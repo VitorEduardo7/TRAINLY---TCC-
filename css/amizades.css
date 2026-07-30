@@ -1,0 +1,154 @@
+/* =========================================
+   LAYOUT DE AMIZADES (ESTILO CARDS)
+   ========================================= */
+.friends-container {
+    max-width: 1000px; /* Mesma largura do painel principal */
+    margin: 40px auto;
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+/* Cabeçalho e Busca */
+.friends-header-modern {
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.friends-header-modern h1 {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+}
+
+.friends-header-modern p {
+    color: var(--text-muted);
+    margin-bottom: 24px;
+}
+
+.modern-search-bar {
+    display: flex;
+    align-items: center;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    padding: 6px 6px 6px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.search-icon {
+    color: var(--text-muted);
+    margin-right: 12px;
+}
+
+.modern-search-bar input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    background: transparent;
+    color: var(--text-dark);
+}
+
+.modern-search-bar .btn-primary {
+    border-radius: 40px;
+    padding: 12px 24px;
+}
+
+/* Grade de Cartões */
+.users-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 24px;
+}
+
+.user-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.user-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+.card-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background-color: var(--bg-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    border: 2px solid var(--border-color);
+}
+
+.user-card h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 4px;
+}
+
+.card-location {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary-blue);
+    margin-bottom: 8px;
+}
+
+.card-mutual {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+}
+
+.btn-connect {
+    width: 100%;
+    background-color: var(--bg-color);
+    color: var(--text-dark);
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.btn-connect:hover {
+    background-color: var(--primary-blue);
+    color: white;
+    border-color: var(--primary-blue);
+}
+
+/* Responsividade */
+@media (max-width: 600px) {
+    .modern-search-bar {
+        flex-direction: column;
+        border-radius: 12px;
+        padding: 12px;
+        gap: 12px;
+    }
+    .modern-search-bar input {
+        width: 100%;
+        text-align: center;
+    }
+    .modern-search-bar .btn-primary {
+        width: 100%;
+        border-radius: 8px;
+    }
+    .users-grid {
+        grid-template-columns: 1fr;
+    }
+}

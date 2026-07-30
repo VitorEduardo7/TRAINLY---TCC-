@@ -1,0 +1,143 @@
+/* =========================================
+   LAYOUT DO MAPA (ESTRUTURA MELHORADA)
+   ========================================= */
+.map-layout {
+    max-width: 1000px;
+    margin: 24px auto;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+    height: calc(100vh - 110px);
+}
+
+/* Painel Lateral (Sidebar) */
+.workout-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.workout-header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 4px;
+}
+
+.workout-header p {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* Grid de Métricas */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.metric-box {
+    background-color: var(--bg-color);
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.metric-box span {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.metric-box strong {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-dark);
+}
+
+.metric-box.full-width {
+    grid-column: span 2;
+}
+
+.metric-box.full-width strong {
+    color: var(--primary-blue);
+    font-size: 26px;
+}
+
+/* Controles */
+.workout-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: auto;
+}
+
+.btn-start-run {
+    background-color: #fc4c02; /* Laranja original mantido */
+    color: white;
+    border: none;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: 8px;
+}
+
+.btn-start-run:hover {
+    background-color: #e34402;
+}
+
+.btn-pause-run {
+    background-color: #242428; /* Escuro estilo botão secundário do dashboard */
+    color: white;
+    border: none;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: 8px;
+}
+
+.btn-pause-run:hover {
+    background-color: #000000;
+}
+
+/* Área do Mapa (Iframe Wrapper) */
+.map-frame-wrapper {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    width: 100%;
+    height: 100%;
+}
+
+.map-frame-wrapper iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .map-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+    .map-frame-wrapper {
+        height: 450px;
+    }
+}

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trainly - Encontrar Amizades</title>
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/amizades.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <a href="dashboard.html" class="brand-logo">Train<span>ly</span></a>
+                <ul class="nav-links">
+                    <li><a href="dashboard.html">Painel</a></li>
+                    <li><a href="mapa.html">Mapa</a></li>
+                    <li><a href="#">Meu Ranking</a></li>
+                    <li><a href="amizades.html" class="active">Amizades</a></li>
+                </ul>
+            </div>
+            <div class="nav-right">
+                <button class="icon-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                </button>
+                <div class="user-avatar-small"><span>U</span></div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="friends-container">
+        <!-- Cabeçalho e Busca Descentralizada do estilo Strava -->
+        <div class="friends-header-modern">
+            <h1>Encontre seus amigos</h1>
+            <p>Conecte-se com outros atletas e acompanhe suas atividades.</p>
+            
+            <div class="modern-search-bar">
+                <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" placeholder="Busque por nome, cidade ou esporte...">
+                <button class="btn-primary">Pesquisar</button>
+            </div>
+        </div>
+
+        <!-- Grade de Usuários (Cards) -->
+        <div class="users-grid">
+            
+            <div class="user-card">
+                <div class="card-avatar">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
+                <h3>Vitor Eduardo</h3>
+                <span class="card-location">Ribeirão Pires, SP</span>
+                <span class="card-mutual">Lenda local perto de você</span>
+                <button class="btn-connect">Conectar</button>
+            </div>
+
+            <div class="user-card">
+                <div class="card-avatar">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
+                <h3>Miguel Bizerra</h3>
+                <span class="card-location">Ribeirão Pires, SP</span>
+                <span class="card-mutual">Lenda local perto de você</span>
+                <button class="btn-connect">Conectar</button>
+            </div>
+
+            <div class="user-card">
+                <div class="card-avatar">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
+                <h3>Victor Gabriel</h3>
+                <span class="card-location">Ribeirão Pires, SP</span>
+                <span class="card-mutual">Lenda local perto de você</span>
+                <button class="btn-connect">Conectar</button>
+            </div>
+
+            <div class="user-card">
+                <div class="card-avatar">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
+                <h3>Vinicius Andrade</h3>
+                <span class="card-location">Ribeirão Pires, SP</span>
+                <span class="card-mutual">Lenda local perto de você</span>
+                <button class="btn-connect">Conectar</button>
+            </div>
+
+            <div class="user-card">
+                <div class="card-avatar">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
+                <h3>Pedro Mirand</h3>
+                <span class="card-location">Ribeirão Pires, SP</span>
+                <span class="card-mutual">Lenda local perto de você</span>
+                <button class="btn-connect">Conectar</button>
+            </div>
+
+        </div>
+    </main>
+</body>
+</html>
