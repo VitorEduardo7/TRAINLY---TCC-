@@ -1,5 +1,5 @@
 /* =========================================
-   RESET E VARIAVEIS GLOBAIS
+   1. VARIÁVEIS E RESET GERAL
    ========================================= */
 :root {
     --primary-blue: #267CEE;
@@ -24,8 +24,15 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+/* Container Principal Reutilizável */
+.main-container {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 24px 16px;
+}
+
 /* =========================================
-   BARRA DE NAVEGAÇÃO (Comum a todas as telas)
+   2. BARRA DE NAVEGAÇÃO (NAVBAR)
    ========================================= */
 .navbar {
     background-color: var(--card-bg);
@@ -74,10 +81,11 @@ body {
     color: var(--text-muted);
     font-size: 14px;
     font-weight: 500;
-    transition: color 0.2s;
+    transition: color 0.2s ease;
 }
 
-.nav-links a:hover, .nav-links a.active {
+.nav-links a:hover, 
+.nav-links a.active {
     color: var(--primary-blue);
 }
 
@@ -95,7 +103,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: color 0.2s;
+    transition: color 0.2s ease;
 }
 
 .icon-btn:hover {
@@ -105,7 +113,7 @@ body {
 .user-avatar-small {
     width: 32px;
     height: 32px;
-    background-color: var(--text-muted);
+    background-color: #2b5d34;
     color: white;
     border-radius: 50%;
     display: flex;
@@ -117,13 +125,13 @@ body {
 }
 
 /* =========================================
-   BOTÕES GERAIS
+   3. BOTÕES GERAIS
    ========================================= */
 button {
     cursor: pointer;
     font-weight: 600;
     border-radius: 4px;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     font-size: 14px;
 }
 
@@ -138,6 +146,9 @@ button {
     background-color: var(--primary-hover);
 }
 
+/* =========================================
+   4. RESPONSIVIDADE
+   ========================================= */
 @media (max-width: 768px) {
     .nav-links {
         display: none;
