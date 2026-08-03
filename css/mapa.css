@@ -125,10 +125,17 @@
     height: 100%;
 }
 
-.map-frame-wrapper iframe {
+.map-frame-wrapper #map {
     width: 100%;
     height: 100%;
-    border: none;
+    background: var(--bg-color); /* visível brevemente enquanto o Leaflet carrega */
+}
+
+/* z-index dos controles do Leaflet abaixo da navbar sticky (z-index: 100) */
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+    z-index: 10;
 }
 
 /* Responsivo */

@@ -101,6 +101,10 @@
     margin-bottom: 4px;
 }
 
+.rank-badge-mini {
+    margin-bottom: 8px;
+}
+
 .card-location {
     font-size: 13px;
     font-weight: 600;
@@ -129,6 +133,12 @@
 .btn-connect:hover {
     background-color: var(--primary-blue);
     color: white;
+    border-color: var(--primary-blue);
+}
+
+.btn-connect.connected {
+    background-color: #eaf4ff;
+    color: var(--primary-blue);
     border-color: var(--primary-blue);
 }
 

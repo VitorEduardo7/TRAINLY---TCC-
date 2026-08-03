@@ -43,6 +43,19 @@
 .user-location {
     font-size: 13px;
     color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.rank-widget-inline {
+    max-width: 220px;
+}
+
+.rank-widget-inline .rank-widget-top {
+    justify-content: flex-start;
+}
+
+.rank-widget-inline .xp-label {
+    text-align: left;
 }
 
 .header-stats-summary {

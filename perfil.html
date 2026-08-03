@@ -22,13 +22,16 @@
                 </ul>
             </div>
             <div class="nav-right">
-                <button class="icon-btn" aria-label="Notificações">
+                <button class="icon-btn" data-notif aria-label="Notificações">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                         <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                     </svg>
                 </button>
                 <a href="perfil.html" class="user-avatar-small"><span>M</span></a>
+                <button class="hamburger-btn" aria-label="Abrir menu" aria-expanded="false">
+                    <span></span><span></span><span></span>
+                </button>
             </div>
         </div>
     </nav>
@@ -43,13 +46,14 @@
                 <div class="profile-meta">
                     <h1 class="user-name">Miguel Bizerra</h1>
                     <p class="user-location">📍 Jardim do Mar, São Paulo, Brasil</p>
+                    <div id="rankWidgetPerfil" class="rank-widget rank-widget-inline"></div>
                 </div>
             </div>
 
             <div class="header-stats-summary">
                 <span class="summary-title">Últimas 4 semanas</span>
                 <div class="stats-counter">
-                    <span class="total-num">0</span>
+                    <span class="total-num" id="perfilTotalAtividades">0</span>
                     <span class="total-label">Total de atividades</span>
                 </div>
             </div>
@@ -69,29 +73,44 @@
                 </div>
 
                 <nav class="profile-tabs">
-                    <button class="tab-item active">Visão Geral</button>
-                    <button class="tab-item">Seguindo</button>
-                    <button class="tab-item">Postagens</button>
+                    <button class="tab-item active" data-tab="geral">Visão Geral</button>
+                    <button class="tab-item" data-tab="seguindo">Seguindo</button>
+                    <button class="tab-item" data-tab="postagens">Postagens</button>
                 </nav>
 
-                <div class="card activity-summary-card">
-                    <div class="activity-header">
-                        <h3>Atividades Recentes</h3>
-                        <span class="date-range">Últimos 30 dias</span>
+                <div data-tab-panel="geral">
+                    <div class="card activity-summary-card">
+                        <div class="activity-header">
+                            <h3>Atividades Recentes</h3>
+                            <span class="date-range">Últimos 30 dias</span>
+                        </div>
+                        <div class="summary-stats">
+                            <div class="metric">
+                                <span class="metric-val" id="perfilDistancia">0,00 km</span>
+                                <span class="metric-lbl">Distância</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-val" id="perfilTempo">0h 0m</span>
+                                <span class="metric-lbl">Tempo Total</span>
+                            </div>
+                            <!-- Elevação: sem sensor de altitude implementado ainda, ver README-MELHORIAS.md -->
+                            <div class="metric">
+                                <span class="metric-val">—</span>
+                                <span class="metric-lbl">Elevação</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="summary-stats">
-                        <div class="metric">
-                            <span class="metric-val">0.0 km</span>
-                            <span class="metric-lbl">Distância</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-val">0h 0m</span>
-                            <span class="metric-lbl">Tempo Total</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-val">0 m</span>
-                            <span class="metric-lbl">Elevação</span>
-                        </div>
+                </div>
+
+                <div data-tab-panel="seguindo" style="display:none;">
+                    <div class="card">
+                        <p class="empty-state">Os atletas que você segue na página Amizades aparecem aqui.</p>
+                    </div>
+                </div>
+
+                <div data-tab-panel="postagens" style="display:none;">
+                    <div class="card">
+                        <p class="empty-state">Nenhuma postagem ainda. Conclua uma atividade no mapa para compartilhar com seus amigos.</p>
                     </div>
                 </div>
 
@@ -109,7 +128,7 @@
                     <div class="social-counters">
                         <div class="counter-item">
                             <span class="label">A seguir</span>
-                            <span class="value">0</span>
+                            <span class="value" id="perfilSeguindo">0</span>
                         </div>
                         <div class="counter-item">
                             <span class="label">Seguidores</span>
@@ -123,11 +142,11 @@
                     <ul class="stats-list">
                         <li>
                             <span class="stat-name">Atividades / semana</span>
-                            <span class="stat-val">0</span>
+                            <span class="stat-val" id="perfilAtividadesSemana">0</span>
                         </li>
                         <li>
                             <span class="stat-name">Média de tempo / semana</span>
-                            <span class="stat-val">0h 0min</span>
+                            <span class="stat-val" id="perfilMediaSemana">0h 0m</span>
                         </li>
                     </ul>
                 </div>
@@ -138,5 +157,6 @@
 
     </main>
 
+    <script src="js/main.js"></script>
 </body>
 </html>
