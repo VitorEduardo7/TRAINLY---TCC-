@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trainly - Rankings</title>
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/rankings.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <a href="dashboard.html" class="brand-logo">Train<span>ly</span></a>
+                <ul class="nav-links">
+                    <li><a href="dashboard.html">Painel</a></li>
+                    <li><a href="mapa.html">Mapa</a></li>
+                    <li><a href="amizades.html">Amizades</a></li>
+                    <li><a href="rankings.html" class="active">Rankings</a></li>
+                </ul>
+            </div>
+            <div class="nav-right">
+                <button class="icon-btn" data-notif aria-label="Notificações">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                </button>
+                <a href="perfil.html" class="user-avatar-small"><span>M</span></a>
+                <button class="hamburger-btn" aria-label="Abrir menu" aria-expanded="false">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="rankings-container">
+
+        <!-- Cabeçalho -->
+        <div class="rankings-header-modern">
+            <h1>Rankings</h1>
+            <p>Veja como você se compara aos outros atletas da comunidade Trainly.</p>
+        </div>
+
+        <!-- Filtros -->
+        <div class="rankings-filters">
+            <div class="filter-group" role="tablist" aria-label="Período">
+                <button class="filter-btn active" data-period="semana">Esta Semana</button>
+                <button class="filter-btn" data-period="mes">Este Mês</button>
+                <button class="filter-btn" data-period="geral">Geral</button>
+            </div>
+            <div class="filter-group" role="tablist" aria-label="Escopo">
+                <button class="filter-btn active" data-scope="amigos">Amigos</button>
+                <button class="filter-btn" data-scope="cidade">Ribeirão Pires</button>
+                <button class="filter-btn" data-scope="global">Global</button>
+            </div>
+        </div>
+
+        <!-- Pódio Top 3 -->
+        <div class="podium">
+            <div class="podium-card place-2">
+                <span class="podium-medal">2</span>
+                <div class="podium-avatar" style="background:#ef4444;">
+                    <span>R</span>
+                </div>
+                <span class="podium-name">Rafael Andrade</span>
+                <span class="podium-xp">2.480 XP</span>
+                <span class="rank-badge-mini" style="--rank-color:#6366f1;">Diamante · Nível 22</span>
+            </div>
+
+            <div class="podium-card place-1">
+                <span class="podium-medal">1</span>
+                <div class="podium-avatar" style="background:#3b82f6;">
+                    <span>V</span>
+                </div>
+                <span class="podium-name">Vitor Eduardo</span>
+                <span class="podium-xp">2.910 XP</span>
+                <span class="rank-badge-mini" style="--rank-color:#d4a017;">Ouro · Nível 12</span>
+            </div>
+
+            <div class="podium-card place-3">
+                <span class="podium-medal">3</span>
+                <div class="podium-avatar" style="background:#8b5cf6;">
+                    <span>P</span>
+                </div>
+                <span class="podium-name">Pedro Miranda</span>
+                <span class="podium-xp">2.105 XP</span>
+                <span class="rank-badge-mini" style="--rank-color:#2fb6c4;">Platina · Nível 17</span>
+            </div>
+        </div>
+
+        <!-- Lista Completa -->
+        <div class="rankings-list-card">
+            <div class="rankings-list-header">
+                <span class="col-position">#</span>
+                <span class="col-user">Atleta</span>
+                <span class="col-rank">Patente</span>
+                <span class="col-xp">XP</span>
+            </div>
+
+            <div class="ranking-row">
+                <span class="row-position top-position">1</span>
+                <div class="row-user">
+                    <div class="row-avatar" style="background:#3b82f6;"><span>V</span></div>
+                    <div class="row-user-info">
+                        <span class="row-name">Vitor Eduardo</span>
+                        <span class="row-location">Ribeirão Pires, SP</span>
+                    </div>
+                </div>
+                <div class="row-rank">
+                    <span class="rank-badge-mini" style="--rank-color:#d4a017;">Ouro · Nível 12</span>
+                </div>
+                <div class="row-xp">2.910<small>XP</small></div>
+            </div>
+
+            <div class="ranking-row">
+                <span class="row-position top-position">2</span>
+                <div class="row-user">
+                    <div class="row-avatar" style="background:#ef4444;"><span>R</span></div>
+                    <div class="row-user-info">
+                        <span class="row-name">Rafael Andrade</span>
+                        <span class="row-location">Ribeirão Pires, SP</span>
+                    </div>
+                </div>
+                <div class="row-rank">
+                    <span class="rank-badge-mini" style="--rank-color:#6366f1;">Diamante · Nível 22</span>
+                </div>
+                <div class="row-xp">2.480<small>XP</small></div>
+            </div>
+
+            <div class="ranking-row">
+                <span class="row-position top-position">3</span>
+                <div class="row-user">
+                    <div class="row-avatar" style="background:#8b5cf6;"><span>P</span></div>
+                    <div class="row-user-info">
+                        <span class="row-name">Pedro Miranda</span>
+                        <span class="row-location">Ribeirão Pires, SP</span>
+                    </div>
+                </div>
+                <div class="row-rank">
+                    <span class="rank-badge-mini" style="--rank-color:#2fb6c4;">Platina · Nível 17</span>
+                </div>
+                <div class="row-xp">2.105<small>XP</small></div>
+            </div>
+
+            <div class="ranking-row">
+                <span class="row-position">4</span>
+                <div class="row-user">
+                    <div class="row-avatar" style="background:#10b981;"><span>V</span></div>
+                    <div class="row-user-info">
+                        <span class="row-name">Victor Gabriel</span>
+                        <span class="row-location">Ribeirão Pires, SP</span>
+                    </div>
+                </div>
+                <div class="row-rank">
+                    <span class="rank-badge-mini" style="--rank-color:#8a94a6;">Prata · Nível 7</span>
+                </div>
+                <div class="row-xp">1.340<small>XP</small></div>
+            </div>
+
+            <div class="ranking-row is-you">
+                <span class="row-position">5</span>
+                <div class="row-user">
+                    <div class="row-avatar" style="background:#2b5d34;"><span>M</span></div>
+                    <div class="row-user-info">
+                        <span class="row-name">Miguel Bizerra<span class="row-you-tag">Você</span></span>
+                        <span class="row-location">Jardim do Mar, SP</span>
+                    </div>
+                </div>
+                <div class="row-rank">
+                    <span class="rank-badge-mini" style="--rank-color:#a5672f;">Bronze · Nível 3</span>
+                </div>
+                <div class="row-xp">890<small>XP</small></div>
+            </div>
+
+            <div class="ranking-row">
+                <span class="row-position">6</span>
+                <div class="row-user">
+                    <div class="row-avatar" style="background:#f59e0b;"><span>V</span></div>
+                    <div class="row-user-info">
+                        <span class="row-name">Vinicius Andrade</span>
+                        <span class="row-location">Ribeirão Pires, SP</span>
+                    </div>
+                </div>
+                <div class="row-rank">
+                    <span class="rank-badge-mini" style="--rank-color:#a5672f;">Bronze · Nível 3</span>
+                </div>
+                <div class="row-xp">705<small>XP</small></div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="js/main.js"></script>
+    <script>
+        // Alterna estado ativo dentro de cada grupo de filtro (semana/mês/geral, amigos/cidade/global)
+        document.querySelectorAll('.filter-group').forEach(function (group) {
+            group.querySelectorAll('.filter-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    group.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
