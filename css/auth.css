@@ -1,0 +1,206 @@
+/* ===== Reset básico ===== */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+}
+
+/* ===== Layout em 3 colunas: foto | formulário | foto ===== */
+.auth-wrapper {
+  display: flex;
+  min-height: 100vh;
+}
+
+.auth-photo {
+  flex: 1;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.auth-photo.left {
+  background-image: url('../img/auth-esquerda.jpg');
+}
+
+.auth-photo.right {
+  background-image: url('../img/auth-direita.jpg');
+}
+
+.auth-form-col {
+  flex: 0 0 460px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 30px;
+  background: #fff;
+}
+
+.auth-form {
+  width: 100%;
+  max-width: 340px;
+}
+
+.auth-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 40px;
+  font-weight: 700;
+  font-size: 22px;
+  color: #16a34a;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-decoration: none;
+}
+
+.auth-form h1 {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 12px 0;
+  line-height: 1.25;
+}
+
+.auth-form p.subtitle {
+  color: #555;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+.auth-switch {
+  font-size: 0.95rem;
+  color: #333;
+  margin-bottom: 24px;
+}
+
+.auth-switch a {
+  color: #16a34a;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-switch a:hover {
+  text-decoration: underline;
+}
+
+/* ===== Botões sociais ===== */
+.social-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 16px;
+  margin-bottom: 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  background: #f7f7f7;
+  color: #1a1a1a;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+
+.social-btn:hover {
+  background: #ececec;
+}
+
+.social-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* ===== Botão principal (e-mail) ===== */
+.btn-primary {
+  width: 100%;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  border: none;
+  border-radius: 6px;
+  background: #16a34a;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: #15803d;
+}
+
+/* ===== Divisor "ou" ===== */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0;
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e0e0e0;
+}
+
+/* ===== Inputs (usados no formulário de e-mail expandido) ===== */
+.auth-form input[type="text"],
+.auth-form input[type="email"],
+.auth-form input[type="password"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px 14px;
+  margin-bottom: 14px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.auth-form input:focus {
+  outline: 2px solid #16a34a;
+  border-color: #16a34a;
+}
+
+/* ===== Rodapé de termos ===== */
+.auth-terms {
+  font-size: 0.8rem;
+  color: #777;
+  line-height: 1.5;
+  margin-top: 16px;
+}
+
+.auth-terms a {
+  color: #16a34a;
+  text-decoration: none;
+}
+
+.auth-terms a:hover {
+  text-decoration: underline;
+}
+
+.auth-error {
+  color: #dc2626;
+  font-size: 0.9rem;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+/* ===== Responsivo ===== */
+@media (max-width: 992px) {
+  .auth-photo {
+    display: none; /* esconde as fotos laterais em telas menores */
+  }
+
+  .auth-form-col {
+    flex: 1;
+  }
+}

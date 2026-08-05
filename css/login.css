@@ -1,0 +1,291 @@
+/* =========================================
+   ESTILOS TELA DE LOGIN / CADASTRO
+   ========================================= */
+
+body {
+    background-color: var(--bg-color);
+    min-height: 100vh;
+}
+
+.auth-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 100vh;
+    width: 100%;
+}
+
+/* --- PAINEL HERO (Lado Esquerdo) --- */
+.auth-hero {
+    position: relative;
+    background-image: url('https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?auto=format&fit=crop&w=1200&q=80');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: flex-end;
+    padding: 60px;
+}
+
+.hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.3) 0%, rgba(15, 23, 42, 0.85) 100%);
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    color: #ffffff;
+    max-width: 480px;
+}
+
+.brand-logo.dark {
+    color: #ffffff;
+    font-size: 32px;
+    margin-bottom: 24px;
+    display: inline-block;
+}
+
+.hero-content h1 {
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 16px;
+    letter-spacing: -0.5px;
+}
+
+.hero-content p {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.5;
+    margin-bottom: 32px;
+}
+
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.badge-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #22c55e;
+    border-radius: 50%;
+}
+
+/* --- FORMULÁRIO (Lado Direito) --- */
+.auth-form-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    background-color: var(--card-bg);
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 400px;
+}
+
+.auth-header {
+    margin-bottom: 28px;
+}
+
+.mobile-logo {
+    display: none;
+    margin-bottom: 16px;
+}
+
+.auth-header h2 {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin-bottom: 6px;
+}
+
+.auth-header p {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* Abas */
+.auth-tabs {
+    display: flex;
+    background: var(--bg-color);
+    padding: 4px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tab-btn.active {
+    background: var(--card-bg);
+    color: var(--text-dark);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Botões Sociais */
+.social-login {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.btn-social {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 11px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dark);
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-social:hover {
+    background: var(--bg-color);
+}
+
+/* Divisor */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 20px 0;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.auth-divider span {
+    padding: 0 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+/* Formulário e Campos */
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.input-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.forgot-link {
+    font-size: 12px;
+    color: var(--primary-blue);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.forgot-link:hover {
+    text-decoration: underline;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--card-bg);
+    color: var(--text-dark);
+    transition: border-color 0.2s ease;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+}
+
+.btn-block {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    margin-top: 8px;
+}
+
+.terms-text {
+    margin-top: 24px;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.4;
+}
+
+.terms-text a {
+    color: var(--text-dark);
+    text-decoration: underline;
+}
+
+/* --- RESPONSIVIDADE --- */
+@media (max-width: 868px) {
+    .auth-container {
+        grid-template-columns: 1fr;
+    }
+
+    .auth-hero {
+        display: none;
+    }
+
+    .mobile-logo {
+        display: inline-block;
+    }
+
+    .auth-form-wrapper {
+        padding: 40px 24px;
+    }
+}
