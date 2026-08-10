@@ -7,6 +7,7 @@
     <!-- CSS Organizado nas pastas -->
     <link rel="stylesheet" href="css/global.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/dashboard-metrics.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -16,11 +17,12 @@
                 <a href="dashboard.html" class="brand-logo">Train<span>ly</span></a>
                 <ul class="nav-links">
                     <li><a href="dashboard.html" class="active">Painel</a></li>
-                    <li><a href="mapa.html">Mapa</a></li> <!-- NOVO LINK AQUI -->
+                    <li><a href="mapa.html">Mapa</a></li>
                     <li><a href="amizades.html">Amizades</a></li>
                 </ul>
             </div>
             <div class="nav-right">
+                <button class="btn-primary" id="openRegisterBtn">+ Registrar</button>
                 <button class="icon-btn" data-notif aria-label="Notificações">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -58,10 +60,33 @@
                 </div>
                 <a href="perfil.html" class="text-link">Editar perfil &gt;</a>
             </div>
+
+            <!-- NOVO: Volume semanal -->
+            <div class="card sidebar-block">
+                <h2>Volume Semanal</h2>
+                <div class="chart" id="weekChart"></div>
+                <div class="chart-total"><span>Total</span><b id="weekTotal">0 km</b></div>
+            </div>
+
+            <!-- NOVO: Recordes pessoais -->
+            <div class="card sidebar-block">
+                <h2>Recordes Pessoais</h2>
+                <div id="prList"></div>
+            </div>
+
+            <!-- NOVO: Meta do mês -->
+            <div class="card sidebar-block">
+                <h2>Meta do Mês</h2>
+                <div id="goalWidget"></div>
+            </div>
         </aside>
 
         <!-- Coluna Central: Feed e Ações -->
         <main class="feed-content">
+
+            <!-- NOVO: Cards de métricas da semana -->
+            <div class="metrics-grid" id="metricsGrid"></div>
+
             <div class="action-cards-grid">
                 <div class="card action-card">
                     <div class="action-info">
@@ -75,12 +100,19 @@
                         <h3>Atividade Bônus</h3>
                         <p>Vá para o mapa e ganhe pontos.</p>
                     </div>
-                    <!-- Direciona para o Mapa também -->
                     <button class="btn-secondary" onclick="window.location.href='mapa.html'">Iniciar</button>
                 </div>
             </div>
 
-            <div class="card feed-card">
+            <!-- NOVO: Atividades recentes reais (só aparece se já tiver alguma) -->
+            <div class="card activities-card" id="activitiesCard" style="display:none;">
+                <div class="feed-header">
+                    <h2>Atividades Recentes</h2>
+                </div>
+                <div id="activityList"></div>
+            </div>
+
+            <div class="card feed-card" id="walkthroughCard">
                 <div class="feed-header">
                     <h2>Vamos Começar</h2>
                     <p>Listamos alguns passos para ajudar você a aproveitar o Trainly.</p>
@@ -98,6 +130,50 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- NOVO: Modal de registrar atividade manualmente -->
+    <div class="overlay" id="registerOverlay">
+        <div class="modal">
+            <h3>Registrar Atividade</h3>
+            <div class="field">
+                <label>Tipo</label>
+                <select id="fType">
+                    <option value="Corrida">Corrida</option>
+                    <option value="Ciclismo">Ciclismo</option>
+                    <option value="Natação">Natação</option>
+                    <option value="Caminhada">Caminhada</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Título (opcional)</label>
+                <input type="text" id="fTitle" placeholder="Ex: Corrida matinal no parque">
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label>Distância (km)</label>
+                    <input type="number" id="fDist" step="0.01" min="0" placeholder="10.0">
+                </div>
+                <div class="field">
+                    <label>Duração (min)</label>
+                    <input type="number" id="fDur" step="1" min="0" placeholder="45">
+                </div>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label>Freq. cardíaca (bpm, opcional)</label>
+                    <input type="number" id="fHr" step="1" min="0" placeholder="150">
+                </div>
+                <div class="field">
+                    <label>Elevação (m, opcional)</label>
+                    <input type="number" id="fElev" step="1" min="0" placeholder="30">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" id="cancelRegisterBtn" type="button">Cancelar</button>
+                <button class="btn-primary" id="saveRegisterBtn" type="button">Salvar atividade</button>
+            </div>
+        </div>
     </div>
 
     <script src="js/main.js"></script>

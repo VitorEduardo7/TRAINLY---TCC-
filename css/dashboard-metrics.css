@@ -1,0 +1,262 @@
+/* =========================================
+   INCREMENTO: Métricas, atividades, volume semanal, recordes
+   Usa as mesmas variáveis do global.css — agora que o tema
+   inteiro é escuro, não precisa mais de cores fixas aqui.
+   ========================================= */
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.metric-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 18px 20px;
+}
+
+.metric-label {
+    font-size: 11px;
+    letter-spacing: 1px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.metric-value {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text-dark);
+}
+
+.metric-value span {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.metric-delta {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 6px;
+}
+
+.delta-up { color: #22c55e; background: rgba(34,197,94,0.14); }
+.delta-down { color: var(--danger); background: rgba(240,85,78,0.14); }
+
+/* Atividades recentes */
+.activities-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+.activities-card .feed-header h2 {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dark);
+}
+
+.activity-item {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+}
+.activity-item:last-child { margin-bottom: 0; }
+.activity-item::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--primary-blue);
+}
+
+.activity-item-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.activity-item-info { display: flex; gap: 12px; align-items: flex-start; }
+
+.act-icon {
+    width: 38px; height: 38px;
+    border-radius: 9px;
+    background: var(--bg-color);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+}
+
+.act-type {
+    color: var(--primary-blue);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.act-title { font-size: 15px; font-weight: 700; color: var(--text-dark); margin: 2px 0; }
+.act-date { color: var(--text-muted); font-size: 12px; }
+
+.act-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 14px;
+}
+.act-stat-label {
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+}
+.act-stat-value { font-size: 14px; font-weight: 700; color: var(--text-dark); }
+
+/* Volume semanal / Recordes pessoais (sidebar) */
+.sidebar-block { margin-top: 20px; }
+.sidebar-block h2 {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dark);
+    margin-bottom: 18px;
+}
+
+.chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 7px;
+    height: 100px;
+    margin-bottom: 6px;
+}
+.chart-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    gap: 6px;
+}
+.chart-bar {
+    width: 100%;
+    max-width: 24px;
+    background: var(--border-color);
+    border-radius: 4px 4px 2px 2px;
+    min-height: 3px;
+    transition: height .3s;
+}
+.chart-bar.today { background: var(--primary-blue); }
+.chart-day { font-size: 10px; color: var(--text-muted); font-weight: 700; }
+.chart-day.today { color: var(--text-dark); }
+.chart-total {
+    border-top: 1px solid var(--border-color);
+    padding-top: 12px;
+    margin-top: 6px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-dark);
+}
+.chart-total b { font-size: 15px; }
+
+.pr-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.pr-row:last-child { border-bottom: none; }
+.pr-label { font-size: 13px; font-weight: 700; color: var(--text-dark); }
+.pr-date { color: var(--text-muted); font-size: 11px; }
+.pr-value { color: var(--primary-blue); font-weight: 800; font-size: 15px; }
+
+/* Curtidas */
+.kudos-btn {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 5px 11px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.kudos-btn.liked { color: #f5a623; border-color: #f5a623; }
+.kudos-btn:hover { border-color: var(--primary-blue); color: var(--text-dark); }
+
+@media (max-width: 768px) {
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .act-stats { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Meta do mês */
+.goal-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-dark); margin-bottom: 8px; }
+.goal-row b { font-weight: 800; }
+.goal-bar { width: 100%; height: 8px; background: var(--bg-color); border-radius: 20px; overflow: hidden; margin-bottom: 8px; }
+.goal-bar-fill { height: 100%; background: var(--primary-blue); border-radius: 20px; transition: width .4s ease; }
+.goal-note { font-size: 11px; color: var(--text-muted); }
+
+/* Modal de registrar atividade */
+.overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none; align-items: center; justify-content: center;
+    z-index: 500; padding: 20px;
+}
+.overlay.open { display: flex; }
+.modal {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 26px;
+    width: 100%; max-width: 440px;
+    max-height: 88vh; overflow-y: auto;
+}
+.modal h3 {
+    font-size: 16px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--text-dark);
+    margin-bottom: 18px;
+}
+.field { margin-bottom: 14px; }
+.field label {
+    display: block; font-size: 12px; color: var(--text-muted);
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.field input, .field select {
+    width: 100%;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text-dark);
+    font-size: 14px;
+    font-family: inherit;
+}
+.field input:focus, .field select:focus { outline: none; border-color: var(--primary-blue); }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.modal-actions .btn-secondary,
+.modal-actions .btn-primary { flex: 1; padding: 11px; }

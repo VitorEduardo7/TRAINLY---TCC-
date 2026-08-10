@@ -2,16 +2,17 @@
    1. VARIÁVEIS E RESET GERAL
    ========================================= */
 :root {
-    --primary-blue: #267CEE;
-    --primary-hover: #1a63c6;
-    --bg-color: #f4f5f7;
-    --card-bg: #ffffff;
-    --text-dark: #242428;
-    --text-muted: #666666;
-    --border-color: #e6e6eb;
+    --primary-blue: #2f7dfd;
+    --primary-hover: #5c9aff;
+    --bg-color: #0a0b0f;
+    --card-bg: #14161f;
+    --text-dark: #f2f3f6;
+    --text-muted: #9a9caa;
+    --border-color: rgba(255,255,255,0.08);
     --avatar-bg: #2b5d34;
-    --danger: #e0473e;
-    --focus-ring: #267CEE;
+    --danger: #f0554e;
+    --focus-ring: #2f7dfd;
+    --toast-bg: #1c1e29;
 }
 
 /* Acessibilidade: foco visível em qualquer elemento navegável por teclado */
@@ -103,7 +104,7 @@ body {
     transition: color 0.2s ease;
 }
 
-.nav-links a:hover, 
+.nav-links a:hover,
 .nav-links a.active {
     color: var(--primary-blue);
 }
@@ -199,7 +200,7 @@ button {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 10px;
-    box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.45);
     opacity: 0;
     visibility: hidden;
     transform: translateY(-6px);
@@ -236,19 +237,20 @@ button {
     left: 50%;
     bottom: 32px;
     transform: translate(-50%, 20px);
-    background: var(--text-dark);
+    background: var(--toast-bg);
     color: #fff;
     padding: 12px 22px;
     border-radius: 30px;
     font-size: 14px;
     font-weight: 600;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.45);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s ease, transform 0.25s ease;
     z-index: 999;
     max-width: 90vw;
     text-align: center;
+    border: 1px solid var(--border-color);
 }
 
 .trainly-toast.show {
@@ -269,9 +271,9 @@ button {
 
 .rank-badge,
 .rank-badge-mini {
-    background: color-mix(in srgb, var(--rank-color) 16%, white);
+    background: color-mix(in srgb, var(--rank-color) 22%, var(--card-bg));
     color: var(--rank-color);
-    border: 1px solid color-mix(in srgb, var(--rank-color) 45%, white);
+    border: 1px solid color-mix(in srgb, var(--rank-color) 50%, var(--card-bg));
 }
 
 .rank-badge {
@@ -349,7 +351,7 @@ button {
         flex-direction: column;
         gap: 0;
         padding: 8px 0;
-        box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.35);
     }
 
     .nav-links.open {

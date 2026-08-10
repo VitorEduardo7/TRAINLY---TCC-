@@ -1,0 +1,13 @@
+# Redireciona tudo dentro de /api/ para o index.php (front controller)
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
+
+# Bloqueia acesso direto ao .env pelo navegador
+<Files ".env">
+    Require all denied
+</Files>
+<Files ".env.example">
+    Require all denied
+</Files>
