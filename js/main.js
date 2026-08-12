@@ -451,6 +451,15 @@
     return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
   }
 
+  // Ex.: 57m 12s / 1h 22m — usado na lista da página de atividades
+  function formatDurationHM(totalSeconds) {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = Math.floor(totalSeconds % 60);
+    if (h > 0) return h + "h " + m + "m";
+    return m + "m " + String(s).padStart(2, "0") + "s";
+  }
+
   /* ---------------------------------------------------------
      4. TOAST (inalterado)
      --------------------------------------------------------- */
@@ -700,6 +709,127 @@
         showToast("Heatmap em desenvolvimento — precisa de histórico real de rotas 🚧");
       });
     }
+  }
+
+  /* ---------------------------------------------------------
+     NOVO: Página "Minhas Atividades" (atividades.html)
+     --------------------------------------------------------- */
+  const ATIVIDADE_TYPE_COLORS = {
+    Corrida: "#2f7dfd",
+    Ciclismo: "#22c1c9",
+    Natação: "#10b981",
+    Caminhada: "#f5a623"
+  };
+
+  function renderAtividadesSummary(data) {
+    const acts = data.activities || [];
+    const totalKm = acts.reduce((s, a) => s + a.distanceKm, 0);
+    const totalSec = acts.reduce((s, a) => s + a.durationSec, 0);
+    const totalElev = acts.reduce((s, a) => s + (Number(a.elevationM) || 0), 0);
+
+    const countEl = document.getElementById("sumCount");
+    const distEl = document.getElementById("sumDist");
+    const timeEl = document.getElementById("sumTime");
+    const elevEl = document.getElementById("sumElev");
+
+    if (countEl) countEl.textContent = acts.length;
+    if (distEl) distEl.textContent = Math.round(totalKm).toLocaleString("pt-BR") + " km";
+    if (timeEl) timeEl.textContent = formatHM(totalSec);
+    if (elevEl) elevEl.textContent = Math.round(totalElev).toLocaleString("pt-BR") + " m";
+  }
+
+  function renderAtividadesList(listEl, emptyEl, data, filterType) {
+    if (!listEl) return;
+    let acts = [...(data.activities || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    if (filterType && filterType !== "Todos") {
+      acts = acts.filter((a) => (a.type || "Corrida") === filterType);
+    }
+
+    if (acts.length === 0) {
+      listEl.innerHTML = "";
+      if (emptyEl) emptyEl.style.display = "";
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = "none";
+
+    listEl.innerHTML = acts.map((a) => {
+      const d = new Date(a.date);
+      const dateLabel = d.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" }) +
+        ", " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      const type = a.type || "Corrida";
+      const title = a.title || (type + " registrada");
+      const icon = TYPE_ICONS[type] || "🏃";
+      const color = ATIVIDADE_TYPE_COLORS[type] || "var(--primary-blue)";
+
+      return (
+        '<div class="atividade-item activity-item" style="--type-color:' + color + '" data-activity-id="' + a.id + '">' +
+          '<div class="atividade-left">' +
+            '<div class="atividade-icon">' + icon + '</div>' +
+            '<div class="atividade-info">' +
+              '<h3>' + title + '</h3>' +
+              '<p>' + dateLabel + '</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="atividade-stats">' +
+            '<div class="atividade-stat"><div class="atividade-stat-label">Distância</div><div class="atividade-stat-value">' + a.distanceKm.toFixed(1).replace(".", ",") + ' km</div></div>' +
+            '<div class="atividade-stat"><div class="atividade-stat-label">Duração</div><div class="atividade-stat-value">' + formatDurationHM(a.durationSec) + '</div></div>' +
+            '<div class="atividade-stat"><div class="atividade-stat-label">Ritmo</div><div class="atividade-stat-value">' + formatPace(a.durationSec / 60, a.distanceKm) + '/km</div></div>' +
+            '<div class="atividade-stat"><div class="atividade-stat-label">FC média</div><div class="atividade-stat-value">' + (a.heartRate ? a.heartRate + ' bpm' : '—') + '</div></div>' +
+          '</div>' +
+          '<button class="atividade-ver-btn" data-action="toggle-expand">Ver →</button>' +
+          '<div class="atividade-expand">' +
+            '<div class="atividade-stat" style="text-align:left;"><div class="atividade-stat-label">Elevação</div><div class="atividade-stat-value">' + (a.elevationM ? a.elevationM + ' m' : '—') + '</div></div>' +
+            '<button class="kudos-btn' + (a.likedByMe ? " liked" : "") + '" data-action="like">👍 <span>' + (a.likeCount || 0) + '</span></button>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join("");
+  }
+
+  function wireAtividadesInteractions(listEl) {
+    wireActivitySocial(listEl);
+
+    if (listEl.dataset.expandWired === "1") return;
+    listEl.dataset.expandWired = "1";
+    listEl.addEventListener("click", (e) => {
+      const verBtn = e.target.closest('[data-action="toggle-expand"]');
+      if (!verBtn) return;
+      const row = verBtn.closest(".atividade-item");
+      const panel = row && row.querySelector(".atividade-expand");
+      if (!panel) return;
+      const isOpen = panel.classList.toggle("open");
+      verBtn.textContent = isOpen ? "Fechar ↑" : "Ver →";
+    });
+  }
+
+  async function initAtividades() {
+    const listEl = document.getElementById("atividadesList");
+    if (!listEl) return;
+
+    const data = await getData();
+    window.__atividadesState = window.__atividadesState || { filter: "Todos" };
+    const state = window.__atividadesState;
+    const emptyEl = document.getElementById("atividadesEmpty");
+
+    renderAtividadesSummary(data);
+    renderAtividadesList(listEl, emptyEl, data, state.filter);
+    wireAtividadesInteractions(listEl);
+
+    const tabsWrap = document.querySelector(".filter-tabs");
+    if (tabsWrap && tabsWrap.dataset.wired !== "1") {
+      tabsWrap.dataset.wired = "1";
+      tabsWrap.querySelectorAll(".filter-pill").forEach((pill) => {
+        pill.addEventListener("click", () => {
+          tabsWrap.querySelectorAll(".filter-pill").forEach((p) => p.classList.remove("active"));
+          pill.classList.add("active");
+          state.filter = pill.dataset.filter;
+          renderAtividadesList(listEl, emptyEl, data, state.filter);
+        });
+      });
+    }
+
+    initRegisterModal(data, null, () => initAtividades());
   }
 
   async function initAmizades() {
@@ -982,6 +1112,7 @@
 
     initDashboard();
     initPerfil();
+    initAtividades();
     initAmizades();
     initMapa();
   });

@@ -17,12 +17,12 @@
                 <a href="dashboard.html" class="brand-logo">Train<span>ly</span></a>
                 <ul class="nav-links">
                     <li><a href="dashboard.html" class="active">Painel</a></li>
+                    <li><a href="atividades.html">Atividades</a></li>
                     <li><a href="mapa.html">Mapa</a></li>
                     <li><a href="amizades.html">Amizades</a></li>
                 </ul>
             </div>
             <div class="nav-right">
-                <button class="btn-primary" id="openRegisterBtn">+ Registrar</button>
                 <button class="icon-btn" data-notif aria-label="Notificações">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -106,8 +106,9 @@
 
             <!-- NOVO: Atividades recentes reais (só aparece se já tiver alguma) -->
             <div class="card activities-card" id="activitiesCard" style="display:none;">
-                <div class="feed-header">
-                    <h2>Atividades Recentes</h2>
+                <div class="feed-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                    <h2 style="margin-bottom:0;">Atividades Recentes</h2>
+                    <a href="atividades.html" class="text-link">Ver todas &gt;</a>
                 </div>
                 <div id="activityList"></div>
             </div>
@@ -130,50 +131,6 @@
                 </div>
             </div>
         </main>
-    </div>
-
-    <!-- NOVO: Modal de registrar atividade manualmente -->
-    <div class="overlay" id="registerOverlay">
-        <div class="modal">
-            <h3>Registrar Atividade</h3>
-            <div class="field">
-                <label>Tipo</label>
-                <select id="fType">
-                    <option value="Corrida">Corrida</option>
-                    <option value="Ciclismo">Ciclismo</option>
-                    <option value="Natação">Natação</option>
-                    <option value="Caminhada">Caminhada</option>
-                </select>
-            </div>
-            <div class="field">
-                <label>Título (opcional)</label>
-                <input type="text" id="fTitle" placeholder="Ex: Corrida matinal no parque">
-            </div>
-            <div class="field-row">
-                <div class="field">
-                    <label>Distância (km)</label>
-                    <input type="number" id="fDist" step="0.01" min="0" placeholder="10.0">
-                </div>
-                <div class="field">
-                    <label>Duração (min)</label>
-                    <input type="number" id="fDur" step="1" min="0" placeholder="45">
-                </div>
-            </div>
-            <div class="field-row">
-                <div class="field">
-                    <label>Freq. cardíaca (bpm, opcional)</label>
-                    <input type="number" id="fHr" step="1" min="0" placeholder="150">
-                </div>
-                <div class="field">
-                    <label>Elevação (m, opcional)</label>
-                    <input type="number" id="fElev" step="1" min="0" placeholder="30">
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn-secondary" id="cancelRegisterBtn" type="button">Cancelar</button>
-                <button class="btn-primary" id="saveRegisterBtn" type="button">Salvar atividade</button>
-            </div>
-        </div>
     </div>
 
     <script src="js/main.js"></script>
