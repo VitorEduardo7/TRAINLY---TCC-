@@ -10,31 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-left">
-                <a href="dashboard.html" class="brand-logo">Train<span>ly</span></a>
-                <ul class="nav-links">
-                    <li><a href="dashboard.html">Painel</a></li>
-                    <li><a href="atividades.html" class="active">Atividades</a></li>
-                    <li><a href="mapa.html">Mapa</a></li>
-                    <li><a href="amizades.html">Amizades</a></li>
-                </ul>
-            </div>
-            <div class="nav-right">
-                <button class="icon-btn" data-notif aria-label="Notificações">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                    </svg>
-                </button>
-                <a href="perfil.html" class="user-avatar-small"><span>M</span></a>
-                <button class="hamburger-btn" aria-label="Abrir menu" aria-expanded="false">
-                    <span></span><span></span><span></span>
-                </button>
-            </div>
-        </div>
-    </nav>
+
+    <?php include __DIR__ . '/includes/nav.php'; ?>
 
     <div class="atividades-container">
         <div class="page-header-top">
@@ -124,6 +101,7 @@
         </div>
     </div>
 
+    <?php include __DIR__ . '/includes/footer.php'; ?>
     <script src="js/main.js"></script>
 </body>
 </html>

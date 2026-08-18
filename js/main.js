@@ -1034,7 +1034,7 @@
           showToast("Atividade muito curta para ser salva.");
         }
         setTimeout(() => {
-          window.location.href = "dashboard.html";
+          window.location.href = "dashboard.php";
         }, 900);
       }
     }
@@ -1066,7 +1066,7 @@
         btn.disabled = true;
         try {
           await login(email, password);
-          window.location.href = "dashboard.html";
+          window.location.href = "dashboard.php";
         } catch (err) {
           showToast(err.message || "Não foi possível entrar.");
           btn.disabled = false;
@@ -1084,7 +1084,7 @@
         btn.disabled = true;
         try {
           await register(name, email, password);
-          window.location.href = "dashboard.html";
+          window.location.href = "dashboard.php";
         } catch (err) {
           showToast(err.message || "Não foi possível criar a conta.");
           btn.disabled = false;
