@@ -34,22 +34,22 @@
             <div class="summary-card">
                 <div class="summary-label">Total de Atividades</div>
                 <div class="summary-value" id="sumCount">0</div>
-                <div class="summary-sub">no total</div>
+                <div class="summary-sub">Este ano</div>
             </div>
             <div class="summary-card">
                 <div class="summary-label">Distância Total</div>
                 <div class="summary-value" id="sumDist">0 km</div>
-                <div class="summary-sub">no total</div>
+                <div class="summary-sub">Este ano</div>
             </div>
             <div class="summary-card">
                 <div class="summary-label">Tempo Total</div>
                 <div class="summary-value" id="sumTime">0h 0m</div>
-                <div class="summary-sub">no total</div>
+                <div class="summary-sub">Este ano</div>
             </div>
             <div class="summary-card">
                 <div class="summary-label">Elevação Total</div>
                 <div class="summary-value" id="sumElev">0 m</div>
-                <div class="summary-sub">no total</div>
+                <div class="summary-sub">Este ano</div>
             </div>
         </div>
 

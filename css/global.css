@@ -9,7 +9,7 @@
     --text-dark: #f2f3f6;
     --text-muted: #9a9caa;
     --border-color: rgba(255,255,255,0.08);
-    --avatar-bg: #2b5d34;
+    --avatar-bg: #2b7ce8;
     --danger: #f0554e;
     --focus-ring: #2f7dfd;
     --toast-bg: #1c1e29;
@@ -55,7 +55,7 @@ body {
    2. BARRA DE NAVEGAÇÃO (NAVBAR)
    ========================================= */
 .navbar {
-    background-color: var(--card-bg);
+    background-color: var(--bg-color);
     border-bottom: 1px solid var(--border-color);
     position: sticky;
     top: 0;
@@ -63,9 +63,9 @@ body {
 }
 
 .nav-container {
-    max-width: 1000px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 0 40px;
     height: 60px;
     display: flex;
     justify-content: space-between;
@@ -75,15 +75,23 @@ body {
 .nav-left {
     display: flex;
     align-items: center;
-    gap: 40px;
+    gap: 60px;
 }
 
 .brand-logo {
-    font-size: 24px;
-    font-weight: 800;
+    font-size: 18px;
+    font-weight: 700;
     color: var(--text-dark);
     letter-spacing: -0.5px;
     text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.brand-logo svg {
+    width: 24px;
+    height: 24px;
 }
 
 .brand-logo span {
@@ -93,7 +101,11 @@ body {
 .nav-links {
     list-style: none;
     display: flex;
-    gap: 24px;
+    gap: 32px;
+}
+
+.nav-links li {
+    position: relative;
 }
 
 .nav-links a {
@@ -102,17 +114,33 @@ body {
     font-size: 14px;
     font-weight: 500;
     transition: color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.nav-links a:hover,
+.nav-links a svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
+}
+
+.nav-links a:hover {
+    color: var(--primary-blue);
+}
+
 .nav-links a.active {
     color: var(--primary-blue);
+}
+
+.nav-links a.active svg {
+    stroke: var(--primary-blue);
 }
 
 .nav-right {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 20px;
 }
 
 .icon-btn {
@@ -124,6 +152,12 @@ body {
     align-items: center;
     justify-content: center;
     transition: color 0.2s ease;
+    padding: 6px;
+}
+
+.icon-btn svg {
+    width: 24px;
+    height: 24px;
 }
 
 .icon-btn:hover {
@@ -152,19 +186,24 @@ body {
 }
 
 .user-avatar-small {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     background-color: var(--avatar-bg);
     color: white;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
-    font-size: 14px;
+    font-weight: 700;
+    font-size: 12px;
     cursor: pointer;
     text-decoration: none;
     flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.user-avatar-small:hover {
+    opacity: 0.9;
 }
 
 /* =========================================
@@ -514,5 +553,3 @@ button {
     background: #20c76a;
     border-radius: 50%;
 }
-
-
