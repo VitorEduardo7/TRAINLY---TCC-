@@ -1,0 +1,172 @@
+/* =========================================
+   FEED DE AMIGOS
+   ========================================= */
+
+.feed-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.feed-avatar.small { width: 32px; height: 32px; font-size: 12px; }
+
+.feed-composer {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.feed-composer input {
+    flex: 1;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 10px 16px;
+    color: var(--text-dark);
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+}
+.feed-composer input:focus { outline: none; border-color: var(--primary-blue); }
+.feed-composer .btn-primary { border-radius: 20px; padding: 9px 18px; white-space: nowrap; }
+
+.feed-post {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-bottom: 20px;
+}
+
+.feed-post-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+.feed-post-author { display: flex; gap: 12px; align-items: center; }
+.feed-author-name { font-size: 15px; font-weight: 700; color: var(--text-dark); }
+.feed-post-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 1px; }
+
+.feed-type-badge {
+    background: color-mix(in srgb, var(--primary-blue) 15%, var(--card-bg));
+    color: var(--primary-blue);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    flex-shrink: 0;
+}
+
+.feed-post-title { font-size: 15px; font-weight: 600; color: var(--text-dark); margin-bottom: 12px; }
+
+.feed-photo {
+    width: 100%;
+    max-height: 360px;
+    object-fit: cover;
+    border-radius: 10px;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.feed-post-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-color);
+}
+.feed-post-footer .kudos-btn { flex-shrink: 0; }
+.comment-icon {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.share-btn {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    font-weight: 700;
+}
+.share-btn:hover { color: var(--text-dark); }
+
+/* Amigos ativos hoje */
+.active-friend-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+}
+.active-friend-name { font-size: 13.5px; font-weight: 700; color: var(--text-dark); }
+.active-friend-meta { font-size: 11.5px; color: var(--text-muted); }
+.active-friend-icon { margin-left: auto; font-size: 16px; }
+
+/* =========================================
+   NOVO LAYOUT DO DASHBOARD (mais largo, sem sidebar de perfil)
+   ========================================= */
+
+.main-container.dashboard-wide {
+    max-width: 1440px;
+    display: block; /* sobrescreve o grid 280px/1fr antigo do dashboard.css */
+}
+
+.dashboard-header { margin-bottom: 28px; }
+.datestamp {
+    display: block;
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+.greeting {
+    font-size: 32px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dark);
+}
+
+.dashboard-columns {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 28px;
+    align-items: start;
+    margin-top: 28px;
+}
+
+.feed-content-wide { min-width: 0; }
+
+.feed-title {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--text-dark);
+    margin: 8px 0 16px;
+}
+
+.dashboard-sidebar .sidebar-block { margin-top: 0; margin-bottom: 20px; }
+.dashboard-sidebar .sidebar-block:last-child { margin-bottom: 0; }
+
+@media (max-width: 980px) {
+    .dashboard-columns { grid-template-columns: 1fr; }
+    .greeting { font-size: 26px; }
+}

@@ -66,27 +66,6 @@
     </div>
 
 
-    <!-- ESTATÍSTICAS -->
-    <div class="footer-stats">
-
-        <div class="stat">
-            <strong>2,4M+</strong>
-            <span>Atletas ativos</span>
-        </div>
-
-        <div class="stat">
-            <strong>18M+</strong>
-            <span>Atividades registradas</span>
-        </div>
-
-        <div class="stat">
-            <strong>4,9★</strong>
-            <span>Avaliação média</span>
-        </div>
-
-    </div>
-
-
     <!-- RODAPÉ INFERIOR -->
     <div class="footer-bottom">
 

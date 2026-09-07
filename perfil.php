@@ -1,140 +1,155 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trainly - Perfil de Utilizador</title>
-    
-    <link rel="stylesheet" href="css/global.css">
-    <link rel="stylesheet" href="css/perfil.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trainly - Meu Perfil</title>
+<link rel="stylesheet" href="css/global.css">
+<link rel="stylesheet" href="css/dashboard-metrics.css">
+<link rel="stylesheet" href="css/perfil.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+<?php include __DIR__ . '/includes/nav.php'; ?>
 
-    <?php include __DIR__ . '/includes/nav.php'; ?>
+<div class="profile-cover" id="profileCover">
+    <button class="btn-secondary cover-edit-btn" id="editCoverBtn">✏️ Editar capa</button>
+    <input type="file" id="coverInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
 
-    <main class="main-container">
+    <div class="profile-avatar-wrapper">
+        <div class="profile-avatar-big" id="profileAvatarBig">M</div>
+        <button class="avatar-edit-btn" id="editAvatarBtn" title="Trocar foto de perfil" aria-label="Trocar foto de perfil">✏️</button>
+        <input type="file" id="avatarInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
+    </div>
+</div>
 
-        <section class="profile-header card">
-            <div class="header-left">
-                <div class="avatar-large">
-                    <span>M</span>
-                </div>
-                <div class="profile-meta">
-                    <h1 class="user-name">Miguel Bizerra</h1>
-                    <p class="user-location">📍 Jardim do Mar, São Paulo, Brasil</p>
-                    <div id="rankWidgetPerfil" class="rank-widget rank-widget-inline"></div>
+<div class="main-container profile-container">
+
+    <div class="profile-top">
+        <div class="profile-identity">
+            <h1 id="profileName">Carregando...</h1>
+            <p class="profile-handle" id="profileHandle"></p>
+            <p class="profile-bio" id="profileBio"></p>
+        </div>
+        <div class="profile-actions">
+            <button class="btn-secondary" id="shareProfileBtn">Compartilhar Perfil</button>
+            <button class="btn-primary" id="editProfileBtn">✏️ Editar Perfil</button>
+        </div>
+    </div>
+
+    <div class="profile-stats-row">
+        <div class="profile-stat-card">
+            <div class="ps-value" id="statActivities">0</div>
+            <div class="ps-label">Atividades</div>
+        </div>
+        <div class="profile-stat-card">
+            <div class="ps-value" id="statFollowers">0</div>
+            <div class="ps-label">Seguidores</div>
+        </div>
+        <div class="profile-stat-card">
+            <div class="ps-value" id="statFollowing">0</div>
+            <div class="ps-label">Seguindo</div>
+        </div>
+        <div class="profile-stat-card">
+            <div class="ps-value" id="statKudos">0</div>
+            <div class="ps-label">Kudos recebidos</div>
+        </div>
+        <div class="profile-stat-card">
+            <div class="ps-value">0</div>
+            <div class="ps-label">Conquistas</div>
+        </div>
+    </div>
+
+    <nav class="profile-tabs-new">
+        <button class="tab-item-new active" data-tab="atividades">ATIVIDADES</button>
+        <button class="tab-item-new" data-tab="estatisticas">ESTATÍSTICAS</button>
+        <button class="tab-item-new" data-tab="conquistas">CONQUISTAS</button>
+    </nav>
+
+    <div data-tab-panel-new="atividades">
+        <div class="activities-grid" id="profileActivitiesGrid"></div>
+        <p class="empty-state" id="profileActivitiesEmpty" style="display:none; padding:32px 0; text-align:center;">
+            Você ainda não registrou nenhuma atividade.
+        </p>
+    </div>
+
+    <div data-tab-panel-new="estatisticas" style="display:none;">
+        <div class="stats-grid-2col">
+            <div class="card">
+                <h3 class="stats-card-title" id="statsYearTitle">Resumo</h3>
+                <div class="resumo-grid">
+                    <div class="resumo-item">
+                        <span class="resumo-label">Distância Total</span>
+                        <span class="resumo-value" id="perfilDistancia">0,00 km</span>
+                    </div>
+                    <div class="resumo-item">
+                        <span class="resumo-label">Tempo Ativo</span>
+                        <span class="resumo-value" id="perfilTempo">0h 0m</span>
+                    </div>
+                    <div class="resumo-item">
+                        <span class="resumo-label">Elevação Acum.</span>
+                        <span class="resumo-value" id="perfilElevacao">0 m</span>
+                    </div>
+                    <div class="resumo-item">
+                        <span class="resumo-label">Atividades</span>
+                        <span class="resumo-value" id="perfilTotalAno">0</span>
+                    </div>
+                    <div class="resumo-item">
+                        <span class="resumo-label">Dias Ativos</span>
+                        <span class="resumo-value" id="perfilDiasAtivos">0 dias</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="header-stats-summary">
-                <span class="summary-title">Últimas 4 semanas</span>
-                <div class="stats-counter">
-                    <span class="total-num" id="perfilTotalAtividades">0</span>
-                    <span class="total-label">Total de atividades</span>
-                </div>
+            <div class="card">
+                <h3 class="stats-card-title">Recordes Pessoais</h3>
+                <div id="perfilRecordesIcon"></div>
             </div>
-        </section>
-
-        <div class="content-grid">
-
-            <section class="feed-column">
-
-                <div class="card banner-card">
-                    <button class="close-btn" aria-label="Fechar">&times;</button>
-                    <div class="banner-content">
-                        <h2>Heatmaps Pessoais</h2>
-                        <p>Cria e partilha uma visualização interativa de todos os locais onde já corresteste ou pedalaste.</p>
-                        <a href="#" class="banner-link">Criar o meu Heatmap &rarr;</a>
-                    </div>
-                </div>
-
-                <nav class="profile-tabs">
-                    <button class="tab-item active" data-tab="geral">Visão Geral</button>
-                    <button class="tab-item" data-tab="seguindo">Seguindo</button>
-                    <button class="tab-item" data-tab="postagens">Postagens</button>
-                </nav>
-
-                <div data-tab-panel="geral">
-                    <div class="card activity-summary-card">
-                        <div class="activity-header">
-                            <h3>Atividades Recentes</h3>
-                            <span class="date-range">Últimos 30 dias</span>
-                        </div>
-                        <div class="summary-stats">
-                            <div class="metric">
-                                <span class="metric-val" id="perfilDistancia">0,00 km</span>
-                                <span class="metric-lbl">Distância</span>
-                            </div>
-                            <div class="metric">
-                                <span class="metric-val" id="perfilTempo">0h 0m</span>
-                                <span class="metric-lbl">Tempo Total</span>
-                            </div>
-                            <!-- Elevação: sem sensor de altitude implementado ainda, ver README-MELHORIAS.md -->
-                            <div class="metric">
-                                <span class="metric-val">—</span>
-                                <span class="metric-lbl">Elevação</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div data-tab-panel="seguindo" style="display:none;">
-                    <div class="card">
-                        <p class="empty-state">Os atletas que você segue na página Amizades aparecem aqui.</p>
-                    </div>
-                </div>
-
-                <div data-tab-panel="postagens" style="display:none;">
-                    <div class="card">
-                        <p class="empty-state">Nenhuma postagem ainda. Conclua uma atividade no mapa para compartilhar com seus amigos.</p>
-                    </div>
-                </div>
-
-            </section>
-
-            <aside class="sidebar-column">
-
-                <div class="card sidebar-block">
-                    <h2>Clubes</h2>
-                    <p class="empty-state">Ainda não estás inscrito em nenhum clube.</p>
-                </div>
-
-                <div class="card sidebar-block">
-                    <h2>Estatísticas Sociais</h2>
-                    <div class="social-counters">
-                        <div class="counter-item">
-                            <span class="label">A seguir</span>
-                            <span class="value" id="perfilSeguindo">0</span>
-                        </div>
-                        <div class="counter-item">
-                            <span class="label">Seguidores</span>
-                            <span class="value">0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card sidebar-block">
-                    <h2>Minhas Estatísticas</h2>
-                    <ul class="stats-list">
-                        <li>
-                            <span class="stat-name">Atividades / semana</span>
-                            <span class="stat-val" id="perfilAtividadesSemana">0</span>
-                        </li>
-                        <li>
-                            <span class="stat-name">Média de tempo / semana</span>
-                            <span class="stat-val" id="perfilMediaSemana">0h 0m</span>
-                        </li>
-                    </ul>
-                </div>
-
-            </aside>
-
         </div>
 
-    </main>
+        <div class="card" style="margin-top:20px;">
+            <h3 class="stats-card-title" id="consistencyTitle">Consistência</h3>
+            <div class="consistency-calendar" id="consistencyGrid"></div>
+            <div class="consistency-summary">
+                <div class="cs-item"><b id="csActiveDays">0 / 0</b><span>Dias ativos no mês</span></div>
+                <div class="cs-item"><b id="csStreak">0 dias</b><span>Maior sequência</span></div>
+                <div class="cs-item"><b id="csPct">0%</b><span>Taxa de consistência</span></div>
+            </div>
+        </div>
+    </div>
 
-    <?php include __DIR__ . '/includes/footer.php'; ?>
-    <script src="js/main.js"></script>
+    <div data-tab-panel-new="conquistas" style="display:none;">
+        <p class="empty-state" style="padding:32px 0; text-align:center;">
+            Sistema de conquistas em breve 🏅
+        </p>
+    </div>
+
+</div>
+
+<!-- Modal: editar perfil -->
+<div class="overlay" id="editProfileOverlay">
+    <div class="modal">
+        <h3>Editar Perfil</h3>
+        <div class="field">
+            <label>Nome</label>
+            <input type="text" id="epName" placeholder="Seu nome">
+        </div>
+        <div class="field">
+            <label>Localização (opcional)</label>
+            <input type="text" id="epLocation" placeholder="Ex: São Paulo, SP">
+        </div>
+        <div class="field">
+            <label>Bio (opcional, máx. 280 caracteres)</label>
+            <input type="text" id="epBio" maxlength="280" placeholder="Fale um pouco sobre você...">
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" id="cancelEditProfileBtn" type="button">Cancelar</button>
+            <button class="btn-primary" id="saveProfileBtn" type="button">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<?php include __DIR__ . '/includes/footer.php'; ?>
+<script src="js/main.js"></script>
 </body>
 </html>
