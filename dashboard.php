@@ -27,23 +27,6 @@
         <!-- Coluna principal: ações + feed -->
         <main class="feed-content-wide">
 
-            <div class="action-cards-grid">
-                <div class="card action-card">
-                    <div class="action-info">
-                        <h3>Recompensa Diária</h3>
-                        <p>Resgate seus pontos de login de hoje.</p>
-                    </div>
-                    <button class="btn-primary" id="rewardBtn">Resgatar</button>
-                </div>
-                <div class="card action-card">
-                    <div class="action-info">
-                        <h3>Atividade Bônus</h3>
-                        <p>Vá para o mapa e ganhe pontos.</p>
-                    </div>
-                    <button class="btn-secondary" onclick="window.location.href='mapa.php'">Iniciar</button>
-                </div>
-            </div>
-
             <h2 class="feed-title">FEED DE AMIGOS</h2>
 
             <div class="feed-composer">

@@ -90,8 +90,8 @@
     });
     if (res.status === 401) {
       clearToken();
-      if (!location.pathname.endsWith("login.html")) {
-        location.href = "login.html";
+      if (!location.pathname.endsWith("login.php")) {
+        location.href = "login.php";
       }
       throw new Error("Não autenticado");
     }
@@ -133,7 +133,7 @@
 
   function logout() {
     clearToken();
-    location.href = "login.html";
+    location.href = "login.php";
   }
 
   // ---- NOVO: amigos reais (por ID), busca e feed ----
@@ -1826,7 +1826,7 @@
   /* ---------------------------------------------------------
      9. AUTENTICAÇÃO (login.html) + guarda de rota
      --------------------------------------------------------- */
-  const PUBLIC_PAGES = ["login.html"];
+  const PUBLIC_PAGES = ["login.php"];
 
   function isPublicPage() {
     return PUBLIC_PAGES.some((p) => location.pathname.endsWith(p));
@@ -1846,7 +1846,7 @@
         btn.disabled = true;
         try {
           await login(email, password);
-          window.location.href = "dashboard.html";
+          window.location.href = "dashboard.php";
         } catch (err) {
           showToast(err.message || "Não foi possível entrar.");
           btn.disabled = false;
@@ -1864,7 +1864,7 @@
         btn.disabled = true;
         try {
           await register(name, email, password);
-          window.location.href = "dashboard.html";
+          window.location.href = "dashboard.php";
         } catch (err) {
           showToast(err.message || "Não foi possível criar a conta.");
           btn.disabled = false;

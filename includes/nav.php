@@ -4,7 +4,7 @@
         <div class="nav-left">
 
             <a href="/TRAINLY---TCC-/dashboard.php" class="brand-logo">
-                <img src="img/logo.png" alt="Trainly" class="logo-img">
+                <img src="img/trainly-icon.png" alt="Trainly" class="logo-img">
             </a>
 
         </div>
