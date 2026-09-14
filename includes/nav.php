@@ -78,6 +78,13 @@
 
             <button
                 class="icon-btn"
+                data-theme-toggle
+                aria-label="Trocar tema claro/escuro"
+                title="Trocar tema"
+            ></button>
+
+            <button
+                class="icon-btn"
                 data-notif
                 aria-label="Notificações"
             >

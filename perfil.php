@@ -33,6 +33,7 @@
         </div>
         <div class="profile-actions">
             <button class="btn-secondary" id="shareProfileBtn">Compartilhar Perfil</button>
+            <button class="btn-primary" id="followProfileBtn" style="display:none;">+ Seguir</button>
             <button class="btn-primary" id="editProfileBtn">✏️ Editar Perfil</button>
         </div>
     </div>

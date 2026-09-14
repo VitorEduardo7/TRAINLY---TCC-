@@ -239,6 +239,7 @@ if (preg_match('#^following/(\d+)$#', $path, $m)) {
     if ($method === 'POST') {
         $stmt = $pdo->prepare('INSERT IGNORE INTO following (user_id, followed_user_id) VALUES (?, ?)');
         $stmt->execute([$userId, $targetId]);
+        notify($pdo, $targetId, $userId, 'follow');
         json_response(['ok' => true], 201);
     }
 
@@ -275,6 +276,11 @@ if (preg_match('#^activities/(\d+)/like$#', $path, $m)) {
     if ($method === 'POST') {
         $stmt = $pdo->prepare('INSERT IGNORE INTO activity_likes (activity_id, user_id) VALUES (?, ?)');
         $stmt->execute([$activityId, $userId]);
+
+        $stmt = $pdo->prepare('SELECT user_id FROM activities WHERE id = ?');
+        $stmt->execute([$activityId]);
+        $owner = $stmt->fetch();
+        if ($owner) notify($pdo, (int) $owner['user_id'], $userId, 'like', $activityId);
     } elseif ($method === 'DELETE') {
         $stmt = $pdo->prepare('DELETE FROM activity_likes WHERE activity_id = ? AND user_id = ?');
         $stmt->execute([$activityId, $userId]);
@@ -532,6 +538,78 @@ if (preg_match('#^clubs/(\d+)/leave$#', $path, $m) && $method === 'POST') {
     $stmt = $pdo->prepare('DELETE FROM club_members WHERE club_id = ? AND user_id = ?');
     $stmt->execute([$clubId, $userId]);
     json_response(['ok' => true]);
+}
+
+// ---------------------------------------------------------------
+// GET /users/{id}/profile  (perfil público de outro usuário)
+// ---------------------------------------------------------------
+if (preg_match('#^users/(\d+)/profile$#', $path, $m) && $method === 'GET') {
+    $viewerId = require_auth();
+    $targetId = (int) $m[1];
+    $profile = build_public_profile($pdo, $targetId, $viewerId);
+    if (!$profile) json_response(['error' => 'Usuário não encontrado'], 404);
+    json_response(['profile' => $profile]);
+}
+
+// ---------------------------------------------------------------
+// GET /notifications  e  POST /notifications/read-all
+// ---------------------------------------------------------------
+if ($path === 'notifications' && $method === 'GET') {
+    $userId = require_auth();
+    $stmt = $pdo->prepare('SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND read_at IS NULL');
+    $stmt->execute([$userId]);
+    $unreadCount = (int) $stmt->fetch()['c'];
+    json_response(['notifications' => build_notifications($pdo, $userId), 'unreadCount' => $unreadCount]);
+}
+
+if ($path === 'notifications/read-all' && $method === 'POST') {
+    $userId = require_auth();
+    $stmt = $pdo->prepare('UPDATE notifications SET read_at = NOW() WHERE user_id = ? AND read_at IS NULL');
+    $stmt->execute([$userId]);
+    json_response(['ok' => true]);
+}
+
+// ---------------------------------------------------------------
+// POST /clubs/{id}/challenges  e  GET /clubs/{id}/challenges
+// ---------------------------------------------------------------
+if (preg_match('#^clubs/(\d+)/challenges$#', $path, $m)) {
+    $userId = require_auth();
+    $clubId = (int) $m[1];
+
+    if ($method === 'POST') {
+        $stmt = $pdo->prepare('SELECT created_by FROM clubs WHERE id = ?');
+        $stmt->execute([$clubId]);
+        $club = $stmt->fetch();
+        if (!$club) json_response(['error' => 'Clube não encontrado'], 404);
+        if ((int) $club['created_by'] !== $userId) {
+            json_response(['error' => 'Só o administrador do clube pode criar desafios'], 403);
+        }
+
+        $body = json_body();
+        $title = trim($body['title'] ?? '');
+        $startDate = trim($body['startDate'] ?? '');
+        $endDate = trim($body['endDate'] ?? '');
+        if (!$title || !$startDate || !$endDate) {
+            json_response(['error' => 'Preencha título, data de início e data de fim'], 400);
+        }
+
+        $stmt = $pdo->prepare('INSERT INTO club_challenges (club_id, title, start_date, end_date, created_by) VALUES (?, ?, ?, ?, ?)');
+        $stmt->execute([$clubId, $title, $startDate, $endDate, $userId]);
+        $newId = (int) $pdo->lastInsertId();
+
+        $stmt = $pdo->prepare('SELECT * FROM club_challenges WHERE id = ?');
+        $stmt->execute([$newId]);
+        json_response(['challenge' => build_challenge($pdo, $stmt->fetch())], 201);
+    }
+
+    if ($method === 'GET') {
+        $stmt = $pdo->prepare(
+            'SELECT * FROM club_challenges WHERE club_id = ? AND end_date >= CURDATE() ORDER BY start_date ASC LIMIT 1'
+        );
+        $stmt->execute([$clubId]);
+        $challenge = $stmt->fetch();
+        json_response(['challenge' => $challenge ? build_challenge($pdo, $challenge) : null]);
+    }
 }
 
 // ---------------------------------------------------------------

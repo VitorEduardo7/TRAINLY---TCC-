@@ -1,6 +1,16 @@
 <?php
 require_once __DIR__ . '/jwt.php';
 
+// Converte um DATETIME do MySQL (ex: "2026-09-07 20:30:00") pra um formato
+// que o JavaScript entende SEM reinterpretar o fuso horário. Usar
+// date('c', strtotime(...)) aqui seria um erro: isso reinterpreta o
+// horário salvo (já em horário local) como se fosse UTC, adiantando ou
+// atrasando a hora exibida em várias horas. Só trocamos o espaço por "T".
+function to_iso_local(?string $mysqlDatetime): ?string {
+    if (!$mysqlDatetime) return null;
+    return str_replace(' ', 'T', $mysqlDatetime);
+}
+
 function json_response($data, int $status = 200): void {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
@@ -61,7 +71,7 @@ function build_user_data(PDO $pdo, int $userId): ?array {
     $activities = array_map(function ($r) {
         return [
             'id' => (int) $r['id'],
-            'date' => date('c', strtotime($r['date'])), // ISO 8601
+            'date' => to_iso_local($r['date']), // ISO 8601
             'type' => $r['type'] ?: 'Corrida',
             'title' => $r['title'],
             'photoUrl' => $r['photo_path'] ?: null,
@@ -106,7 +116,138 @@ function build_user_data(PDO $pdo, int $userId): ?array {
     ];
 }
 
-// ---- NOVO: sugestões de atletas e ranking entre amigos ----
+// ---- NOVO: Perfil público de outro usuário ----
+function build_public_profile(PDO $pdo, int $targetId, int $viewerId): ?array {
+    $stmt = $pdo->prepare('SELECT id, name, bio, location, cover_photo, avatar_photo, created_at FROM users WHERE id = ?');
+    $stmt->execute([$targetId]);
+    $user = $stmt->fetch();
+    if (!$user) return null;
+
+    $stmt = $pdo->prepare(
+        'SELECT a.id, a.date, a.type, a.title, a.photo_path, a.distance_km, a.duration_sec, a.elevation_m,
+                (SELECT COUNT(*) FROM activity_likes WHERE activity_id = a.id) AS like_count,
+                (SELECT COUNT(*) FROM activity_likes WHERE activity_id = a.id AND user_id = ?) AS liked_by_me
+         FROM activities a WHERE a.user_id = ? ORDER BY a.date DESC LIMIT 12'
+    );
+    $stmt->execute([$viewerId, $targetId]);
+    $rows = $stmt->fetchAll();
+
+    $activities = array_map(function ($r) {
+        return [
+            'id' => (int) $r['id'],
+            'date' => to_iso_local($r['date']),
+            'type' => $r['type'] ?: 'Corrida',
+            'title' => $r['title'],
+            'photoUrl' => $r['photo_path'] ?: null,
+            'distanceKm' => (float) $r['distance_km'],
+            'durationSec' => (int) $r['duration_sec'],
+            'elevationM' => $r['elevation_m'] !== null ? (int) $r['elevation_m'] : null,
+            'likeCount' => (int) $r['like_count'],
+            'likedByMe' => (int) $r['liked_by_me'] > 0,
+        ];
+    }, $rows);
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) AS c FROM activities WHERE user_id = ?');
+    $stmt->execute([$targetId]);
+    $activitiesCount = (int) $stmt->fetch()['c'];
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) AS c FROM following WHERE followed_user_id = ?');
+    $stmt->execute([$targetId]);
+    $followersCount = (int) $stmt->fetch()['c'];
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) AS c FROM following WHERE user_id = ?');
+    $stmt->execute([$targetId]);
+    $followingCount = (int) $stmt->fetch()['c'];
+
+    $stmt = $pdo->prepare(
+        'SELECT COUNT(*) AS c FROM activity_likes al JOIN activities a ON a.id = al.activity_id WHERE a.user_id = ?'
+    );
+    $stmt->execute([$targetId]);
+    $kudosReceived = (int) $stmt->fetch()['c'];
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) AS c FROM following WHERE user_id = ? AND followed_user_id = ?');
+    $stmt->execute([$viewerId, $targetId]);
+    $isFollowing = (int) $stmt->fetch()['c'] > 0;
+
+    return [
+        'id' => (int) $user['id'],
+        'name' => $user['name'],
+        'bio' => $user['bio'],
+        'location' => $user['location'],
+        'coverPhotoUrl' => $user['cover_photo'],
+        'avatarPhotoUrl' => $user['avatar_photo'],
+        'memberSince' => to_iso_local($user['created_at']),
+        'activitiesCount' => $activitiesCount,
+        'followersCount' => $followersCount,
+        'followingCount' => $followingCount,
+        'kudosReceived' => $kudosReceived,
+        'isFollowing' => $isFollowing,
+        'isSelf' => $targetId === $viewerId,
+        'activities' => $activities,
+    ];
+}
+
+// ---- NOVO: Notificações ----
+function notify(PDO $pdo, int $userId, int $actorId, string $type, ?int $activityId = null): void {
+    if ($userId === $actorId) return; // não notifica a própria ação
+    $stmt = $pdo->prepare('INSERT INTO notifications (user_id, actor_id, type, activity_id) VALUES (?, ?, ?, ?)');
+    $stmt->execute([$userId, $actorId, $type, $activityId]);
+}
+
+function build_notifications(PDO $pdo, int $userId, int $limit = 20): array {
+    $stmt = $pdo->prepare(
+        'SELECT n.id, n.type, n.read_at, n.created_at, u.id AS actor_id, u.name AS actor_name,
+                a.id AS activity_id, a.title AS activity_title
+         FROM notifications n
+         JOIN users u ON u.id = n.actor_id
+         LEFT JOIN activities a ON a.id = n.activity_id
+         WHERE n.user_id = ?
+         ORDER BY n.created_at DESC
+         LIMIT ' . (int) $limit
+    );
+    $stmt->execute([$userId]);
+    $rows = $stmt->fetchAll();
+    return array_map(function ($r) {
+        return [
+            'id' => (int) $r['id'],
+            'type' => $r['type'],
+            'actorId' => (int) $r['actor_id'],
+            'actorName' => $r['actor_name'],
+            'activityId' => $r['activity_id'] !== null ? (int) $r['activity_id'] : null,
+            'activityTitle' => $r['activity_title'],
+            'read' => $r['read_at'] !== null,
+            'date' => to_iso_local($r['created_at']),
+        ];
+    }, $rows);
+}
+
+// ---- NOVO: Desafios de clube ----
+function build_challenge(PDO $pdo, array $c): array {
+    $stmt = $pdo->prepare(
+        "SELECT u.id, u.name, COALESCE(SUM(CASE WHEN a.date >= ? AND a.date < DATE_ADD(?, INTERVAL 1 DAY) THEN a.distance_km ELSE 0 END), 0) AS km
+         FROM club_members cm
+         JOIN users u ON u.id = cm.user_id
+         LEFT JOIN activities a ON a.user_id = u.id
+         WHERE cm.club_id = ?
+         GROUP BY u.id, u.name
+         ORDER BY km DESC"
+    );
+    $stmt->execute([$c['start_date'], $c['end_date'], $c['club_id']]);
+    $rows = $stmt->fetchAll();
+    $leaderboard = array_map(function ($r) {
+        return ['id' => (int) $r['id'], 'name' => $r['name'], 'km' => (float) $r['km']];
+    }, $rows);
+
+    return [
+        'id' => (int) $c['id'],
+        'title' => $c['title'],
+        'startDate' => $c['start_date'],
+        'endDate' => $c['end_date'],
+        'daysLeft' => max(0, (int) ceil((strtotime($c['end_date']) - time()) / 86400)),
+        'leaderboard' => $leaderboard,
+    ];
+}
+
 function build_suggested_user(array $r, PDO $pdo, int $currentUserId): array {
     $userId = (int) $r['id'];
 
@@ -240,7 +381,7 @@ function build_feed(PDO $pdo, int $userId, int $limit = 30): array {
     return array_map(function ($r) {
         return [
             'id' => (int) $r['id'],
-            'date' => date('c', strtotime($r['date'])),
+            'date' => to_iso_local($r['date']),
             'type' => $r['type'] ?: 'Corrida',
             'title' => $r['title'],
             'photoUrl' => $r['photo_path'] ?: null,

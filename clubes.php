@@ -61,6 +61,31 @@
     </div>
 </div>
 
+<!-- Modal: criar desafio de clube -->
+<div class="overlay" id="createChallengeOverlay">
+    <div class="modal">
+        <h3>🏆 Criar Desafio</h3>
+        <div class="field">
+            <label>Título do desafio</label>
+            <input type="text" id="chTitle" placeholder="Ex: Quem corre mais km em agosto?">
+        </div>
+        <div class="field-row">
+            <div class="field">
+                <label>Data de início</label>
+                <input type="date" id="chStart">
+            </div>
+            <div class="field">
+                <label>Data de fim</label>
+                <input type="date" id="chEnd">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" id="cancelChallengeBtn" type="button">Cancelar</button>
+            <button class="btn-primary" id="saveChallengeBtn" type="button">Criar desafio</button>
+        </div>
+    </div>
+</div>
+
 <?php include __DIR__ . '/includes/footer.php'; ?>
 <script src="js/main.js"></script>
 </body>

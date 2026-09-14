@@ -149,9 +149,40 @@
     font-weight: 700;
     display: flex; align-items: center; justify-content: center;
 }
-.rank-name { flex: 1; font-size: 14px; font-weight: 700; color: var(--text-dark); }
+.rank-name { flex: 1; font-size: 14px; font-weight: 700; color: var(--text-dark); text-decoration: none; }
+.rank-name:hover { color: var(--primary-blue); text-decoration: underline; }
 .rank-km { font-size: 15px; font-weight: 800; color: var(--primary-blue); }
 
 @media (max-width: 900px) {
     .clubes-grid { grid-template-columns: 1fr; }
+}
+
+.challenge-banner {
+    background: linear-gradient(135deg, #3a2e0f, #1a1c26);
+    border: 1px solid #f5a623;
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin-bottom: 20px;
+}
+.challenge-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.challenge-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #f5a623;
+}
+.challenge-days {
+    font-size: 13px;
+    font-weight: 700;
+    color: #f5a623;
+}
+.challenge-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text-dark);
 }

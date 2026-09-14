@@ -6,7 +6,6 @@
 <title>Trainly - Painel Inicial</title>
 <link rel="stylesheet" href="css/global.css">
 <link rel="stylesheet" href="css/dashboard.css">
-<link rel="stylesheet" href="css/dashboard-metrics.css">
 <link rel="stylesheet" href="css/feed.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>

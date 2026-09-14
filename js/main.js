@@ -196,6 +196,35 @@
     return apiRequest("/clubs/" + id + "/leave", { method: "POST" });
   }
 
+  // ---- NOVO: perfil público de outro usuário ----
+  async function getPublicProfile(id) {
+    const { profile } = await apiRequest("/users/" + id + "/profile");
+    return profile;
+  }
+
+  // ---- NOVO: notificações reais ----
+  async function getNotifications() {
+    return apiRequest("/notifications"); // { notifications, unreadCount }
+  }
+
+  async function markNotificationsRead() {
+    return apiRequest("/notifications/read-all", { method: "POST" });
+  }
+
+  // ---- NOVO: desafios de clube ----
+  async function createChallenge(clubId, title, startDate, endDate) {
+    const { challenge } = await apiRequest("/clubs/" + clubId + "/challenges", {
+      method: "POST",
+      body: JSON.stringify({ title, startDate, endDate })
+    });
+    return challenge;
+  }
+
+  async function getChallenge(clubId) {
+    const { challenge } = await apiRequest("/clubs/" + clubId + "/challenges");
+    return challenge;
+  }
+
   // ---- NOVO: editar perfil e foto de capa ----
   async function updateProfile(payload) {
     const { data } = await apiRequest("/profile", {
@@ -699,11 +728,84 @@
     if (bellBtn) {
       const panel = document.createElement("div");
       panel.className = "notif-panel";
-      panel.innerHTML =
-        '<div class="notif-panel-header">Notificações</div>' +
-        '<div class="notif-empty">Nenhuma notificação por aqui ainda.<br>Complete uma atividade para começar a receber novidades.</div>';
+      panel.innerHTML = '<div class="notif-panel-header">Notificações</div><div class="notif-empty">Carregando...</div>';
       bellBtn.parentElement.style.position = "relative";
       bellBtn.parentElement.appendChild(panel);
+
+      const badge = document.createElement("span");
+      badge.className = "notif-badge";
+      badge.style.display = "none";
+      bellBtn.style.position = "relative";
+      bellBtn.appendChild(badge);
+
+      function timeAgoShort(dateStr) {
+        const diffMs = Date.now() - new Date(dateStr).getTime();
+        const mins = Math.floor(diffMs / 60000);
+        if (mins < 1) return "agora";
+        if (mins < 60) return mins + "min";
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) return hours + "h";
+        return Math.floor(hours / 24) + "d";
+      }
+
+      function renderNotifications(notifications, unreadCount) {
+        badge.textContent = unreadCount > 9 ? "9+" : String(unreadCount);
+        badge.style.display = unreadCount > 0 ? "flex" : "none";
+
+        if (!notifications.length) {
+          panel.innerHTML =
+            '<div class="notif-panel-header">Notificações</div>' +
+            '<div class="notif-empty">Nenhuma notificação por aqui ainda.<br>Complete uma atividade para começar a receber novidades.</div>';
+          return;
+        }
+
+        const items = notifications.map((n) => {
+          const msg = n.type === "like"
+            ? "<b>" + n.actorName + "</b> curtiu sua atividade" + (n.activityTitle ? ' "' + n.activityTitle + '"' : "")
+            : "<b>" + n.actorName + "</b> começou a seguir você";
+          const icon = n.type === "like" ? "👍" : "➕";
+          return (
+            '<div class="notif-item' + (n.read ? "" : " unread") + '">' +
+              '<span class="notif-icon">' + icon + "</span>" +
+              "<div>" +
+                '<div class="notif-msg">' + msg + "</div>" +
+                '<div class="notif-time">' + timeAgoShort(n.date) + " atrás</div>" +
+              "</div>" +
+            "</div>"
+          );
+        }).join("");
+
+        panel.innerHTML =
+          '<div class="notif-panel-header">Notificações' +
+            (unreadCount > 0 ? '<button class="notif-mark-read" type="button">Marcar como lidas</button>' : "") +
+          "</div>" +
+          '<div class="notif-list">' + items + "</div>";
+
+        const markBtn = panel.querySelector(".notif-mark-read");
+        if (markBtn) {
+          markBtn.addEventListener("click", async (e) => {
+            e.stopPropagation();
+            try {
+              await markNotificationsRead();
+              badge.style.display = "none";
+              panel.querySelectorAll(".notif-item.unread").forEach((el) => el.classList.remove("unread"));
+              markBtn.remove();
+            } catch (err) { /* ignora */ }
+          });
+        }
+      }
+
+      async function loadNotifications() {
+        try {
+          const { notifications, unreadCount } = await getNotifications();
+          renderNotifications(notifications, unreadCount);
+        } catch (e) {
+          panel.innerHTML = '<div class="notif-panel-header">Notificações</div><div class="notif-empty">Não foi possível carregar.</div>';
+        }
+      }
+
+      loadNotifications();
+
       bellBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         panel.classList.toggle("open");
@@ -942,9 +1044,133 @@
     initRegisterModal(data, rankEl, () => initDashboard());
   }
 
+  // ---------------------------------------------------------
+  // NOVO: Perfil PÚBLICO de outra pessoa (via perfil.php?user=ID)
+  // ---------------------------------------------------------
+  async function renderPublicProfile(targetId) {
+    const nameEl = document.getElementById("profileName");
+    let profile;
+    try {
+      profile = await getPublicProfile(targetId);
+    } catch (e) {
+      nameEl.textContent = "Perfil não encontrado";
+      return;
+    }
+
+    // Se for o próprio perfil, manda pra versão editável normal
+    if (profile.isSelf) {
+      window.location.href = "perfil.php";
+      return;
+    }
+
+    nameEl.textContent = profile.name;
+    const handle = "@" + profile.name.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    document.getElementById("profileHandle").textContent =
+      handle + (profile.location ? " · 📍 " + profile.location : "");
+    document.getElementById("profileBio").textContent = profile.bio || "Esse atleta ainda não escreveu uma bio.";
+
+    const avatarEl = document.getElementById("profileAvatarBig");
+    if (avatarEl) {
+      if (profile.avatarPhotoUrl) {
+        avatarEl.style.backgroundImage = "url('" + profile.avatarPhotoUrl + "')";
+        avatarEl.style.backgroundSize = "cover";
+        avatarEl.style.backgroundPosition = "center";
+        avatarEl.textContent = "";
+      } else {
+        avatarEl.textContent = initials(profile.name);
+      }
+    }
+    const coverEl = document.getElementById("profileCover");
+    if (coverEl && profile.coverPhotoUrl) {
+      coverEl.style.backgroundImage = "url('" + profile.coverPhotoUrl + "')";
+    }
+
+    document.getElementById("statActivities").textContent = profile.activitiesCount;
+    document.getElementById("statFollowers").textContent = profile.followersCount;
+    document.getElementById("statFollowing").textContent = profile.followingCount;
+    document.getElementById("statKudos").textContent = profile.kudosReceived;
+
+    // Esconde tudo que só faz sentido no PRÓPRIO perfil
+    ["editCoverBtn", "editAvatarBtn", "editProfileBtn"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = "none";
+    });
+
+    // Mostra e liga o botão de Seguir
+    const followBtn = document.getElementById("followProfileBtn");
+    if (followBtn) {
+      followBtn.style.display = "";
+      const paintFollowBtn = (isFollowing) => {
+        followBtn.textContent = isFollowing ? "Seguindo" : "+ Seguir";
+        followBtn.classList.toggle("btn-secondary", isFollowing);
+        followBtn.classList.toggle("btn-primary", !isFollowing);
+      };
+      paintFollowBtn(profile.isFollowing);
+      followBtn.addEventListener("click", async () => {
+        followBtn.disabled = true;
+        try {
+          if (followBtn.textContent.trim() === "Seguindo") {
+            await unfollowUser(targetId);
+            paintFollowBtn(false);
+          } else {
+            await followUser(targetId);
+            paintFollowBtn(true);
+          }
+        } catch (e) {
+          showToast(e.message || "Não foi possível concluir a ação.");
+        } finally {
+          followBtn.disabled = false;
+        }
+      });
+    }
+
+    // Só a aba Atividades faz sentido aqui — esconde Estatísticas/Conquistas
+    document.querySelectorAll(".tab-item-new").forEach((tab) => {
+      if (tab.dataset.tab !== "atividades") tab.style.display = "none";
+    });
+
+    // Grade de atividades públicas (as mais recentes)
+    const grid = document.getElementById("profileActivitiesGrid");
+    const emptyEl = document.getElementById("profileActivitiesEmpty");
+    if (!profile.activities.length) {
+      grid.innerHTML = "";
+      emptyEl.textContent = "Esse atleta ainda não registrou nenhuma atividade.";
+      emptyEl.style.display = "block";
+    } else {
+      emptyEl.style.display = "none";
+      grid.innerHTML = profile.activities.map((a) => {
+        const d = new Date(a.date);
+        const type = a.type || "Corrida";
+        const photoStyle = a.photoUrl ? "background-image:url('" + a.photoUrl + "');" : "";
+        return (
+          '<div class="pa-card activity-item" data-activity-id="' + a.id + '">' +
+            '<div class="pa-photo" style="' + photoStyle + '"><span class="pa-badge">' + type.toUpperCase() + "</span></div>" +
+            '<div class="pa-body">' +
+              '<div class="pa-title">' + (a.title || (type + " registrada")) + "</div>" +
+              '<div class="pa-date">' + d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }) + "</div>" +
+              '<div class="pa-stats">' +
+                "<div><b>" + a.distanceKm.toFixed(1).replace(".", ",") + " km</b>Dist.</div>" +
+                "<div><b>" + formatClock(a.durationSec) + "</b>Tempo</div>" +
+                "<div><b>" + formatPace(a.durationSec / 60, a.distanceKm) + "/km</b>Ritmo</div>" +
+                '<button class="kudos-btn pa-kudos' + (a.likedByMe ? " liked" : "") + '" data-action="like">👍 <span>' + (a.likeCount || 0) + "</span></button>" +
+              "</div>" +
+            "</div>" +
+          "</div>"
+        );
+      }).join("");
+      wireActivitySocial(grid);
+    }
+  }
+
   async function initPerfil() {
     const nameEl = document.getElementById("profileName");
     if (!nameEl) return; // não é a página de perfil
+
+    // NOVO: se a URL tiver ?user=ID, mostra o perfil PÚBLICO de outra pessoa
+    const viewUserId = new URLSearchParams(location.search).get("user");
+    if (viewUserId) {
+      return renderPublicProfile(Number(viewUserId));
+    }
 
     const data = await getData();
     const stats = computeStats(data);
@@ -1094,7 +1320,7 @@
         const type = a.type || "Corrida";
         const photoStyle = a.photoUrl ? "background-image:url('" + a.photoUrl + "');" : "";
         return (
-          '<div class="pa-card">' +
+          '<div class="pa-card activity-item" data-activity-id="' + a.id + '">' +
             '<div class="pa-photo" style="' + photoStyle + '"><span class="pa-badge">' + type.toUpperCase() + "</span></div>" +
             '<div class="pa-body">' +
               '<div class="pa-title">' + (a.title || (type + " registrada")) + "</div>" +
@@ -1103,12 +1329,13 @@
                 "<div><b>" + a.distanceKm.toFixed(1).replace(".", ",") + " km</b>Dist.</div>" +
                 "<div><b>" + formatClock(a.durationSec) + "</b>Tempo</div>" +
                 "<div><b>" + formatPace(a.durationSec / 60, a.distanceKm) + "/km</b>Ritmo</div>" +
-                '<div class="pa-kudos">👍 ' + (a.likeCount || 0) + "</div>" +
+                '<button class="kudos-btn pa-kudos' + (a.likedByMe ? " liked" : "") + '" data-action="like">👍 <span>' + (a.likeCount || 0) + "</span></button>" +
               "</div>" +
             "</div>" +
           "</div>"
         );
       }).join("");
+      wireActivitySocial(grid);
     }
 
     // Abas Atividades / Estatísticas / Conquistas
@@ -1274,7 +1501,7 @@
         });
 
         viewBtn.addEventListener("click", () => {
-          showToast("Perfis públicos de outros atletas ainda estão em desenvolvimento 🚧");
+          window.location.href = "perfil.php?user=" + userId;
         });
       });
     }
@@ -1337,7 +1564,7 @@
           '<div class="lb-row">' +
             '<div class="lb-pos">' + (i + 1) + "</div>" +
             '<div class="small-avatar" style="background:' + avatarColor(m.id) + '">' + initials(m.name) + "</div>" +
-            '<div class="lb-name">' + m.name + "</div>" +
+            '<a class="lb-name" href="perfil.php?user=' + m.id + '">' + m.name + "</a>" +
             '<div class="lb-km">' + m.weekKm.toFixed(1).replace(".", ",") + " km</div>" +
           "</div>"
         )).join("");
@@ -1583,7 +1810,7 @@
           showToast("Atividade muito curta para ser salva.");
         }
         setTimeout(() => {
-          window.location.href = "dashboard.html";
+          window.location.href = "dashboard.php";
         }, 900);
       }
     }
@@ -1824,7 +2051,7 @@
   }
 
   /* ---------------------------------------------------------
-     9. AUTENTICAÇÃO (login.html) + guarda de rota
+     9. AUTENTICAÇÃO (login.php) + guarda de rota
      --------------------------------------------------------- */
   const PUBLIC_PAGES = ["login.php"];
 
@@ -1916,7 +2143,7 @@
       }
     }
 
-    function renderClubDetail(club) {
+    async function renderClubDetail(club) {
       const detailEl = document.getElementById("clubDetail");
       const medals = ["🥇", "🥈", "🥉"];
 
@@ -1925,11 +2152,24 @@
             '<div class="rank-row">' +
               '<div class="rank-pos">' + (i < 3 ? '<span class="rank-medal">' + medals[i] + "</span>" : i + 1) + "</div>" +
               '<div class="rank-avatar" style="background:' + avatarColor(m.id) + '">' + initials(m.name) + "</div>" +
-              '<div class="rank-name">' + m.name + "</div>" +
+              '<a class="rank-name" href="perfil.php?user=' + m.id + '">' + m.name + "</a>" +
               '<div class="rank-km">' + m.weekKm.toFixed(1).replace(".", ",") + " km</div>" +
             "</div>"
           )).join("")
         : '<p class="empty-state">Nenhum membro registrou km essa semana ainda.</p>';
+
+      let challenge = null;
+      try { challenge = await getChallenge(club.id); } catch (e) { /* ignora */ }
+
+      const challengeHtml = challenge
+        ? '<div class="challenge-banner">' +
+            '<div class="challenge-top">' +
+              '<span class="challenge-label">🏆 DESAFIO ATIVO</span>' +
+              '<span class="challenge-days">Termina em ' + challenge.daysLeft + (challenge.daysLeft === 1 ? " dia" : " dias") + "</span>" +
+            "</div>" +
+            '<div class="challenge-title">' + challenge.title + "</div>" +
+          "</div>"
+        : "";
 
       detailEl.innerHTML =
         '<div class="club-detail-header">' +
@@ -1937,8 +2177,12 @@
             '<div class="club-detail-title">' + club.name + "</div>" +
             '<div class="club-detail-sub">' + (club.description || "Sem descrição") + " · " + club.memberCount + " membros</div>" +
           "</div>" +
-          (club.isAdmin ? "" : '<button class="btn-secondary" id="leaveClubBtn">Sair do clube</button>') +
+          '<div style="display:flex;gap:10px;">' +
+            (club.isAdmin ? '<button class="btn-secondary" id="openChallengeBtn">🏆 Criar Desafio</button>' : "") +
+            (club.isAdmin ? "" : '<button class="btn-secondary" id="leaveClubBtn">Sair do clube</button>') +
+          "</div>" +
         "</div>" +
+        challengeHtml +
         '<div class="club-invite-box">' +
           "<div>" +
             '<div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Código de convite</div>' +
@@ -1950,6 +2194,11 @@
           '<div class="club-ranking-title">🏆 Ranking da semana</div>' +
           rankingHtml +
         "</div>";
+
+      const openChallengeBtn = document.getElementById("openChallengeBtn");
+      if (openChallengeBtn) {
+        openChallengeBtn.addEventListener("click", () => openChallengeModal(club.id));
+      }
 
       const copyBtn = document.getElementById("copyInviteBtn");
       if (copyBtn) {
@@ -1970,6 +2219,52 @@
             loadMyClubs();
           } catch (e) {
             showToast(e.message || "Não foi possível sair do clube.");
+          }
+        });
+      }
+    }
+
+    // Modal: criar desafio de clube
+    function openChallengeModal(clubId) {
+      const overlay = document.getElementById("createChallengeOverlay");
+      if (!overlay) return;
+      document.getElementById("chTitle").value = "";
+      const today = new Date().toISOString().slice(0, 10);
+      const in30days = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+      document.getElementById("chStart").value = today;
+      document.getElementById("chEnd").value = in30days;
+      overlay.classList.add("open");
+      overlay.dataset.clubId = clubId;
+    }
+
+    const challengeOverlay = document.getElementById("createChallengeOverlay");
+    if (challengeOverlay) {
+      const cancelBtn = document.getElementById("cancelChallengeBtn");
+      const saveBtn = document.getElementById("saveChallengeBtn");
+      if (cancelBtn) cancelBtn.addEventListener("click", () => challengeOverlay.classList.remove("open"));
+      challengeOverlay.addEventListener("click", (e) => { if (e.target === challengeOverlay) challengeOverlay.classList.remove("open"); });
+
+      if (saveBtn) {
+        saveBtn.addEventListener("click", async () => {
+          const title = document.getElementById("chTitle").value.trim();
+          const startDate = document.getElementById("chStart").value;
+          const endDate = document.getElementById("chEnd").value;
+          const clubId = challengeOverlay.dataset.clubId;
+
+          if (!title || !startDate || !endDate) {
+            showToast("Preencha todos os campos.");
+            return;
+          }
+          saveBtn.disabled = true;
+          try {
+            await createChallenge(clubId, title, startDate, endDate);
+            showToast("Desafio criado!");
+            challengeOverlay.classList.remove("open");
+            selectClub(Number(clubId));
+          } catch (e) {
+            showToast(e.message || "Não foi possível criar o desafio.");
+          } finally {
+            saveBtn.disabled = false;
           }
         });
       }
@@ -2047,9 +2342,43 @@
   }
 
   /* ---------------------------------------------------------
+     NOVO: Modo claro / escuro
+     --------------------------------------------------------- */
+  const THEME_KEY = "trainly_theme";
+  const SUN_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
+  const MOON_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+  }
+
+  function initTheme() {
+    const saved = localStorage.getItem(THEME_KEY) || "dark";
+    applyTheme(saved);
+
+    const toggle = document.querySelector("[data-theme-toggle]");
+    if (!toggle) return;
+
+    // Mostra o ícone do modo PRA ONDE vai mudar (lua = "trocar pra escuro" quando já tá claro, etc.)
+    const paintIcon = (theme) => {
+      toggle.innerHTML = theme === "light" ? MOON_ICON : SUN_ICON;
+    };
+    paintIcon(saved);
+
+    toggle.addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+      const next = current === "light" ? "dark" : "light";
+      applyTheme(next);
+      localStorage.setItem(THEME_KEY, next);
+      paintIcon(next);
+    });
+  }
+
+  /* ---------------------------------------------------------
      BOOT
      --------------------------------------------------------- */
   document.addEventListener("DOMContentLoaded", () => {
+    initTheme();
     initNavbar();
 
     if (isPublicPage()) {
@@ -2059,7 +2388,7 @@
 
     // Páginas protegidas: sem token, manda pro login.
     if (!getToken()) {
-      window.location.href = "login.html";
+      window.location.href = "login.php";
       return;
     }
 
