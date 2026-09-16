@@ -175,7 +175,7 @@ if ($path === 'users/search' && $method === 'GET') {
         json_response(['users' => []]);
     }
 
-    $stmt = $pdo->prepare('SELECT id, name, location FROM users WHERE id <> ? AND name LIKE ? ORDER BY name ASC LIMIT 20');
+    $stmt = $pdo->prepare('SELECT id, name, location, avatar_photo FROM users WHERE id <> ? AND name LIKE ? ORDER BY name ASC LIMIT 20');
     $stmt->execute([$userId, '%' . $q . '%']);
     $rows = $stmt->fetchAll();
 
@@ -189,7 +189,7 @@ if ($path === 'users/suggested' && $method === 'GET') {
     $userId = require_auth();
 
     $stmt = $pdo->prepare(
-        "SELECT u.id, u.name, u.location FROM users u
+        "SELECT u.id, u.name, u.location, u.avatar_photo FROM users u
          WHERE u.id <> ?
            AND u.id NOT IN (SELECT followed_user_id FROM following WHERE user_id = ?)
          ORDER BY RAND()
@@ -297,17 +297,29 @@ if (preg_match('#^activities/(\d+)/like$#', $path, $m)) {
 // GET /routes?type=Todos|Corrida|Ciclismo|Trilha
 // ---------------------------------------------------------------
 if ($path === 'routes' && $method === 'GET') {
-    require_auth();
+    $userId = require_auth();
     $type = trim($_GET['type'] ?? 'Todos');
 
-    if ($type === 'Todos' || $type === '') {
-        $stmt = $pdo->query('SELECT * FROM routes ORDER BY created_at DESC');
-    } else {
-        $stmt = $pdo->prepare('SELECT * FROM routes WHERE type = ? ORDER BY created_at DESC');
-        $stmt->execute([$type]);
+    $sql = "SELECT r.*, u.name AS creator_name FROM routes r
+            JOIN users u ON u.id = r.user_id
+            WHERE (r.user_id = ? OR r.user_id IN (SELECT followed_user_id FROM following WHERE user_id = ?))";
+    $params = [$userId, $userId];
+
+    if ($type !== 'Todos' && $type !== '') {
+        $sql .= ' AND r.type = ?';
+        $params[] = $type;
     }
+    $sql .= ' ORDER BY r.created_at DESC';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
     $rows = $stmt->fetchAll();
-    json_response(['routes' => array_map('build_route', $rows)]);
+
+    $routes = array_map(function ($r) use ($userId) {
+        return build_route($r, $userId);
+    }, $rows);
+
+    json_response(['routes' => $routes]);
 }
 
 // ---------------------------------------------------------------
@@ -339,9 +351,62 @@ if ($path === 'routes' && $method === 'POST') {
     $stmt->execute([$userId, $name, $type, $difficulty, $terrain, $distanceKm, $elevationM, $startLat, $startLng, json_encode($path)]);
 
     $newId = (int) $pdo->lastInsertId();
-    $stmt = $pdo->prepare('SELECT * FROM routes WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT r.*, u.name AS creator_name FROM routes r JOIN users u ON u.id = r.user_id WHERE r.id = ?');
     $stmt->execute([$newId]);
-    json_response(['route' => build_route($stmt->fetch())], 201);
+    json_response(['route' => build_route($stmt->fetch(), $userId)], 201);
+}
+
+// ---------------------------------------------------------------
+// PUT /routes/{id}   e   DELETE /routes/{id}   (editar/apagar rota própria)
+// ---------------------------------------------------------------
+if (preg_match('#^routes/(\d+)$#', $path, $m)) {
+    $userId = require_auth();
+    $routeId = (int) $m[1];
+
+    $stmt = $pdo->prepare('SELECT user_id FROM routes WHERE id = ?');
+    $stmt->execute([$routeId]);
+    $existing = $stmt->fetch();
+    if (!$existing) {
+        json_response(['error' => 'Rota não encontrada'], 404);
+    }
+    if ((int) $existing['user_id'] !== $userId) {
+        json_response(['error' => 'Você só pode editar ou apagar rotas que você mesmo criou'], 403);
+    }
+
+    if ($method === 'PUT') {
+        $body = json_body();
+
+        $name = trim($body['name'] ?? '');
+        $type = trim($body['type'] ?? '') ?: 'Corrida';
+        $difficulty = trim($body['difficulty'] ?? '') ?: 'Iniciante';
+        $terrain = trim($body['terrain'] ?? '') ?: null;
+        $distanceKm = (float) ($body['distanceKm'] ?? 0);
+        $elevationM = (int) ($body['elevationM'] ?? 0);
+        $routePath = $body['path'] ?? [];
+
+        if (!$name || $distanceKm <= 0 || count($routePath) < 2) {
+            json_response(['error' => 'Preencha o nome, a distância e marque ao menos 2 pontos no mapa'], 400);
+        }
+
+        $startLat = $routePath[0][0];
+        $startLng = $routePath[0][1];
+
+        $stmt = $pdo->prepare(
+            'UPDATE routes SET name = ?, type = ?, difficulty = ?, terrain = ?, distance_km = ?, elevation_m = ?, start_lat = ?, start_lng = ?, path_json = ?
+             WHERE id = ?'
+        );
+        $stmt->execute([$name, $type, $difficulty, $terrain, $distanceKm, $elevationM, $startLat, $startLng, json_encode($routePath), $routeId]);
+
+        $stmt = $pdo->prepare('SELECT r.*, u.name AS creator_name FROM routes r JOIN users u ON u.id = r.user_id WHERE r.id = ?');
+        $stmt->execute([$routeId]);
+        json_response(['route' => build_route($stmt->fetch(), $userId)]);
+    }
+
+    if ($method === 'DELETE') {
+        $stmt = $pdo->prepare('DELETE FROM routes WHERE id = ?');
+        $stmt->execute([$routeId]);
+        json_response(['ok' => true]);
+    }
 }
 
 // ---------------------------------------------------------------
@@ -527,6 +592,42 @@ if (preg_match('#^clubs/(\d+)$#', $path, $m) && $method === 'GET') {
     $detail = build_club($club, $pdo, $userId);
     $detail['leaderboard'] = build_club_leaderboard($pdo, $clubId);
     json_response(['club' => $detail]);
+}
+
+// ---------------------------------------------------------------
+// PUT /clubs/{id}   e   DELETE /clubs/{id}   (editar/apagar clube, só admin)
+// ---------------------------------------------------------------
+if (preg_match('#^clubs/(\d+)$#', $path, $m) && in_array($method, ['PUT', 'DELETE'])) {
+    $userId = require_auth();
+    $clubId = (int) $m[1];
+
+    $stmt = $pdo->prepare('SELECT created_by FROM clubs WHERE id = ?');
+    $stmt->execute([$clubId]);
+    $club = $stmt->fetch();
+    if (!$club) json_response(['error' => 'Clube não encontrado'], 404);
+    if ((int) $club['created_by'] !== $userId) {
+        json_response(['error' => 'Só quem criou o clube pode editar ou apagar'], 403);
+    }
+
+    if ($method === 'PUT') {
+        $body = json_body();
+        $name = trim($body['name'] ?? '');
+        $description = trim($body['description'] ?? '') ?: null;
+        if (!$name) json_response(['error' => 'Nome do clube é obrigatório'], 400);
+
+        $stmt = $pdo->prepare('UPDATE clubs SET name = ?, description = ? WHERE id = ?');
+        $stmt->execute([$name, $description, $clubId]);
+
+        $stmt = $pdo->prepare('SELECT * FROM clubs WHERE id = ?');
+        $stmt->execute([$clubId]);
+        json_response(['club' => build_club($stmt->fetch(), $pdo, $userId)]);
+    }
+
+    if ($method === 'DELETE') {
+        $stmt = $pdo->prepare('DELETE FROM clubs WHERE id = ?');
+        $stmt->execute([$clubId]);
+        json_response(['ok' => true]);
+    }
 }
 
 // ---------------------------------------------------------------

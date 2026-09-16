@@ -196,6 +196,18 @@
     return apiRequest("/clubs/" + id + "/leave", { method: "POST" });
   }
 
+  async function updateClub(id, name, description) {
+    const { club } = await apiRequest("/clubs/" + id, {
+      method: "PUT",
+      body: JSON.stringify({ name, description })
+    });
+    return club;
+  }
+
+  async function deleteClub(id) {
+    return apiRequest("/clubs/" + id, { method: "DELETE" });
+  }
+
   // ---- NOVO: perfil público de outro usuário ----
   async function getPublicProfile(id) {
     const { profile } = await apiRequest("/users/" + id + "/profile");
@@ -535,6 +547,14 @@
     return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
   }
 
+  // NOVO: gera o HTML de um avatar — foto real se existir, senão iniciais coloridas
+  function avatarHtml(className, id, name, photoUrl) {
+    if (photoUrl) {
+      return '<div class="' + className + '" style="background-image:url(\'' + photoUrl + '\');background-size:cover;background-position:center;"></div>';
+    }
+    return '<div class="' + className + '" style="background:' + avatarColor(id) + '">' + initials(name) + "</div>";
+  }
+
   function initials(name) {
     return name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   }
@@ -573,7 +593,7 @@
         '<div class="feed-post">' +
           '<div class="feed-post-top">' +
             '<div class="feed-post-author">' +
-              '<div class="feed-avatar" style="background:' + avatarColor(p.authorId) + '">' + initials(p.authorName) + "</div>" +
+              avatarHtml("feed-avatar", p.authorId, p.authorName, p.authorAvatarUrl) +
               "<div>" +
                 '<div class="feed-author-name">' + p.authorName + "</div>" +
                 '<div class="feed-post-meta">' + timeAgo(p.date) + " · " + type + " " + icon + "</div>" +
@@ -632,7 +652,7 @@
       const icon = TYPE_ICONS[a.type] || "🏃";
       return (
         '<div class="active-friend-row">' +
-          '<div class="feed-avatar small" style="background:' + avatarColor(a.id) + '">' + initials(a.name) + "</div>" +
+          avatarHtml("feed-avatar small", a.id, a.name, a.avatarPhotoUrl) +
           "<div>" +
             '<div class="active-friend-name">' + a.name + "</div>" +
             '<div class="active-friend-meta">' + a.type + " · " + a.distanceKm.toFixed(1).replace(".", ",") + " km</div>" +
@@ -987,7 +1007,16 @@
       greetingEl.textContent = saud + ", " + firstName.toUpperCase() + " 👋";
     }
     const composerAvatar = document.getElementById("composerAvatar");
-    if (composerAvatar) composerAvatar.textContent = initials(data.name || "?");
+    if (composerAvatar) {
+      if (data.avatarPhotoUrl) {
+        composerAvatar.style.backgroundImage = "url('" + data.avatarPhotoUrl + "')";
+        composerAvatar.style.backgroundSize = "cover";
+        composerAvatar.style.backgroundPosition = "center";
+        composerAvatar.textContent = "";
+      } else {
+        composerAvatar.textContent = initials(data.name || "?");
+      }
+    }
 
     // O widget de patente e o nome não aparecem mais no dashboard
     // (ficaram só na página de Perfil), mas seguem funcionando lá.
@@ -1459,7 +1488,7 @@
 
       grid.innerHTML = users.map((u) => (
         '<div class="user-card" data-user-id="' + u.id + '">' +
-          '<div class="user-card-avatar" style="background:' + avatarColor(u.id) + '">' + initials(u.name) + "</div>" +
+          avatarHtml("user-card-avatar", u.id, u.name, u.avatarPhotoUrl) +
           '<div class="user-card-name">' + u.name + "</div>" +
           '<div class="user-card-location">' + (u.location || "Localização não informada") + "</div>" +
           '<div class="user-card-stats">' +
@@ -1563,7 +1592,7 @@
         lbEl.innerHTML = leaderboard.map((m, i) => (
           '<div class="lb-row">' +
             '<div class="lb-pos">' + (i + 1) + "</div>" +
-            '<div class="small-avatar" style="background:' + avatarColor(m.id) + '">' + initials(m.name) + "</div>" +
+            avatarHtml("small-avatar", m.id, m.name, m.avatarPhotoUrl) +
             '<a class="lb-name" href="perfil.php?user=' + m.id + '">' + m.name + "</a>" +
             '<div class="lb-km">' + m.weekKm.toFixed(1).replace(".", ",") + " km</div>" +
           "</div>"
@@ -1682,6 +1711,18 @@
       body: JSON.stringify(payload)
     });
     return route;
+  }
+
+  async function updateRoute(id, payload) {
+    const { route } = await apiRequest("/routes/" + id, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    });
+    return route;
+  }
+
+  async function deleteRoute(id) {
+    return apiRequest("/routes/" + id, { method: "DELETE" });
   }
 
   function haversineKm(lat1, lon1, lat2, lon2) {
@@ -1826,8 +1867,9 @@
   const ROUTE_TYPE_COLOR = { Corrida: "#3b82f6", Ciclismo: "#10b981", Trilha: "#f59e0b" };
 
   function initExplorar() {
-    const listEl = document.getElementById("routesList");
-    if (!listEl || typeof L === "undefined") return; // não é a página Explorar
+    const myListEl = document.getElementById("myRoutesList");
+    if (!myListEl || typeof L === "undefined") return; // não é a página Explorar
+    const friendsListEl = document.getElementById("friendsRoutesList");
 
     let allRoutes = [];
     let selectedId = null;
@@ -1861,7 +1903,7 @@
       bar.innerHTML =
         "<div>" +
           '<div class="route-detail-title">' + route.name + "</div>" +
-          '<div class="route-detail-sub">' + route.type + " · " + route.difficulty + (route.terrain ? " · " + route.terrain : "") + "</div>" +
+          '<div class="route-detail-sub">' + route.type + " · " + route.difficulty + (route.terrain ? " · " + route.terrain : "") + (route.isMine ? "" : " · por " + route.creatorName) + "</div>" +
         "</div>" +
         '<div class="route-detail-stats">' +
           '<div><div class="rd-label">Distância</div><div class="rd-value">' + route.distanceKm.toFixed(1).replace(".", ",") + " km</div></div>" +
@@ -1871,17 +1913,23 @@
         '<a class="btn-primary" href="mapa.php?startLat=' + route.startLat + "&startLng=" + route.startLng + '" style="text-decoration:none;">Iniciar Rota →</a>';
     }
 
-    function renderList(routes) {
-      const emptyEl = document.getElementById("routesEmpty");
+    function selectRoute(id) {
+      selectedId = id;
+      const route = allRoutes.find((r) => r.id === id);
+      document.querySelectorAll(".route-card").forEach((c) => c.classList.toggle("selected", Number(c.dataset.routeId) === id));
+      drawRouteOnMap(route);
+      renderDetailBar(route);
+    }
+
+    function renderGroup(containerEl, emptyEl, routes, showCreator) {
       if (!routes.length) {
-        listEl.innerHTML = "";
+        containerEl.innerHTML = "";
         emptyEl.style.display = "block";
-        renderDetailBar(null);
         return;
       }
       emptyEl.style.display = "none";
 
-      listEl.innerHTML = routes.map((r) => {
+      containerEl.innerHTML = routes.map((r) => {
         const icon = ROUTE_TYPE_ICON[r.type] || "🏃";
         const color = ROUTE_TYPE_COLOR[r.type] || "#3b82f6";
         return (
@@ -1893,27 +1941,46 @@
                 '<div class="route-meta">' + r.type + (r.ratingAvg ? " · ★ " + r.ratingAvg + " (" + r.ratingCount + ")" : "") + "</div>" +
                 '<div class="route-stats">' + r.distanceKm.toFixed(1).replace(".", ",") + " km <span>↑ " + r.elevationM + "m</span></div>" +
                 '<div class="route-tags"><span class="route-tag">' + r.difficulty + "</span>" + (r.terrain ? '<span class="route-tag">' + r.terrain + "</span>" : "") + "</div>" +
+                (showCreator ? '<div class="route-creator">por ' + r.creatorName + "</div>" : "") +
               "</div>" +
+              (!showCreator ? (
+                '<div class="route-card-actions">' +
+                  '<button class="route-icon-btn" data-edit-route="' + r.id + '" title="Editar" aria-label="Editar rota">' +
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"></path></svg>' +
+                  "</button>" +
+                  '<button class="route-icon-btn danger" data-delete-route="' + r.id + '" title="Apagar" aria-label="Apagar rota">' +
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>' +
+                  "</button>" +
+                "</div>"
+              ) : "") +
             "</div>" +
           "</div>"
         );
       }).join("");
 
-      listEl.querySelectorAll(".route-card").forEach((card) => {
-        card.addEventListener("click", () => {
-          const id = Number(card.dataset.routeId);
-          selectedId = id;
-          const route = allRoutes.find((r) => r.id === id);
-          listEl.querySelectorAll(".route-card").forEach((c) => c.classList.remove("selected"));
-          card.classList.add("selected");
-          drawRouteOnMap(route);
-          renderDetailBar(route);
+      containerEl.querySelectorAll(".route-card").forEach((card) => {
+        card.addEventListener("click", (e) => {
+          if (e.target.closest("[data-edit-route], [data-delete-route]")) return;
+          selectRoute(Number(card.dataset.routeId));
         });
       });
+    }
 
-      // Seleciona a primeira rota automaticamente
-      if (!selectedId && routes.length) {
-        listEl.querySelector(".route-card").click();
+    function renderList(routes) {
+      const myRoutes = routes.filter((r) => r.isMine);
+      const friendsRoutes = routes.filter((r) => !r.isMine);
+
+      renderGroup(myListEl, document.getElementById("myRoutesEmpty"), myRoutes, false);
+      renderGroup(friendsListEl, document.getElementById("friendsRoutesEmpty"), friendsRoutes, true);
+
+      if (!routes.length) {
+        renderDetailBar(null);
+        return;
+      }
+
+      // Seleciona a primeira rota automaticamente (prioriza as minhas)
+      if (!selectedId || !routes.some((r) => r.id === selectedId)) {
+        selectRoute((myRoutes[0] || friendsRoutes[0]).id);
       }
     }
 
@@ -1944,13 +2011,15 @@
       searchTimer = setTimeout(loadAndRender, 300);
     });
 
-    /* ---- Modal: adicionar rota nova ---- */
+    /* ---- Modal: adicionar/editar rota ---- */
     const addOverlay = document.getElementById("addRouteOverlay");
     const openAddBtn = document.getElementById("openAddRouteBtn");
     const cancelAddBtn = document.getElementById("cancelAddRouteBtn");
     const saveRouteBtn = document.getElementById("saveRouteBtn");
     const undoPointBtn = document.getElementById("undoPointBtn");
+    const modalTitleEl = document.querySelector("#addRouteOverlay h3");
     let drawMap, drawPoints = [], drawPolyline, drawMarkers = [];
+    let editingRouteId = null;
 
     function setupDrawMap() {
       if (drawMap) return; // só inicializa uma vez
@@ -1967,7 +2036,7 @@
 
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition((pos) => {
-          drawMap.setView([pos.coords.latitude, pos.coords.longitude], 14);
+          if (!drawPoints.length) drawMap.setView([pos.coords.latitude, pos.coords.longitude], 14);
         });
       }
     }
@@ -1982,6 +2051,7 @@
       });
       if (drawPoints.length > 1) {
         drawPolyline = L.polyline(drawPoints, { color: "#3b82f6", weight: 4 }).addTo(drawMap);
+        drawMap.fitBounds(drawPolyline.getBounds(), { padding: [20, 20] });
       }
 
       document.getElementById("drawPointsCount").textContent = drawPoints.length + " pontos marcados";
@@ -1994,10 +2064,15 @@
     }
 
     function openAddModal() {
+      editingRouteId = null;
+      if (modalTitleEl) modalTitleEl.textContent = "Adicionar Rota";
+      if (saveRouteBtn) saveRouteBtn.textContent = "Salvar rota";
       addOverlay.classList.add("open");
       document.getElementById("rName").value = "";
       document.getElementById("rElev").value = "";
       document.getElementById("rTerrain").value = "";
+      document.getElementById("rType").value = "Corrida";
+      document.getElementById("rDifficulty").value = "Iniciante";
       drawPoints = [];
       setTimeout(() => {
         setupDrawMap();
@@ -2005,6 +2080,26 @@
         redrawDrawMap();
       }, 50);
     }
+
+    function openEditModal(route) {
+      editingRouteId = route.id;
+      if (modalTitleEl) modalTitleEl.textContent = "Editar Rota";
+      if (saveRouteBtn) saveRouteBtn.textContent = "Salvar alterações";
+      addOverlay.classList.add("open");
+      document.getElementById("rName").value = route.name;
+      document.getElementById("rType").value = route.type;
+      document.getElementById("rDifficulty").value = route.difficulty;
+      document.getElementById("rElev").value = route.elevationM || "";
+      document.getElementById("rTerrain").value = route.terrain || "";
+      document.getElementById("rDist").value = route.distanceKm;
+      drawPoints = route.path.map((p) => [p[0], p[1]]);
+      setTimeout(() => {
+        setupDrawMap();
+        drawMap.invalidateSize();
+        redrawDrawMap();
+      }, 50);
+    }
+
     function closeAddModal() {
       addOverlay.classList.remove("open");
     }
@@ -2034,20 +2129,51 @@
         }
 
         saveRouteBtn.disabled = true;
-        saveRouteBtn.textContent = "Salvando...";
+        saveRouteBtn.textContent = editingRouteId ? "Salvando..." : "Salvando...";
         try {
-          await createRoute({ name, type, difficulty, terrain, distanceKm, elevationM, path: drawPoints });
-          showToast("Rota cadastrada com sucesso!");
+          const payload = { name, type, difficulty, terrain, distanceKm, elevationM, path: drawPoints };
+          if (editingRouteId) {
+            await updateRoute(editingRouteId, payload);
+            showToast("Rota atualizada!");
+          } else {
+            await createRoute(payload);
+            showToast("Rota cadastrada com sucesso!");
+          }
           closeAddModal();
           loadAndRender();
         } catch (e) {
           showToast(e.message || "Não foi possível salvar a rota.");
         } finally {
           saveRouteBtn.disabled = false;
-          saveRouteBtn.textContent = "Salvar rota";
+          saveRouteBtn.textContent = editingRouteId ? "Salvar alterações" : "Salvar rota";
         }
       });
     }
+
+    // Editar/apagar (delegação de eventos pros botões dentro dos cards de "Minhas Rotas")
+    myListEl.addEventListener("click", async (e) => {
+      const editBtn = e.target.closest("[data-edit-route]");
+      const delBtn = e.target.closest("[data-delete-route]");
+      if (editBtn) {
+        e.stopPropagation();
+        const route = allRoutes.find((r) => r.id === Number(editBtn.dataset.editRoute));
+        if (route) openEditModal(route);
+        return;
+      }
+      if (delBtn) {
+        e.stopPropagation();
+        const id = Number(delBtn.dataset.deleteRoute);
+        const route = allRoutes.find((r) => r.id === id);
+        if (!confirm('Tem certeza que quer apagar a rota "' + (route ? route.name : "") + '"?')) return;
+        try {
+          await deleteRoute(id);
+          showToast("Rota apagada.");
+          loadAndRender();
+        } catch (err) {
+          showToast(err.message || "Não foi possível apagar a rota.");
+        }
+      }
+    });
   }
 
   /* ---------------------------------------------------------
@@ -2151,7 +2277,7 @@
         ? club.leaderboard.map((m, i) => (
             '<div class="rank-row">' +
               '<div class="rank-pos">' + (i < 3 ? '<span class="rank-medal">' + medals[i] + "</span>" : i + 1) + "</div>" +
-              '<div class="rank-avatar" style="background:' + avatarColor(m.id) + '">' + initials(m.name) + "</div>" +
+              avatarHtml("rank-avatar", m.id, m.name, m.avatarPhotoUrl) +
               '<a class="rank-name" href="perfil.php?user=' + m.id + '">' + m.name + "</a>" +
               '<div class="rank-km">' + m.weekKm.toFixed(1).replace(".", ",") + " km</div>" +
             "</div>"
@@ -2177,9 +2303,17 @@
             '<div class="club-detail-title">' + club.name + "</div>" +
             '<div class="club-detail-sub">' + (club.description || "Sem descrição") + " · " + club.memberCount + " membros</div>" +
           "</div>" +
-          '<div style="display:flex;gap:10px;">' +
+          '<div style="display:flex;align-items:center;gap:10px;">' +
             (club.isAdmin ? '<button class="btn-secondary" id="openChallengeBtn">🏆 Criar Desafio</button>' : "") +
             (club.isAdmin ? "" : '<button class="btn-secondary" id="leaveClubBtn">Sair do clube</button>') +
+            (club.isAdmin ? (
+              '<button class="route-icon-btn" id="editClubBtn" title="Editar clube" aria-label="Editar clube">' +
+                '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"></path></svg>' +
+              "</button>" +
+              '<button class="route-icon-btn danger" id="deleteClubBtn" title="Apagar clube" aria-label="Apagar clube">' +
+                '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>' +
+              "</button>"
+            ) : "") +
           "</div>" +
         "</div>" +
         challengeHtml +
@@ -2222,6 +2356,37 @@
           }
         });
       }
+
+      const editClubBtn = document.getElementById("editClubBtn");
+      if (editClubBtn) {
+        editClubBtn.addEventListener("click", () => openEditClubModal(club));
+      }
+      const deleteClubBtn = document.getElementById("deleteClubBtn");
+      if (deleteClubBtn) {
+        deleteClubBtn.addEventListener("click", async () => {
+          if (!confirm('Tem certeza que quer apagar o clube "' + club.name + '"? Essa ação não pode ser desfeita.')) return;
+          try {
+            await deleteClub(club.id);
+            showToast("Clube apagado.");
+            selectedClubId = null;
+            document.getElementById("clubDetail").innerHTML = '<p class="empty-state" style="padding:60px 0;text-align:center;">Selecione um clube na lista ao lado.</p>';
+            loadMyClubs();
+          } catch (e) {
+            showToast(e.message || "Não foi possível apagar o clube.");
+          }
+        });
+      }
+    }
+
+    // Modal: editar clube (reaproveita o modal de criar)
+    function openEditClubModal(club) {
+      const overlay = document.getElementById("createClubOverlay");
+      document.querySelector("#createClubOverlay h3").textContent = "Editar Clube";
+      document.getElementById("ccName").value = club.name;
+      document.getElementById("ccDescription").value = club.description || "";
+      document.getElementById("saveCreateClubBtn").textContent = "Salvar alterações";
+      overlay.dataset.editingClubId = club.id;
+      overlay.classList.add("open");
     }
 
     // Modal: criar desafio de clube
@@ -2287,6 +2452,9 @@
       openCreateBtn.addEventListener("click", () => {
         document.getElementById("ccName").value = "";
         document.getElementById("ccDescription").value = "";
+        document.querySelector("#createClubOverlay h3").textContent = "Criar Clube";
+        saveCreateBtn.textContent = "Criar";
+        delete createOverlay.dataset.editingClubId;
         createOverlay.classList.add("open");
       });
     }
@@ -2301,15 +2469,25 @@
           showToast("Digite um nome para o clube.");
           return;
         }
+        const editingId = createOverlay.dataset.editingClubId;
         saveCreateBtn.disabled = true;
         try {
-          const club = await createClub(name, description);
-          showToast("Clube criado!");
-          createOverlay.classList.remove("open");
-          await loadMyClubs();
-          selectClub(club.id);
+          if (editingId) {
+            await updateClub(editingId, name, description);
+            showToast("Clube atualizado!");
+            createOverlay.classList.remove("open");
+            delete createOverlay.dataset.editingClubId;
+            await loadMyClubs();
+            selectClub(Number(editingId));
+          } else {
+            const club = await createClub(name, description);
+            showToast("Clube criado!");
+            createOverlay.classList.remove("open");
+            await loadMyClubs();
+            selectClub(club.id);
+          }
         } catch (e) {
-          showToast(e.message || "Não foi possível criar o clube.");
+          showToast(e.message || "Não foi possível salvar o clube.");
         } finally {
           saveCreateBtn.disabled = false;
         }
@@ -2350,6 +2528,9 @@
 
   function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
+    document.querySelectorAll(".logo-img").forEach((img) => {
+      img.src = theme === "light" ? "img/trainly-icon-light.png" : "img/trainly-icon.png";
+    });
   }
 
   function initTheme() {

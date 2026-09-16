@@ -224,18 +224,18 @@ function build_notifications(PDO $pdo, int $userId, int $limit = 20): array {
 // ---- NOVO: Desafios de clube ----
 function build_challenge(PDO $pdo, array $c): array {
     $stmt = $pdo->prepare(
-        "SELECT u.id, u.name, COALESCE(SUM(CASE WHEN a.date >= ? AND a.date < DATE_ADD(?, INTERVAL 1 DAY) THEN a.distance_km ELSE 0 END), 0) AS km
+        "SELECT u.id, u.name, u.avatar_photo, COALESCE(SUM(CASE WHEN a.date >= ? AND a.date < DATE_ADD(?, INTERVAL 1 DAY) THEN a.distance_km ELSE 0 END), 0) AS km
          FROM club_members cm
          JOIN users u ON u.id = cm.user_id
          LEFT JOIN activities a ON a.user_id = u.id
          WHERE cm.club_id = ?
-         GROUP BY u.id, u.name
+         GROUP BY u.id, u.name, u.avatar_photo
          ORDER BY km DESC"
     );
     $stmt->execute([$c['start_date'], $c['end_date'], $c['club_id']]);
     $rows = $stmt->fetchAll();
     $leaderboard = array_map(function ($r) {
-        return ['id' => (int) $r['id'], 'name' => $r['name'], 'km' => (float) $r['km']];
+        return ['id' => (int) $r['id'], 'name' => $r['name'], 'avatarPhotoUrl' => $r['avatar_photo'] ?: null, 'km' => (float) $r['km']];
     }, $rows);
 
     return [
@@ -283,6 +283,7 @@ function build_suggested_user(array $r, PDO $pdo, int $currentUserId): array {
         'id' => $userId,
         'name' => $r['name'],
         'location' => $r['location'] ?? null,
+        'avatarPhotoUrl' => $r['avatar_photo'] ?? null,
         'kmMonth' => (float) $monthRow['km'],
         'activitiesCount' => $activitiesCount,
         'followersCount' => $followersCount,
@@ -294,19 +295,19 @@ function build_suggested_user(array $r, PDO $pdo, int $currentUserId): array {
 function build_friends_leaderboard(PDO $pdo, int $userId, int $limit = 10): array {
     $weekStart = get_week_start();
     $stmt = $pdo->prepare(
-        'SELECT u.id, u.name, COALESCE(SUM(CASE WHEN a.date >= ? THEN a.distance_km ELSE 0 END), 0) AS week_km
+        'SELECT u.id, u.name, u.avatar_photo, COALESCE(SUM(CASE WHEN a.date >= ? THEN a.distance_km ELSE 0 END), 0) AS week_km
          FROM following f
          JOIN users u ON u.id = f.followed_user_id
          LEFT JOIN activities a ON a.user_id = u.id
          WHERE f.user_id = ?
-         GROUP BY u.id, u.name
+         GROUP BY u.id, u.name, u.avatar_photo
          ORDER BY week_km DESC
          LIMIT ' . (int) $limit
     );
     $stmt->execute([$weekStart, $userId]);
     $rows = $stmt->fetchAll();
     return array_map(function ($r) {
-        return ['id' => (int) $r['id'], 'name' => $r['name'], 'weekKm' => (float) $r['week_km']];
+        return ['id' => (int) $r['id'], 'name' => $r['name'], 'avatarPhotoUrl' => $r['avatar_photo'] ?: null, 'weekKm' => (float) $r['week_km']];
     }, $rows);
 }
 function get_week_start(): string {
@@ -343,25 +344,25 @@ function build_club(array $c, PDO $pdo, ?int $currentUserId = null): array {
 function build_club_leaderboard(PDO $pdo, int $clubId): array {
     $weekStart = get_week_start();
     $stmt = $pdo->prepare(
-        "SELECT u.id, u.name,
+        "SELECT u.id, u.name, u.avatar_photo,
                 COALESCE(SUM(CASE WHEN a.date >= ? THEN a.distance_km ELSE 0 END), 0) AS week_km
          FROM club_members cm
          JOIN users u ON u.id = cm.user_id
          LEFT JOIN activities a ON a.user_id = u.id
          WHERE cm.club_id = ?
-         GROUP BY u.id, u.name
+         GROUP BY u.id, u.name, u.avatar_photo
          ORDER BY week_km DESC"
     );
     $stmt->execute([$weekStart, $clubId]);
     $rows = $stmt->fetchAll();
     return array_map(function ($r) {
-        return ['id' => (int) $r['id'], 'name' => $r['name'], 'weekKm' => (float) $r['week_km']];
+        return ['id' => (int) $r['id'], 'name' => $r['name'], 'avatarPhotoUrl' => $r['avatar_photo'] ?: null, 'weekKm' => (float) $r['week_km']];
     }, $rows);
 }
 function build_feed(PDO $pdo, int $userId, int $limit = 30): array {
     $stmt = $pdo->prepare(
         "SELECT a.id, a.date, a.type, a.title, a.photo_path, a.distance_km, a.duration_sec, a.elevation_m,
-                u.id AS author_id, u.name AS author_name,
+                u.id AS author_id, u.name AS author_name, u.avatar_photo AS author_avatar,
                 (SELECT COUNT(*) FROM activity_likes WHERE activity_id = a.id) AS like_count,
                 (SELECT COUNT(*) FROM activity_likes WHERE activity_id = a.id AND user_id = ?) AS liked_by_me
          FROM activities a
@@ -390,6 +391,7 @@ function build_feed(PDO $pdo, int $userId, int $limit = 30): array {
             'elevationM' => $r['elevation_m'] !== null ? (int) $r['elevation_m'] : null,
             'authorId' => (int) $r['author_id'],
             'authorName' => $r['author_name'],
+            'authorAvatarUrl' => $r['author_avatar'] ?: null,
             'likeCount' => (int) $r['like_count'],
             'likedByMe' => (int) $r['liked_by_me'] > 0,
         ];
@@ -397,7 +399,7 @@ function build_feed(PDO $pdo, int $userId, int $limit = 30): array {
 }
 
 // ---- NOVO: Rotas (página Explorar) ----
-function build_route(array $r): array {
+function build_route(array $r, int $viewerId): array {
     return [
         'id' => (int) $r['id'],
         'name' => $r['name'],
@@ -411,11 +413,14 @@ function build_route(array $r): array {
         'startLat' => (float) $r['start_lat'],
         'startLng' => (float) $r['start_lng'],
         'path' => json_decode($r['path_json'], true) ?: [],
+        'creatorId' => (int) $r['user_id'],
+        'creatorName' => $r['creator_name'] ?? null,
+        'isMine' => (int) $r['user_id'] === $viewerId,
     ];
 }
 function build_active_today(PDO $pdo, int $userId): array {
     $stmt = $pdo->prepare(
-        "SELECT u.id, u.name, a.type, a.distance_km, a.date
+        "SELECT u.id, u.name, u.avatar_photo, a.type, a.distance_km, a.date
          FROM following f
          JOIN users u ON u.id = f.followed_user_id
          JOIN activities a ON a.user_id = u.id
@@ -434,6 +439,7 @@ function build_active_today(PDO $pdo, int $userId): array {
         $result[] = [
             'id' => (int) $r['id'],
             'name' => $r['name'],
+            'avatarPhotoUrl' => $r['avatar_photo'] ?: null,
             'type' => $r['type'] ?: 'Corrida',
             'distanceKm' => (float) $r['distance_km'],
         ];

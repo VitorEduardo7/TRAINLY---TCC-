@@ -34,17 +34,25 @@
     </div>
 
     <div class="explorar-grid">
-        <div class="routes-list" id="routesList"></div>
+        <div class="routes-list">
+            <h2 class="routes-section-title">Minhas Rotas</h2>
+            <div id="myRoutesList"></div>
+            <p id="myRoutesEmpty" class="empty-state" style="display:none;">
+                Você ainda não cadastrou nenhuma rota.
+            </p>
+
+            <h2 class="routes-section-title" style="margin-top:24px;">Rotas de Amigos</h2>
+            <div id="friendsRoutesList"></div>
+            <p id="friendsRoutesEmpty" class="empty-state" style="display:none;">
+                Ninguém que você segue cadastrou uma rota ainda.
+            </p>
+        </div>
 
         <div class="explorar-map-col">
             <div id="exploreMap"></div>
             <div class="route-detail-bar" id="routeDetailBar" style="display:none;"></div>
         </div>
     </div>
-
-    <p id="routesEmpty" class="empty-state" style="display:none; text-align:center; padding:40px 0;">
-        Nenhuma rota cadastrada ainda. Clique em "+ Adicionar Rota" para ser o primeiro.
-    </p>
 </div>
 
 <!-- Modal: adicionar rota nova -->
@@ -104,7 +112,7 @@
 </div>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

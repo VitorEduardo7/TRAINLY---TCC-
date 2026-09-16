@@ -157,6 +157,19 @@
     .clubes-grid { grid-template-columns: 1fr; }
 }
 
+.route-icon-btn {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.route-icon-btn:hover { background: var(--bg-color); color: var(--primary-blue); }
+.route-icon-btn.danger:hover { color: var(--danger); }
+
 .challenge-banner {
     background: linear-gradient(135deg, #3a2e0f, #1a1c26);
     border: 1px solid #f5a623;
