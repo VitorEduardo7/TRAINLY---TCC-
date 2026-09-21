@@ -3,9 +3,13 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 16/09/2026 às 23:21
+-- Tempo de geração: 21/09/2026 às 04:44
 -- Versão do servidor: 10.4.32-MariaDB
 -- Versão do PHP: 8.2.12
+
+-- Criado pra você não precisar selecionar o banco manualmente antes de importar
+CREATE DATABASE IF NOT EXISTS `trainly` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE `trainly`;
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -167,6 +171,7 @@ CREATE TABLE `following` (
 
 INSERT INTO `following` (`user_id`, `followed_user_id`, `created_at`) VALUES
 (1, 2, '2026-09-14 01:06:44'),
+(1, 3, '2026-09-21 02:43:50'),
 (2, 1, '2026-09-07 01:44:53'),
 (3, 1, '2026-09-14 01:14:02');
 
@@ -182,6 +187,7 @@ CREATE TABLE `notifications` (
   `actor_id` int(11) NOT NULL,
   `type` varchar(20) NOT NULL,
   `activity_id` int(11) DEFAULT NULL,
+  `post_id` int(11) DEFAULT NULL,
   `read_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -190,18 +196,85 @@ CREATE TABLE `notifications` (
 -- Despejando dados para a tabela `notifications`
 --
 
-INSERT INTO `notifications` (`id`, `user_id`, `actor_id`, `type`, `activity_id`, `read_at`, `created_at`) VALUES
-(1, 2, 1, 'like', 8, NULL, '2026-09-14 01:01:47'),
-(2, 2, 1, 'follow', NULL, NULL, '2026-09-14 01:06:38'),
-(3, 2, 1, 'follow', NULL, NULL, '2026-09-14 01:06:44'),
-(4, 1, 3, 'follow', NULL, NULL, '2026-09-14 01:14:02'),
-(5, 1, 3, 'like', 10, NULL, '2026-09-14 01:17:30'),
-(6, 1, 3, 'like', 7, NULL, '2026-09-14 01:17:31'),
-(7, 1, 3, 'like', 6, NULL, '2026-09-14 01:17:32'),
-(8, 1, 3, 'like', 6, NULL, '2026-09-14 01:20:40'),
-(9, 1, 3, 'like', 5, NULL, '2026-09-14 01:20:41'),
-(10, 1, 3, 'like', 4, NULL, '2026-09-14 01:20:41'),
-(11, 2, 1, 'like', 8, NULL, '2026-09-16 20:58:40');
+INSERT INTO `notifications` (`id`, `user_id`, `actor_id`, `type`, `activity_id`, `post_id`, `read_at`, `created_at`) VALUES
+(1, 2, 1, 'like', 8, NULL, NULL, '2026-09-14 01:01:47'),
+(2, 2, 1, 'follow', NULL, NULL, NULL, '2026-09-14 01:06:38'),
+(3, 2, 1, 'follow', NULL, NULL, NULL, '2026-09-14 01:06:44'),
+(4, 1, 3, 'follow', NULL, NULL, NULL, '2026-09-14 01:14:02'),
+(5, 1, 3, 'like', 10, NULL, NULL, '2026-09-14 01:17:30'),
+(6, 1, 3, 'like', 7, NULL, NULL, '2026-09-14 01:17:31'),
+(7, 1, 3, 'like', 6, NULL, NULL, '2026-09-14 01:17:32'),
+(8, 1, 3, 'like', 6, NULL, NULL, '2026-09-14 01:20:40'),
+(9, 1, 3, 'like', 5, NULL, NULL, '2026-09-14 01:20:41'),
+(10, 1, 3, 'like', 4, NULL, NULL, '2026-09-14 01:20:41'),
+(11, 2, 1, 'like', 8, NULL, NULL, '2026-09-16 20:58:40'),
+(12, 3, 1, 'follow', NULL, NULL, NULL, '2026-09-21 02:43:50'),
+(13, 3, 1, 'post_comment', NULL, 1, NULL, '2026-09-21 02:43:55'),
+(14, 3, 1, 'post_like', NULL, 1, NULL, '2026-09-21 02:43:56');
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `posts`
+--
+
+CREATE TABLE `posts` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `content` text DEFAULT NULL,
+  `photo_path` varchar(255) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Despejando dados para a tabela `posts`
+--
+
+INSERT INTO `posts` (`id`, `user_id`, `content`, `photo_path`, `created_at`) VALUES
+(1, 3, 'ssssssssssss', 'uploads/posts/9b2bf5eeaf5f6093f9d8abbcdee3279e.png', '2026-09-20 23:43:16');
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `post_comments`
+--
+
+CREATE TABLE `post_comments` (
+  `id` int(11) NOT NULL,
+  `post_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `content` varchar(500) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Despejando dados para a tabela `post_comments`
+--
+
+INSERT INTO `post_comments` (`id`, `post_id`, `user_id`, `content`, `created_at`) VALUES
+(1, 1, 3, 'ssssssssss', '2026-09-20 23:43:18'),
+(2, 1, 1, 'ssssss', '2026-09-20 23:43:55');
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `post_likes`
+--
+
+CREATE TABLE `post_likes` (
+  `id` int(11) NOT NULL,
+  `post_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Despejando dados para a tabela `post_likes`
+--
+
+INSERT INTO `post_likes` (`id`, `post_id`, `user_id`, `created_at`) VALUES
+(1, 1, 3, '2026-09-20 23:43:20'),
+(2, 1, 1, '2026-09-20 23:43:56');
 
 -- --------------------------------------------------------
 
@@ -322,6 +395,29 @@ ALTER TABLE `notifications`
   ADD KEY `idx_user_created` (`user_id`,`created_at`);
 
 --
+-- Índices de tabela `posts`
+--
+ALTER TABLE `posts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Índices de tabela `post_comments`
+--
+ALTER TABLE `post_comments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `post_id` (`post_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Índices de tabela `post_likes`
+--
+ALTER TABLE `post_likes`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_post_like` (`post_id`,`user_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
 -- Índices de tabela `routes`
 --
 ALTER TABLE `routes`
@@ -367,7 +463,25 @@ ALTER TABLE `club_challenges`
 -- AUTO_INCREMENT de tabela `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+
+--
+-- AUTO_INCREMENT de tabela `posts`
+--
+ALTER TABLE `posts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT de tabela `post_comments`
+--
+ALTER TABLE `post_comments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT de tabela `post_likes`
+--
+ALTER TABLE `post_likes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de tabela `routes`
@@ -432,6 +546,26 @@ ALTER TABLE `notifications`
   ADD CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `notifications_ibfk_2` FOREIGN KEY (`actor_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `notifications_ibfk_3` FOREIGN KEY (`activity_id`) REFERENCES `activities` (`id`) ON DELETE CASCADE;
+
+--
+-- Restrições para tabelas `posts`
+--
+ALTER TABLE `posts`
+  ADD CONSTRAINT `posts_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Restrições para tabelas `post_comments`
+--
+ALTER TABLE `post_comments`
+  ADD CONSTRAINT `post_comments_ibfk_1` FOREIGN KEY (`post_id`) REFERENCES `posts` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `post_comments_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Restrições para tabelas `post_likes`
+--
+ALTER TABLE `post_likes`
+  ADD CONSTRAINT `post_likes_ibfk_1` FOREIGN KEY (`post_id`) REFERENCES `posts` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `post_likes_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Restrições para tabelas `routes`
