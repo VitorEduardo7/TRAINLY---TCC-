@@ -6,6 +6,8 @@
 <title>Trainly - Meu Perfil</title>
 <link rel="stylesheet" href="css/global.css">
 <link rel="stylesheet" href="css/dashboard-metrics.css">
+<link rel="stylesheet" href="css/feed.css">
+<link rel="stylesheet" href="css/posts.css">
 <link rel="stylesheet" href="css/perfil.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
@@ -56,18 +58,25 @@
             <div class="ps-label">Kudos recebidos</div>
         </div>
         <div class="profile-stat-card">
-            <div class="ps-value">0</div>
-            <div class="ps-label">Conquistas</div>
+            <div class="ps-value" id="statPosts">0</div>
+            <div class="ps-label">Publicações</div>
         </div>
     </div>
 
     <nav class="profile-tabs-new">
-        <button class="tab-item-new active" data-tab="atividades">ATIVIDADES</button>
+        <button class="tab-item-new active" data-tab="publicacoes">PUBLICAÇÕES</button>
+        <button class="tab-item-new" data-tab="atividades">ATIVIDADES</button>
         <button class="tab-item-new" data-tab="estatisticas">ESTATÍSTICAS</button>
-        <button class="tab-item-new" data-tab="conquistas">CONQUISTAS</button>
     </nav>
 
-    <div data-tab-panel-new="atividades">
+    <div data-tab-panel-new="publicacoes">
+        <div id="profilePostsList"></div>
+        <p class="empty-state" id="profilePostsEmpty" style="display:none; padding:32px 0; text-align:center;">
+            Nenhuma publicação por aqui ainda.
+        </p>
+    </div>
+
+    <div data-tab-panel-new="atividades" style="display:none;">
         <div class="activities-grid" id="profileActivitiesGrid"></div>
         <p class="empty-state" id="profileActivitiesEmpty" style="display:none; padding:32px 0; text-align:center;">
             Você ainda não registrou nenhuma atividade.
@@ -119,12 +128,6 @@
         </div>
     </div>
 
-    <div data-tab-panel-new="conquistas" style="display:none;">
-        <p class="empty-state" style="padding:32px 0; text-align:center;">
-            Sistema de conquistas em breve 🏅
-        </p>
-    </div>
-
 </div>
 
 <!-- Modal: editar perfil -->
@@ -152,5 +155,6 @@
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
 <script src="js/main.js"></script>
+<script src="js/posts.js"></script>
 </body>
 </html>

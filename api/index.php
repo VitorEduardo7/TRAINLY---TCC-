@@ -252,6 +252,7 @@ if (preg_match('#^following/(\d+)$#', $path, $m)) {
 
 // ---------------------------------------------------------------
 // GET /feed  (suas atividades + de quem você segue)
+// Mantida por compatibilidade, mas o dashboard agora usa /posts/feed.
 // ---------------------------------------------------------------
 if ($path === 'feed' && $method === 'GET') {
     $userId = require_auth();
@@ -291,6 +292,194 @@ if (preg_match('#^activities/(\d+)/like$#', $path, $m)) {
     $count = (int) $stmt->fetch()['c'];
 
     json_response(['likeCount' => $count, 'likedByMe' => $method === 'POST']);
+}
+
+// =================================================================
+// NOVO: Publicações (posts) — interação social separada das atividades
+// =================================================================
+
+// ---------------------------------------------------------------
+// POST /posts  (criar publicação: texto e/ou foto)
+// ---------------------------------------------------------------
+if ($path === 'posts' && $method === 'POST') {
+    $userId = require_auth();
+
+    $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+    $isMultipart = stripos($contentType, 'multipart/form-data') !== false;
+    $body = $isMultipart ? $_POST : json_body();
+
+    $content = isset($body['content']) ? trim($body['content']) : '';
+
+    $photoPath = null;
+    if ($isMultipart && isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+        $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+        $tmpPath = $_FILES['photo']['tmp_name'];
+        $mime = mime_content_type($tmpPath);
+
+        if (!isset($allowed[$mime])) {
+            json_response(['error' => 'Formato de imagem não suportado (use JPG, PNG ou WEBP)'], 400);
+        }
+        if ($_FILES['photo']['size'] > 5 * 1024 * 1024) {
+            json_response(['error' => 'Imagem muito grande (máx. 5MB)'], 400);
+        }
+
+        $uploadDir = __DIR__ . '/../uploads/posts/';
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+
+        $filename = bin2hex(random_bytes(16)) . '.' . $allowed[$mime];
+        move_uploaded_file($tmpPath, $uploadDir . $filename);
+        $photoPath = 'uploads/posts/' . $filename;
+    }
+
+    if ($content === '' && !$photoPath) {
+        json_response(['error' => 'Escreva algo ou anexe uma foto para publicar'], 400);
+    }
+
+    $stmt = $pdo->prepare('INSERT INTO posts (user_id, content, photo_path, created_at) VALUES (?, ?, ?, NOW())');
+    $stmt->execute([$userId, $content ?: null, $photoPath]);
+    $newId = (int) $pdo->lastInsertId();
+
+    $stmt = $pdo->prepare(
+        'SELECT p.*, u.name AS author_name, u.avatar_photo AS author_avatar
+         FROM posts p JOIN users u ON u.id = p.user_id WHERE p.id = ?'
+    );
+    $stmt->execute([$newId]);
+    json_response(['post' => build_post($pdo, $stmt->fetch(), $userId)], 201);
+}
+
+// ---------------------------------------------------------------
+// GET /posts/feed  (publicações suas + de quem você segue)
+// ---------------------------------------------------------------
+if ($path === 'posts/feed' && $method === 'GET') {
+    $userId = require_auth();
+    json_response(['feed' => build_posts_feed($pdo, $userId)]);
+}
+
+// ---------------------------------------------------------------
+// GET /posts/mine  (só as suas publicações, pra aba "Publicações" do
+// seu próprio perfil)
+// ---------------------------------------------------------------
+if ($path === 'posts/mine' && $method === 'GET') {
+    $userId = require_auth();
+    json_response(['posts' => build_user_posts($pdo, $userId, $userId)]);
+}
+
+// ---------------------------------------------------------------
+// GET /users/{id}/posts  (publicações de um usuário específico, pra aba
+// "Publicações" do perfil de OUTRO usuário — só retorna algo se ele for
+// seu amigo)
+// ---------------------------------------------------------------
+if (preg_match('#^users/(\d+)/posts$#', $path, $m) && $method === 'GET') {
+    $viewerId = require_auth();
+    $targetId = (int) $m[1];
+    json_response(['posts' => build_user_posts($pdo, $targetId, $viewerId)]);
+}
+
+// ---------------------------------------------------------------
+// DELETE /posts/{id}  (apagar publicação própria)
+// ---------------------------------------------------------------
+if (preg_match('#^posts/(\d+)$#', $path, $m) && $method === 'DELETE') {
+    $userId = require_auth();
+    $postId = (int) $m[1];
+
+    $stmt = $pdo->prepare('SELECT user_id FROM posts WHERE id = ?');
+    $stmt->execute([$postId]);
+    $existing = $stmt->fetch();
+    if (!$existing) {
+        json_response(['error' => 'Publicação não encontrada'], 404);
+    }
+    if ((int) $existing['user_id'] !== $userId) {
+        json_response(['error' => 'Você só pode apagar suas próprias publicações'], 403);
+    }
+
+    $stmt = $pdo->prepare('DELETE FROM posts WHERE id = ?');
+    $stmt->execute([$postId]);
+    json_response(['ok' => true]);
+}
+
+// ---------------------------------------------------------------
+// POST /posts/{id}/like   e   DELETE /posts/{id}/like
+// Só quem é "amigo" do autor (segue ou é seguido por ele) pode curtir.
+// ---------------------------------------------------------------
+if (preg_match('#^posts/(\d+)/like$#', $path, $m)) {
+    $userId = require_auth();
+    $postId = (int) $m[1];
+
+    $stmt = $pdo->prepare('SELECT user_id FROM posts WHERE id = ?');
+    $stmt->execute([$postId]);
+    $post = $stmt->fetch();
+    if (!$post) json_response(['error' => 'Publicação não encontrada'], 404);
+    $authorId = (int) $post['user_id'];
+
+    if (!is_friend($pdo, $userId, $authorId)) {
+        json_response(['error' => 'Você só pode curtir publicações de quem é seu amigo'], 403);
+    }
+
+    if ($method === 'POST') {
+        $stmt = $pdo->prepare('INSERT IGNORE INTO post_likes (post_id, user_id) VALUES (?, ?)');
+        $stmt->execute([$postId, $userId]);
+        notify($pdo, $authorId, $userId, 'post_like', null, $postId);
+    } elseif ($method === 'DELETE') {
+        $stmt = $pdo->prepare('DELETE FROM post_likes WHERE post_id = ? AND user_id = ?');
+        $stmt->execute([$postId, $userId]);
+    }
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) AS c FROM post_likes WHERE post_id = ?');
+    $stmt->execute([$postId]);
+    $count = (int) $stmt->fetch()['c'];
+
+    json_response(['likeCount' => $count, 'likedByMe' => $method === 'POST']);
+}
+
+// ---------------------------------------------------------------
+// POST /posts/{id}/comments   e   GET /posts/{id}/comments
+// ---------------------------------------------------------------
+if (preg_match('#^posts/(\d+)/comments$#', $path, $m)) {
+    $userId = require_auth();
+    $postId = (int) $m[1];
+
+    $stmt = $pdo->prepare('SELECT user_id FROM posts WHERE id = ?');
+    $stmt->execute([$postId]);
+    $post = $stmt->fetch();
+    if (!$post) json_response(['error' => 'Publicação não encontrada'], 404);
+    $authorId = (int) $post['user_id'];
+
+    if ($method === 'POST') {
+        if (!is_friend($pdo, $userId, $authorId)) {
+            json_response(['error' => 'Você só pode comentar em publicações de quem é seu amigo'], 403);
+        }
+
+        $body = json_body();
+        $content = trim($body['content'] ?? '');
+        if ($content === '') json_response(['error' => 'Escreva um comentário'], 400);
+        if (strlen($content) > 500) json_response(['error' => 'Comentário muito longo (máx. 500 caracteres)'], 400);
+
+        $stmt = $pdo->prepare('INSERT INTO post_comments (post_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())');
+        $stmt->execute([$postId, $userId, $content]);
+        $newCommentId = (int) $pdo->lastInsertId();
+
+        // IMPORTANTE: pegar o lastInsertId() ANTES de chamar notify(), porque
+        // notify() faz outro INSERT (na tabela notifications) e isso mudaria
+        // qual id o lastInsertId() devolve.
+        notify($pdo, $authorId, $userId, 'post_comment', null, $postId);
+
+        $stmt = $pdo->prepare(
+            'SELECT c.id, c.user_id, c.content, c.created_at, u.name AS user_name, u.avatar_photo AS user_avatar
+             FROM post_comments c JOIN users u ON u.id = c.user_id WHERE c.id = ?'
+        );
+        $stmt->execute([$newCommentId]);
+        json_response(['comment' => build_post_comment($stmt->fetch())], 201);
+    }
+
+    if ($method === 'GET') {
+        $stmt = $pdo->prepare(
+            'SELECT c.id, c.user_id, c.content, c.created_at, u.name AS user_name, u.avatar_photo AS user_avatar
+             FROM post_comments c JOIN users u ON u.id = c.user_id
+             WHERE c.post_id = ? ORDER BY c.created_at ASC'
+        );
+        $stmt->execute([$postId]);
+        json_response(['comments' => array_map('build_post_comment', $stmt->fetchAll())]);
+    }
 }
 
 // ---------------------------------------------------------------

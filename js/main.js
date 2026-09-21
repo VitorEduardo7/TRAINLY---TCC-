@@ -780,10 +780,20 @@
         }
 
         const items = notifications.map((n) => {
-          const msg = n.type === "like"
-            ? "<b>" + n.actorName + "</b> curtiu sua atividade" + (n.activityTitle ? ' "' + n.activityTitle + '"' : "")
-            : "<b>" + n.actorName + "</b> começou a seguir você";
-          const icon = n.type === "like" ? "👍" : "➕";
+          let msg, icon;
+          if (n.type === "like") {
+            msg = "<b>" + n.actorName + "</b> curtiu sua atividade" + (n.activityTitle ? ' "' + n.activityTitle + '"' : "");
+            icon = "👍";
+          } else if (n.type === "post_like") {
+            msg = "<b>" + n.actorName + "</b> curtiu sua publicação";
+            icon = "👍";
+          } else if (n.type === "post_comment") {
+            msg = "<b>" + n.actorName + "</b> comentou na sua publicação";
+            icon = "💬";
+          } else {
+            msg = "<b>" + n.actorName + "</b> começou a seguir você";
+            icon = "➕";
+          }
           return (
             '<div class="notif-item' + (n.read ? "" : " unread") + '">' +
               '<span class="notif-icon">' + icon + "</span>" +
@@ -917,8 +927,6 @@
     overlay.dataset.wired = "1";
 
     const openBtn = document.getElementById("openRegisterBtn");
-    const composerInput = document.getElementById("composerInput");
-    const composerBtn = document.getElementById("composerBtn");
     const cancelBtn = document.getElementById("cancelRegisterBtn");
     const saveBtn = document.getElementById("saveRegisterBtn");
 
@@ -938,8 +946,6 @@
     }
 
     if (openBtn) openBtn.addEventListener("click", open);
-    if (composerInput) composerInput.addEventListener("focus", open);
-    if (composerBtn) composerBtn.addEventListener("click", open);
     if (cancelBtn) cancelBtn.addEventListener("click", close);
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) close();
@@ -1057,11 +1063,9 @@
       emptyNote.style.display = "block";
     }
 
-    // Métricas da semana, feed de amigos, volume semanal e recordes
+    // Métricas da semana, volume semanal e recordes
+    // (o feed de amigos agora é carregado por js/posts.js, só com publicações)
     renderMetricsGrid(metricsEl, data);
-
-    const feed = await getFeed();
-    renderFeed(document.getElementById("feedList"), document.getElementById("feedEmpty"), feed);
 
     const active = await getActiveToday();
     renderActiveToday(document.getElementById("activeTodayList"), active);
@@ -1153,9 +1157,9 @@
       });
     }
 
-    // Só a aba Atividades faz sentido aqui — esconde Estatísticas/Conquistas
+    // Publicações e Atividades fazem sentido aqui — só esconde Estatísticas
     document.querySelectorAll(".tab-item-new").forEach((tab) => {
-      if (tab.dataset.tab !== "atividades") tab.style.display = "none";
+      if (tab.dataset.tab === "estatisticas") tab.style.display = "none";
     });
 
     // Grade de atividades públicas (as mais recentes)

@@ -116,7 +116,7 @@ function build_user_data(PDO $pdo, int $userId): ?array {
     ];
 }
 
-// ---- NOVO: Perfil público de outro usuário ----
+// ---- Perfil público de outro usuário ----
 function build_public_profile(PDO $pdo, int $targetId, int $viewerId): ?array {
     $stmt = $pdo->prepare('SELECT id, name, bio, location, cover_photo, avatar_photo, created_at FROM users WHERE id = ?');
     $stmt->execute([$targetId]);
@@ -187,20 +187,23 @@ function build_public_profile(PDO $pdo, int $targetId, int $viewerId): ?array {
     ];
 }
 
-// ---- NOVO: Notificações ----
-function notify(PDO $pdo, int $userId, int $actorId, string $type, ?int $activityId = null): void {
+// ---- Notificações ----
+// $postId é opcional (NOVO): permite notificar curtida/comentário em uma publicação.
+function notify(PDO $pdo, int $userId, int $actorId, string $type, ?int $activityId = null, ?int $postId = null): void {
     if ($userId === $actorId) return; // não notifica a própria ação
-    $stmt = $pdo->prepare('INSERT INTO notifications (user_id, actor_id, type, activity_id) VALUES (?, ?, ?, ?)');
-    $stmt->execute([$userId, $actorId, $type, $activityId]);
+    $stmt = $pdo->prepare('INSERT INTO notifications (user_id, actor_id, type, activity_id, post_id) VALUES (?, ?, ?, ?, ?)');
+    $stmt->execute([$userId, $actorId, $type, $activityId, $postId]);
 }
 
 function build_notifications(PDO $pdo, int $userId, int $limit = 20): array {
     $stmt = $pdo->prepare(
         'SELECT n.id, n.type, n.read_at, n.created_at, u.id AS actor_id, u.name AS actor_name,
-                a.id AS activity_id, a.title AS activity_title
+                a.id AS activity_id, a.title AS activity_title,
+                p.id AS post_id
          FROM notifications n
          JOIN users u ON u.id = n.actor_id
          LEFT JOIN activities a ON a.id = n.activity_id
+         LEFT JOIN posts p ON p.id = n.post_id
          WHERE n.user_id = ?
          ORDER BY n.created_at DESC
          LIMIT ' . (int) $limit
@@ -215,13 +218,14 @@ function build_notifications(PDO $pdo, int $userId, int $limit = 20): array {
             'actorName' => $r['actor_name'],
             'activityId' => $r['activity_id'] !== null ? (int) $r['activity_id'] : null,
             'activityTitle' => $r['activity_title'],
+            'postId' => $r['post_id'] !== null ? (int) $r['post_id'] : null,
             'read' => $r['read_at'] !== null,
             'date' => to_iso_local($r['created_at']),
         ];
     }, $rows);
 }
 
-// ---- NOVO: Desafios de clube ----
+// ---- Desafios de clube ----
 function build_challenge(PDO $pdo, array $c): array {
     $stmt = $pdo->prepare(
         "SELECT u.id, u.name, u.avatar_photo, COALESCE(SUM(CASE WHEN a.date >= ? AND a.date < DATE_ADD(?, INTERVAL 1 DAY) THEN a.distance_km ELSE 0 END), 0) AS km
@@ -398,7 +402,7 @@ function build_feed(PDO $pdo, int $userId, int $limit = 30): array {
     }, $rows);
 }
 
-// ---- NOVO: Rotas (página Explorar) ----
+// ---- Rotas (página Explorar) ----
 function build_route(array $r, int $viewerId): array {
     return [
         'id' => (int) $r['id'],
@@ -445,4 +449,112 @@ function build_active_today(PDO $pdo, int $userId): array {
         ];
     }
     return $result;
+}
+
+// =================================================================
+// NOVO: Publicações (posts) — interação social separada das atividades
+// =================================================================
+
+// "Amigo" aqui = existe relação de follow em qualquer direção entre os dois
+// (você segue ele OU ele te segue). Usado pra restringir quem pode curtir.
+function is_friend(PDO $pdo, int $userA, int $userB): bool {
+    if ($userA === $userB) return true;
+    $stmt = $pdo->prepare(
+        'SELECT COUNT(*) AS c FROM following
+         WHERE (user_id = ? AND followed_user_id = ?) OR (user_id = ? AND followed_user_id = ?)'
+    );
+    $stmt->execute([$userA, $userB, $userB, $userA]);
+    return (int) $stmt->fetch()['c'] > 0;
+}
+
+function build_post_comment(array $r): array {
+    return [
+        'id' => (int) $r['id'],
+        'userId' => (int) $r['user_id'],
+        'userName' => $r['user_name'],
+        'userAvatarUrl' => $r['user_avatar'] ?: null,
+        'content' => $r['content'],
+        'date' => to_iso_local($r['created_at']),
+    ];
+}
+
+function build_post(PDO $pdo, array $r, int $viewerId): array {
+    $postId = (int) $r['id'];
+    $authorId = (int) $r['user_id'];
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) AS c FROM post_likes WHERE post_id = ?');
+    $stmt->execute([$postId]);
+    $likeCount = (int) $stmt->fetch()['c'];
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) AS c FROM post_likes WHERE post_id = ? AND user_id = ?');
+    $stmt->execute([$postId, $viewerId]);
+    $likedByMe = (int) $stmt->fetch()['c'] > 0;
+
+    $stmt = $pdo->prepare(
+        'SELECT c.id, c.user_id, c.content, c.created_at, u.name AS user_name, u.avatar_photo AS user_avatar
+         FROM post_comments c JOIN users u ON u.id = c.user_id
+         WHERE c.post_id = ? ORDER BY c.created_at ASC'
+    );
+    $stmt->execute([$postId]);
+    $comments = array_map('build_post_comment', $stmt->fetchAll());
+
+    return [
+        'id' => $postId,
+        'authorId' => $authorId,
+        'authorName' => $r['author_name'],
+        'authorAvatarUrl' => $r['author_avatar'] ?: null,
+        'content' => $r['content'],
+        'photoUrl' => $r['photo_path'] ?: null,
+        'date' => to_iso_local($r['created_at']),
+        'likeCount' => $likeCount,
+        'likedByMe' => $likedByMe,
+        'canLike' => is_friend($pdo, $viewerId, $authorId),
+        'isMine' => $authorId === $viewerId,
+        'comments' => $comments,
+    ];
+}
+
+function build_posts_feed(PDO $pdo, int $userId, int $limit = 30): array {
+    $stmt = $pdo->prepare(
+        "SELECT p.*, u.name AS author_name, u.avatar_photo AS author_avatar
+         FROM posts p
+         JOIN users u ON u.id = p.user_id
+         WHERE p.user_id = ?
+            OR p.user_id IN (SELECT followed_user_id FROM following WHERE user_id = ?)
+         ORDER BY p.created_at DESC
+         LIMIT ?"
+    );
+    $stmt->bindValue(1, $userId, PDO::PARAM_INT);
+    $stmt->bindValue(2, $userId, PDO::PARAM_INT);
+    $stmt->bindValue(3, $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    $rows = $stmt->fetchAll();
+
+    return array_map(function ($r) use ($pdo, $userId) {
+        return build_post($pdo, $r, $userId);
+    }, $rows);
+}
+
+// NOVO: publicações de UM usuário específico (pra aba "Publicações" do perfil).
+// Só retorna algo se o viewer for o próprio dono ou "amigo" dele — mesma regra
+// de visibilidade usada no feed.
+function build_user_posts(PDO $pdo, int $targetId, int $viewerId, int $limit = 30): array {
+    if (!is_friend($pdo, $viewerId, $targetId)) return [];
+
+    $stmt = $pdo->prepare(
+        "SELECT p.*, u.name AS author_name, u.avatar_photo AS author_avatar
+         FROM posts p
+         JOIN users u ON u.id = p.user_id
+         WHERE p.user_id = ?
+         ORDER BY p.created_at DESC
+         LIMIT ?"
+    );
+    $stmt->bindValue(1, $targetId, PDO::PARAM_INT);
+    $stmt->bindValue(2, $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    $rows = $stmt->fetchAll();
+
+    return array_map(function ($r) use ($pdo, $viewerId) {
+        return build_post($pdo, $r, $viewerId);
+    }, $rows);
 }

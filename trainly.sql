@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 14/09/2026 às 03:54
+-- Tempo de geração: 16/09/2026 às 23:21
 -- Versão do servidor: 10.4.32-MariaDB
 -- Versão do PHP: 8.2.12
 
@@ -76,11 +76,12 @@ CREATE TABLE `activity_likes` (
 
 INSERT INTO `activity_likes` (`id`, `activity_id`, `user_id`, `created_at`) VALUES
 (1, 1, 1, '2026-08-10 02:56:28'),
-(2, 9, 1, '2026-09-14 01:01:44'),
-(3, 8, 1, '2026-09-14 01:01:47'),
 (5, 7, 3, '2026-09-14 01:17:31'),
 (7, 6, 3, '2026-09-14 01:20:40'),
-(8, 5, 3, '2026-09-14 01:20:41');
+(8, 5, 3, '2026-09-14 01:20:41'),
+(10, 10, 1, '2026-09-16 20:58:32'),
+(11, 9, 1, '2026-09-16 20:58:34'),
+(12, 8, 1, '2026-09-16 20:58:40');
 
 -- --------------------------------------------------------
 
@@ -102,7 +103,8 @@ CREATE TABLE `clubs` (
 --
 
 INSERT INTO `clubs` (`id`, `name`, `description`, `invite_code`, `created_by`, `created_at`) VALUES
-(1, 'aaaaaaaaaaaa', 'aaaaaaaa', '2E0CA5C3', 1, '2026-09-07 01:13:56');
+(1, 'aaaaaaaaaaaa', 'aaaaaaaa', '2E0CA5C3', 1, '2026-09-07 01:13:56'),
+(2, 'palmeiras', 'irbifnujro', 'C93E8508', 1, '2026-09-16 21:20:20');
 
 -- --------------------------------------------------------
 
@@ -144,7 +146,8 @@ CREATE TABLE `club_members` (
 --
 
 INSERT INTO `club_members` (`club_id`, `user_id`, `joined_at`) VALUES
-(1, 1, '2026-09-07 01:13:56');
+(1, 1, '2026-09-07 01:13:56'),
+(2, 1, '2026-09-16 21:20:20');
 
 -- --------------------------------------------------------
 
@@ -197,7 +200,8 @@ INSERT INTO `notifications` (`id`, `user_id`, `actor_id`, `type`, `activity_id`,
 (7, 1, 3, 'like', 6, NULL, '2026-09-14 01:17:32'),
 (8, 1, 3, 'like', 6, NULL, '2026-09-14 01:20:40'),
 (9, 1, 3, 'like', 5, NULL, '2026-09-14 01:20:41'),
-(10, 1, 3, 'like', 4, NULL, '2026-09-14 01:20:41');
+(10, 1, 3, 'like', 4, NULL, '2026-09-14 01:20:41'),
+(11, 2, 1, 'like', 8, NULL, '2026-09-16 20:58:40');
 
 -- --------------------------------------------------------
 
@@ -227,7 +231,7 @@ CREATE TABLE `routes` (
 --
 
 INSERT INTO `routes` (`id`, `user_id`, `name`, `type`, `difficulty`, `terrain`, `distance_km`, `elevation_m`, `rating_avg`, `rating_count`, `start_lat`, `start_lng`, `path_json`, `created_at`) VALUES
-(1, 1, 'msmsmsm', 'Corrida', 'Iniciante', 'asfalto', 19.98, 10, NULL, 0, -23.4057581, -46.5878677, '[[-23.4057581264885,-46.58786773681641],[-23.4057581264885,-46.58786773681641],[-23.387482669515563,-46.51782989501953],[-23.387482669515563,-46.51714324951172],[-23.380549939970052,-46.45397186279297],[-23.380549939970052,-46.45397186279297],[-23.35596734059268,-46.50615692138672],[-23.35596734059268,-46.50615692138672]]', '2026-09-07 00:01:03');
+(2, 1, 'aaaaaa', 'Ciclismo', 'Avançado', 'dfwgfd', 2176.43, 21213, NULL, 0, -23.3560461, -46.5756798, '[[-23.35604613825412,-46.57567977905274],[-6.271618064314864,-36.65039062500001]]', '2026-09-16 21:15:12');
 
 -- --------------------------------------------------------
 
@@ -255,7 +259,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `name`, `bio`, `location`, `cover_photo`, `avatar_photo`, `email`, `password_hash`, `xp`, `monthly_goal_km`, `last_daily_reward`, `created_at`) VALUES
-(1, 'Miguel', 'ai dento', 'Ribeirão Pires , SP', 'uploads/covers/cover_1_793275cf0a9cf47c.jpg', 'uploads/avatars/avatar_1_8c707ff0fee3f036.jpg', 'teste@gmail.com', '$2y$10$SQ4C4rq3.3ONkR5QCuciguyCNh/wmejFL1bDOJK4HdlRLtoBkZ58m', 30814, 100, '2026-09-07', '2026-08-09 16:56:38'),
+(1, 'Miguel', 'ai dento', 'Ribeirão Pires , SP', 'uploads/covers/cover_1_793275cf0a9cf47c.jpg', 'uploads/avatars/avatar_1_b509df4d0a60a115.jpg', 'teste@gmail.com', '$2y$10$SQ4C4rq3.3ONkR5QCuciguyCNh/wmejFL1bDOJK4HdlRLtoBkZ58m', 30814, 100, '2026-09-07', '2026-08-09 16:56:38'),
 (2, 'martin odegard', NULL, NULL, NULL, NULL, 'abc@gmail.com', '$2y$10$ncqyxYnZR91RVp0ZDZBUpOHiWQmFvgXswfHVomEEiP4zgJcpbLSQm', 2242, 100, NULL, '2026-09-07 01:44:31'),
 (3, 'Miguel Bizerra Silva', NULL, NULL, NULL, NULL, 'bizerrasilvamiguel@gmail.com', '$2y$10$o/hq2RUJx90BSIWyLZrD4OxCnhThBNemSS2pewigU.Gx3j6McLs6.', 0, 100, NULL, '2026-09-14 01:12:19');
 
@@ -345,13 +349,13 @@ ALTER TABLE `activities`
 -- AUTO_INCREMENT de tabela `activity_likes`
 --
 ALTER TABLE `activity_likes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT de tabela `clubs`
 --
 ALTER TABLE `clubs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de tabela `club_challenges`
@@ -363,13 +367,13 @@ ALTER TABLE `club_challenges`
 -- AUTO_INCREMENT de tabela `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT de tabela `routes`
 --
 ALTER TABLE `routes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de tabela `users`
