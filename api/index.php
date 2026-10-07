@@ -5,7 +5,7 @@ require_once __DIR__ . '/helpers.php';
 // ---- CORS ----
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
-header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
@@ -142,6 +142,71 @@ if ($path === 'activities' && $method === 'POST') {
     }
 
     json_response(['data' => build_user_data($pdo, $userId), 'xpEarned' => $xpEarned], 201);
+}
+
+// ---------------------------------------------------------------
+// GET /activities/summary?period=week|month|6months|year
+// Resumo agregado (distância, tempo, elevação, atividades, dias
+// ativos) + consistência (maior sequência, taxa) pro período
+// escolhido. Usado pelos cards de Resumo/Consistência na página
+// Atividades (independente da aba Estatísticas do perfil).
+// ---------------------------------------------------------------
+if ($path === 'activities/summary' && $method === 'GET') {
+    $userId = require_auth();
+
+    $period = trim($_GET['period'] ?? 'year');
+    $daysMap = ['week' => 7, 'month' => 30, '6months' => 182, 'year' => 365];
+    $days = $daysMap[$period] ?? 365;
+    if (!isset($daysMap[$period])) $period = 'year';
+
+    $stmt = $pdo->prepare(
+        'SELECT date, distance_km, duration_sec, elevation_m FROM activities
+         WHERE user_id = ? AND date >= (CURDATE() - INTERVAL ? DAY)
+         ORDER BY date ASC'
+    );
+    $stmt->execute([$userId, $days]);
+    $rows = $stmt->fetchAll();
+
+    $distanceKm = 0.0;
+    $durationSec = 0;
+    $elevationM = 0;
+    $activeDaySet = [];
+
+    foreach ($rows as $r) {
+        $distanceKm += (float) $r['distance_km'];
+        $durationSec += (int) $r['duration_sec'];
+        $elevationM += (int) ($r['elevation_m'] ?? 0);
+        $activeDaySet[substr($r['date'], 0, 10)] = true;
+    }
+
+    $activeDays = array_keys($activeDaySet);
+    sort($activeDays);
+
+    // Maior sequência de dias consecutivos com atividade, dentro do período.
+    $longestStreak = 0;
+    $currentStreak = 0;
+    $prevDate = null;
+    foreach ($activeDays as $d) {
+        $currentStreak = ($prevDate !== null && (strtotime($d) - strtotime($prevDate)) === 86400)
+            ? $currentStreak + 1
+            : 1;
+        $longestStreak = max($longestStreak, $currentStreak);
+        $prevDate = $d;
+    }
+
+    $consistencyRate = $days > 0 ? (int) round((count($activeDays) / $days) * 100) : 0;
+
+    json_response(['data' => [
+        'period' => $period,
+        'distanceKm' => round($distanceKm, 2),
+        'durationSec' => $durationSec,
+        'elevationM' => $elevationM,
+        'activitiesCount' => count($rows),
+        'activeDays' => count($activeDays),
+        'longestStreak' => $longestStreak,
+        'consistencyRate' => $consistencyRate,
+        'totalDays' => $days
+    ]]);
 }
 
 // ---------------------------------------------------------------
@@ -294,6 +359,88 @@ if (preg_match('#^activities/(\d+)/like$#', $path, $m)) {
     json_response(['likeCount' => $count, 'likedByMe' => $method === 'POST']);
 }
 
+// ---------------------------------------------------------------
+// PUT /activities/{id}     -> editar uma atividade própria
+// DELETE /activities/{id}  -> excluir uma atividade própria
+// O XP é ajustado junto: edição recalcula e aplica a diferença,
+// exclusão devolve o XP que a atividade tinha dado.
+// ---------------------------------------------------------------
+if (preg_match('#^activities/(\d+)$#', $path, $m) && in_array($method, ['PUT', 'DELETE'], true)) {
+    $userId = require_auth();
+    $activityId = (int) $m[1];
+
+    $stmt = $pdo->prepare('SELECT id, user_id, photo_path, xp_earned FROM activities WHERE id = ?');
+    $stmt->execute([$activityId]);
+    $activity = $stmt->fetch();
+
+    if (!$activity) json_response(['error' => 'Atividade não encontrada'], 404);
+    if ((int) $activity['user_id'] !== $userId) json_response(['error' => 'Você só pode alterar suas próprias atividades'], 403);
+
+    $oldXp = (int) $activity['xp_earned'];
+
+    if ($method === 'PUT') {
+        $body = json_body();
+
+        $distanceKm = (float) ($body['distanceKm'] ?? 0);
+        $durationSec = (int) ($body['durationSec'] ?? 0);
+        $type = trim($body['type'] ?? '') ?: 'Corrida';
+        $title = isset($body['title']) && trim($body['title']) !== '' ? trim($body['title']) : null;
+        $heartRate = isset($body['heartRate']) && $body['heartRate'] !== '' ? (int) $body['heartRate'] : null;
+        $elevationM = isset($body['elevationM']) && $body['elevationM'] !== '' ? (int) $body['elevationM'] : null;
+
+        if ($distanceKm <= 0 || $durationSec <= 0) {
+            json_response(['error' => 'distanceKm e durationSec são obrigatórios'], 400);
+        }
+
+        $newXp = xp_from_activity($distanceKm, $durationSec);
+
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare('UPDATE activities SET type = ?, title = ?, distance_km = ?, duration_sec = ?, heart_rate = ?, elevation_m = ?, xp_earned = ? WHERE id = ? AND user_id = ?');
+            $stmt->execute([$type, $title, $distanceKm, $durationSec, $heartRate, $elevationM, $newXp, $activityId, $userId]);
+
+            $stmt = $pdo->prepare('UPDATE users SET xp = GREATEST(0, xp + ?) WHERE id = ?');
+            $stmt->execute([$newXp - $oldXp, $userId]);
+
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            json_response(['error' => 'Erro ao editar atividade'], 500);
+        }
+
+        json_response(['data' => build_user_data($pdo, $userId), 'xpDelta' => $newXp - $oldXp]);
+    }
+
+    // DELETE
+    $pdo->beginTransaction();
+    try {
+        // Limpa o que aponta para a atividade (caso o banco não tenha ON DELETE CASCADE)
+        $stmt = $pdo->prepare('DELETE FROM activity_likes WHERE activity_id = ?');
+        $stmt->execute([$activityId]);
+
+        $stmt = $pdo->prepare('DELETE FROM notifications WHERE activity_id = ?');
+        $stmt->execute([$activityId]);
+
+        $stmt = $pdo->prepare('DELETE FROM activities WHERE id = ? AND user_id = ?');
+        $stmt->execute([$activityId, $userId]);
+
+        $stmt = $pdo->prepare('UPDATE users SET xp = GREATEST(0, xp - ?) WHERE id = ?');
+        $stmt->execute([$oldXp, $userId]);
+
+        $pdo->commit();
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        json_response(['error' => 'Erro ao excluir atividade'], 500);
+    }
+
+    if (!empty($activity['photo_path'])) {
+        $file = __DIR__ . '/../' . $activity['photo_path'];
+        if (is_file($file)) @unlink($file);
+    }
+
+    json_response(['data' => build_user_data($pdo, $userId), 'xpRemoved' => $oldXp]);
+}
+
 // =================================================================
 // NOVO: Publicações (posts) — interação social separada das atividades
 // =================================================================
@@ -338,6 +485,10 @@ if ($path === 'posts' && $method === 'POST') {
     $stmt = $pdo->prepare('INSERT INTO posts (user_id, content, photo_path, created_at) VALUES (?, ?, ?, NOW())');
     $stmt->execute([$userId, $content ?: null, $photoPath]);
     $newId = (int) $pdo->lastInsertId();
+
+    // Avisa os amigos mútuos. Se falhar (ex.: migração ainda não rodada), a
+    // publicação já foi criada e não deve dar erro por causa do aviso.
+    try { notify_new_post($pdo, $userId, $newId); } catch (Exception $e) { /* ignora */ }
 
     $stmt = $pdo->prepare(
         'SELECT p.*, u.name AS author_name, u.avatar_photo AS author_avatar
@@ -623,6 +774,30 @@ if ($path === 'profile' && $method === 'PUT') {
 }
 
 // ---------------------------------------------------------------
+// PUT /profile/goal  (editar o tipo e o valor da meta do mês)
+// ---------------------------------------------------------------
+if ($path === 'profile/goal' && $method === 'PUT') {
+    $userId = require_auth();
+    $body = json_body();
+
+    $goalType = trim($body['goalType'] ?? '');
+    $goalValue = (float) ($body['goalValue'] ?? 0);
+
+    $allowedTypes = ['km', 'activities', 'hours'];
+    if (!in_array($goalType, $allowedTypes, true)) {
+        json_response(['error' => 'Tipo de meta inválido'], 400);
+    }
+    if ($goalValue <= 0) {
+        json_response(['error' => 'Informe um valor de meta maior que zero'], 400);
+    }
+
+    $stmt = $pdo->prepare('UPDATE users SET monthly_goal_type = ?, monthly_goal_value = ? WHERE id = ?');
+    $stmt->execute([$goalType, $goalValue, $userId]);
+
+    json_response(['data' => build_user_data($pdo, $userId)]);
+}
+
+// ---------------------------------------------------------------
 // POST /profile/cover  (upload da foto de capa)
 // ---------------------------------------------------------------
 if ($path === 'profile/cover' && $method === 'POST') {
@@ -763,6 +938,12 @@ if ($path === 'clubs/join' && $method === 'POST') {
     $stmt = $pdo->prepare('INSERT IGNORE INTO club_members (club_id, user_id) VALUES (?, ?)');
     $stmt->execute([$club['id'], $userId]);
 
+    // Só avisa o admin se a pessoa realmente entrou agora (digitar o código
+    // de novo estando no clube não gera outro aviso).
+    if ($stmt->rowCount() > 0) {
+        try { notify_club_join($pdo, $club, $userId); } catch (Exception $e) { /* ignora */ }
+    }
+
     json_response(['club' => build_club($club, $pdo, $userId)], 201);
 }
 
@@ -879,13 +1060,22 @@ if (preg_match('#^clubs/(\d+)/challenges$#', $path, $m)) {
         $title = trim($body['title'] ?? '');
         $startDate = trim($body['startDate'] ?? '');
         $endDate = trim($body['endDate'] ?? '');
+        $metric = trim($body['metric'] ?? '') ?: 'km';
         if (!$title || !$startDate || !$endDate) {
             json_response(['error' => 'Preencha título, data de início e data de fim'], 400);
         }
+        if (!isset(challenge_metrics()[$metric])) {
+            json_response(['error' => 'Tipo de desafio inválido'], 400);
+        }
+        if ($endDate < $startDate) {
+            json_response(['error' => 'A data de fim não pode ser antes da data de início'], 400);
+        }
 
-        $stmt = $pdo->prepare('INSERT INTO club_challenges (club_id, title, start_date, end_date, created_by) VALUES (?, ?, ?, ?, ?)');
-        $stmt->execute([$clubId, $title, $startDate, $endDate, $userId]);
+        $stmt = $pdo->prepare('INSERT INTO club_challenges (club_id, title, metric, start_date, end_date, created_by) VALUES (?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$clubId, $title, $metric, $startDate, $endDate, $userId]);
         $newId = (int) $pdo->lastInsertId();
+
+        try { notify_new_challenge($pdo, $clubId, $userId, $newId); } catch (Exception $e) { /* ignora */ }
 
         $stmt = $pdo->prepare('SELECT * FROM club_challenges WHERE id = ?');
         $stmt->execute([$newId]);
@@ -894,12 +1084,29 @@ if (preg_match('#^clubs/(\d+)/challenges$#', $path, $m)) {
 
     if ($method === 'GET') {
         $stmt = $pdo->prepare(
-            'SELECT * FROM club_challenges WHERE club_id = ? AND end_date >= CURDATE() ORDER BY start_date ASC LIMIT 1'
+            'SELECT * FROM club_challenges WHERE club_id = ? AND end_date >= CURDATE()
+             ORDER BY (start_date > CURDATE()) ASC, start_date ASC LIMIT 1'
         );
         $stmt->execute([$clubId]);
         $challenge = $stmt->fetch();
         json_response(['challenge' => $challenge ? build_challenge($pdo, $challenge) : null]);
     }
+}
+
+// ---------------------------------------------------------------
+// GET /clubs/{id}/challenges/history  (desafios já encerrados, com ranking final)
+// ---------------------------------------------------------------
+if (preg_match('#^clubs/(\d+)/challenges/history$#', $path, $m) && $method === 'GET') {
+    $userId = require_auth();
+    $clubId = (int) $m[1];
+
+    $stmt = $pdo->prepare(
+        'SELECT * FROM club_challenges WHERE club_id = ? AND end_date < CURDATE()
+         ORDER BY end_date DESC LIMIT 10'
+    );
+    $stmt->execute([$clubId]);
+    $rows = $stmt->fetchAll();
+    json_response(['challenges' => array_map(fn($r) => build_challenge($pdo, $r), $rows)]);
 }
 
 // ---------------------------------------------------------------

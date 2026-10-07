@@ -224,10 +224,10 @@
   }
 
   // ---- NOVO: desafios de clube ----
-  async function createChallenge(clubId, title, startDate, endDate) {
+  async function createChallenge(clubId, title, startDate, endDate, metric) {
     const { challenge } = await apiRequest("/clubs/" + clubId + "/challenges", {
       method: "POST",
-      body: JSON.stringify({ title, startDate, endDate })
+      body: JSON.stringify({ title, startDate, endDate, metric })
     });
     return challenge;
   }
@@ -235,6 +235,11 @@
   async function getChallenge(clubId) {
     const { challenge } = await apiRequest("/clubs/" + clubId + "/challenges");
     return challenge;
+  }
+
+  async function getChallengeHistory(clubId) {
+    const { challenges } = await apiRequest("/clubs/" + clubId + "/challenges/history");
+    return challenges;
   }
 
   // ---- NOVO: editar perfil e foto de capa ----
@@ -371,7 +376,7 @@
       "</div>";
   }
 
-  const TYPE_ICONS = { Corrida: "🏃", Ciclismo: "🚴", Natação: "🏊", Caminhada: "🚶" };
+  const TYPE_ICONS = { Corrida: "", Ciclismo: "", Natação: "", Caminhada: "" };
 
   function renderActivityList(cardEl, listEl, walkthroughEl, data) {
     if (!listEl || !cardEl) return;
@@ -391,7 +396,7 @@
         ", " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
       const type = a.type || "Corrida";
       const title = a.title || (type + " registrada");
-      const icon = TYPE_ICONS[type] || "🏃";
+      const icon = TYPE_ICONS[type] || "";
       const extraStats = (a.heartRate || a.elevationM)
         ? '<div><div class="act-stat-label">Freq.</div><div class="act-stat-value">' + (a.heartRate ? a.heartRate + " bpm" : "—") + '</div></div>' +
           '<div><div class="act-stat-label">Elevação</div><div class="act-stat-value">' + (a.elevationM ? a.elevationM + "m" : "—") + '</div></div>'
@@ -407,7 +412,6 @@
                 '<div class="act-date">' + dateLabel + "</div>" +
               "</div>" +
             "</div>" +
-            '<button class="kudos-btn' + (a.likedByMe ? " liked" : "") + '" data-action="like">👍 <span>' + (a.likeCount || 0) + "</span></button>" +
           "</div>" +
           '<div class="act-stats">' +
             '<div><div class="act-stat-label">Distância</div><div class="act-stat-value">' + a.distanceKm.toFixed(2).replace(".", ",") + ' km</div></div>' +
@@ -447,42 +451,135 @@
     });
   }
 
+  // Volume Semanal: clicar em um dia mostra os km daquele dia; as setas
+  // navegam entre semanas (a seta "próxima" para na semana atual).
   function renderWeeklyChart(chartEl, totalEl, data) {
     if (!chartEl) return;
-    const acts = data.activities || [];
-    const now = new Date();
-    const s = startOfWeek(now);
+
     const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+    const weekdaysLong = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+    const months = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(s);
-      d.setDate(d.getDate() + i);
-      const km = acts
-        .filter((a) => new Date(a.date).toDateString() === d.toDateString())
-        .reduce((sum, a) => sum + a.distanceKm, 0);
-      days.push({ date: d, km });
+    const rangeEl = document.getElementById("weekRange");
+    const infoEl = document.getElementById("weekDayInfo");
+    const prevBtn = document.getElementById("weekPrevBtn");
+    const nextBtn = document.getElementById("weekNextBtn");
+
+    // Estado fica no próprio elemento: o dashboard recarrega depois de registrar
+    // uma atividade e a semana que o usuário está vendo não deve resetar.
+    chartEl._acts = data.activities || [];
+    chartEl._totalEl = totalEl;
+    if (chartEl._offset === undefined) chartEl._offset = 0;   // 0 = semana atual, -1 = passada...
+    if (chartEl._selected === undefined) chartEl._selected = null;
+
+    const fmtKm = (km) => km.toFixed(1).replace(".", ",") + " km";
+
+    function draw() {
+      const acts = chartEl._acts;
+      const now = new Date();
+      const start = startOfWeek(now);
+      start.setDate(start.getDate() + chartEl._offset * 7);
+
+      const days = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(start);
+        d.setDate(d.getDate() + i);
+        const ds = d.toDateString();
+        const dayActs = acts.filter((a) => new Date(a.date).toDateString() === ds);
+        days.push({
+          date: d,
+          km: dayActs.reduce((sum, a) => sum + a.distanceKm, 0),
+          sec: dayActs.reduce((sum, a) => sum + a.durationSec, 0),
+          count: dayActs.length
+        });
+      }
+
+      // Dia selecionado: na semana atual começa em "hoje"
+      let sel = chartEl._selected;
+      if (sel === null && chartEl._offset === 0) {
+        sel = days.findIndex((d) => d.date.toDateString() === now.toDateString());
+        if (sel < 0) sel = null;
+      }
+
+      const max = Math.max(...days.map((d) => d.km), 1);
+      const todayStr = now.toDateString();
+
+      chartEl.innerHTML = days.map((d, idx) => {
+        const isToday = d.date.toDateString() === todayStr;
+        const h = Math.max(3, Math.round((d.km / max) * 100));
+        const label = weekdays[d.date.getDay()];
+        return (
+          '<button type="button" class="chart-col' + (idx === sel ? " selected" : "") + '" data-idx="' + idx + '"' +
+            ' title="' + label + ": " + fmtKm(d.km) + '">' +
+            '<div class="chart-bar' + (isToday ? " today" : "") + '" style="height:' + h + '%"></div>' +
+            '<div class="chart-day' + (isToday ? " today" : "") + '">' + label + "</div>" +
+          "</button>"
+        );
+      }).join("");
+
+      // Intervalo da semana
+      const end = days[6].date;
+      const fmtDay = (d) => d.getDate() + " " + months[d.getMonth()];
+      if (rangeEl) {
+        rangeEl.textContent = (chartEl._offset === 0 ? "Esta semana · " : "") + fmtDay(start) + " – " + fmtDay(end);
+      }
+
+      // Detalhe do dia clicado
+      if (infoEl) {
+        if (sel === null) {
+          infoEl.innerHTML = "";
+        } else {
+          const d = days[sel];
+          const title = weekdaysLong[d.date.getDay()] + ", " + fmtDay(d.date);
+          infoEl.innerHTML = d.count === 0
+            ? '<div class="week-day-title">' + title + '</div><div class="week-day-empty">Nenhuma atividade neste dia.</div>'
+            : '<div class="week-day-title">' + title + "</div>" +
+              '<div class="week-day-km">' + fmtKm(d.km) + "</div>" +
+              '<div class="week-day-meta">' + d.count + (d.count === 1 ? " atividade" : " atividades") + " · " + formatHM(d.sec) + "</div>";
+        }
+      }
+
+      // Navegação: não passa da semana atual nem volta antes da primeira atividade
+      const firstStart = acts.length
+        ? startOfWeek(new Date(Math.min(...acts.map((a) => new Date(a.date).getTime()))))
+        : start;
+      if (nextBtn) nextBtn.disabled = chartEl._offset >= 0;
+      if (prevBtn) prevBtn.disabled = start.getTime() <= firstStart.getTime();
+
+      if (chartEl._totalEl) {
+        const total = days.reduce((sum, d) => sum + d.km, 0);
+        chartEl._totalEl.textContent = total.toFixed(1).replace(".", ",") + " km";
+      }
     }
 
-    const max = Math.max(...days.map((d) => d.km), 1);
-    const todayStr = now.toDateString();
+    chartEl._draw = draw;
 
-    chartEl.innerHTML = days.map((d) => {
-      const isToday = d.date.toDateString() === todayStr;
-      const h = Math.max(3, Math.round((d.km / max) * 100));
-      const label = weekdays[d.date.getDay()];
-      return (
-        '<div class="chart-col">' +
-          '<div class="chart-bar' + (isToday ? " today" : "") + '" style="height:' + h + '%"></div>' +
-          '<div class="chart-day' + (isToday ? " today" : "") + '">' + label + "</div>" +
-        "</div>"
-      );
-    }).join("");
+    // Listeners ligados uma vez só (o dashboard pode renderizar de novo)
+    if (chartEl.dataset.wired !== "1") {
+      chartEl.dataset.wired = "1";
 
-    if (totalEl) {
-      const total = days.reduce((s, d) => s + d.km, 0);
-      totalEl.textContent = total.toFixed(1).replace(".", ",") + " km";
+      chartEl.addEventListener("click", (e) => {
+        const col = e.target.closest(".chart-col");
+        if (!col) return;
+        const idx = Number(col.dataset.idx);
+        chartEl._selected = chartEl._selected === idx ? null : idx;
+        chartEl._draw();
+      });
+
+      if (prevBtn) prevBtn.addEventListener("click", () => {
+        chartEl._offset -= 1;
+        chartEl._selected = null;
+        chartEl._draw();
+      });
+      if (nextBtn) nextBtn.addEventListener("click", () => {
+        if (chartEl._offset >= 0) return;
+        chartEl._offset += 1;
+        chartEl._selected = null;
+        chartEl._draw();
+      });
     }
+
+    draw();
   }
 
   function renderPersonalRecords(el, data) {
@@ -513,26 +610,113 @@
       row("Maior duração", formatHM(longestDur.durationSec), longestDur.date);
   }
 
+  // NOVO: meta do mês editável pelo usuário — pode ser por distância (km),
+  // número de atividades ou tempo ativo (horas). data.monthlyGoalType e
+  // data.monthlyGoalValue vêm da API (/me via build_user_data).
+  const GOAL_TYPE_LABELS = { km: "Distância", activities: "Atividades", hours: "Tempo ativo" };
+
+  function computeGoalProgress(data) {
+    const type = data.monthlyGoalType || "km";
+    const goal = data.monthlyGoalValue || 100;
+    const now = new Date();
+    const monthActs = (data.activities || []).filter((a) => {
+      const d = new Date(a.date);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+
+    let current = 0;
+    let unit = "km";
+    if (type === "activities") {
+      current = monthActs.length;
+      unit = current === 1 ? "atividade" : "atividades";
+    } else if (type === "hours") {
+      current = monthActs.reduce((s, a) => s + a.durationSec, 0) / 3600;
+      unit = "h";
+    } else {
+      current = monthActs.reduce((s, a) => s + a.distanceKm, 0);
+      unit = "km";
+    }
+
+    return { type, goal, current, unit };
+  }
+
   function renderGoalWidget(el, data) {
     if (!el) return;
-    const goal = data.monthlyGoalKm || 100;
+    const { type, goal, current, unit } = computeGoalProgress(data);
     const now = new Date();
-    const acts = data.activities || [];
-    const km = acts
-      .filter((a) => {
-        const d = new Date(a.date);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      })
-      .reduce((s, a) => s + a.distanceKm, 0);
-
-    const pct = Math.min(100, Math.round((km / goal) * 100));
+    const pct = Math.min(100, Math.round((current / goal) * 100));
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const daysLeft = daysInMonth - now.getDate();
 
+    const label = GOAL_TYPE_LABELS[type] || "Meta";
+    const currentLabel = type === "hours" ? current.toFixed(1).replace(".", ",") : current.toFixed(0);
+    const goalLabel = type === "hours" ? goal.toFixed(1).replace(".", ",") : goal.toFixed(0);
+
     el.innerHTML =
-      '<div class="goal-row"><span>Distância</span><b>' + km.toFixed(0) + " / " + goal + " km</b></div>" +
+      '<div class="goal-row"><span>' + label + '</span><b>' + currentLabel + " / " + goalLabel + " " + unit + '</b></div>' +
       '<div class="goal-bar"><div class="goal-bar-fill" style="width:' + pct + '%"></div></div>' +
       '<div class="goal-note">' + pct + "% concluído · faltam " + daysLeft + " dias</div>";
+  }
+
+  async function updateMonthlyGoal(goalType, goalValue) {
+    const { data } = await apiRequest("/profile/goal", {
+      method: "PUT",
+      body: JSON.stringify({ goalType, goalValue })
+    });
+    return data;
+  }
+
+  function initGoalEditModal(data) {
+    const overlay = document.getElementById("editGoalOverlay");
+    if (!overlay) return;
+    if (overlay.dataset.wired === "1") return;
+    overlay.dataset.wired = "1";
+
+    const openBtn = document.getElementById("editGoalBtn");
+    const cancelBtn = document.getElementById("cancelGoalBtn");
+    const saveBtn = document.getElementById("saveGoalBtn");
+    const typeSelect = document.getElementById("goalType");
+    const valueInput = document.getElementById("goalValue");
+
+    function open() {
+      const { type, goal } = computeGoalProgress(data);
+      typeSelect.value = type;
+      valueInput.value = goal;
+      overlay.classList.add("open");
+    }
+    function close() {
+      overlay.classList.remove("open");
+    }
+
+    if (openBtn) openBtn.addEventListener("click", open);
+    if (cancelBtn) cancelBtn.addEventListener("click", close);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+
+    if (saveBtn) {
+      saveBtn.addEventListener("click", async () => {
+        const goalType = typeSelect.value;
+        const goalValue = parseFloat(valueInput.value);
+
+        if (!goalValue || goalValue <= 0) {
+          showToast("Informe um valor de meta maior que zero.");
+          return;
+        }
+
+        saveBtn.disabled = true;
+        try {
+          const fresh = await updateMonthlyGoal(goalType, goalValue);
+          data.monthlyGoalType = fresh.monthlyGoalType;
+          data.monthlyGoalValue = fresh.monthlyGoalValue;
+          renderGoalWidget(document.getElementById("goalWidget"), data);
+          showToast("Meta do mês atualizada!");
+          close();
+        } catch (e) {
+          showToast(e.message || "Não foi possível salvar a meta.");
+        } finally {
+          saveBtn.disabled = false;
+        }
+      });
+    }
   }
 
   /* ---------------------------------------------------------
@@ -583,7 +767,7 @@
 
     listEl.innerHTML = feed.map((p) => {
       const type = p.type || "Corrida";
-      const icon = TYPE_ICONS[type] || "🏃";
+      const icon = TYPE_ICONS[type] || "";
       const title = p.title || (type + " registrada");
       const photoHtml = p.photoUrl
         ? '<img class="feed-photo" src="' + p.photoUrl + '" alt="Foto da atividade">'
@@ -596,7 +780,7 @@
               avatarHtml("feed-avatar", p.authorId, p.authorName, p.authorAvatarUrl) +
               "<div>" +
                 '<div class="feed-author-name">' + p.authorName + "</div>" +
-                '<div class="feed-post-meta">' + timeAgo(p.date) + " · " + type + " " + icon + "</div>" +
+                '<div class="feed-post-meta">' + timeAgo(p.date) + " · " + type + "</div>" +
               "</div>" +
             "</div>" +
             '<span class="feed-type-badge">' + type.toUpperCase() + "</span>" +
@@ -610,9 +794,9 @@
             '<div><div class="act-stat-label">Elevação</div><div class="act-stat-value">' + (p.elevationM ? p.elevationM + "m" : "—") + '</div></div>' +
           "</div>" +
           '<div class="feed-post-footer" data-activity-id="' + p.id + '">' +
-            '<button class="kudos-btn' + (p.likedByMe ? " liked" : "") + '" data-action="like">👍 <span>' + (p.likeCount || 0) + "</span></button>" +
-            '<span class="comment-icon">💬 0</span>' +
-            '<button class="share-btn" type="button">↗ Compartilhar</button>' +
+            '<button class="kudos-btn' + (p.likedByMe ? " liked" : "") + '" data-action="like"><span>' + (p.likeCount || 0) + "</span></button>" +
+            '<span class="comment-icon">0 comentários</span>' +
+            '<button class="share-btn" type="button">Compartilhar</button>' +
           "</div>" +
         "</div>"
       );
@@ -638,7 +822,7 @@
     });
 
     listEl.querySelectorAll(".share-btn").forEach((btn) => {
-      btn.addEventListener("click", () => showToast("Compartilhamento externo ainda em desenvolvimento 🚧"));
+      btn.addEventListener("click", () => showToast("Compartilhamento externo ainda em desenvolvimento."));
     });
   }
 
@@ -649,7 +833,7 @@
       return;
     }
     el.innerHTML = active.map((a) => {
-      const icon = TYPE_ICONS[a.type] || "🏃";
+      const icon = TYPE_ICONS[a.type] || "";
       return (
         '<div class="active-friend-row">' +
           avatarHtml("feed-avatar small", a.id, a.name, a.avatarPhotoUrl) +
@@ -687,6 +871,18 @@
     return apiRequest("/activities/" + activityId + "/like", {
       method: currentlyLiked ? "DELETE" : "POST"
     });
+  }
+
+  // ---- NOVO: editar / excluir atividade própria ----
+  async function updateActivity(activityId, fields) {
+    return apiRequest("/activities/" + activityId, {
+      method: "PUT",
+      body: JSON.stringify(fields)
+    });
+  }
+
+  async function deleteActivity(activityId) {
+    return apiRequest("/activities/" + activityId, { method: "DELETE" });
   }
 
   async function claimDailyReward() {
@@ -780,23 +976,30 @@
         }
 
         const items = notifications.map((n) => {
-          let msg, icon;
+          let msg;
+          let href = "";
           if (n.type === "like") {
             msg = "<b>" + n.actorName + "</b> curtiu sua atividade" + (n.activityTitle ? ' "' + n.activityTitle + '"' : "");
-            icon = "👍";
           } else if (n.type === "post_like") {
             msg = "<b>" + n.actorName + "</b> curtiu sua publicação";
-            icon = "👍";
           } else if (n.type === "post_comment") {
             msg = "<b>" + n.actorName + "</b> comentou na sua publicação";
-            icon = "💬";
+          } else if (n.type === "new_post") {
+            msg = "<b>" + n.actorName + "</b> " + (n.count > 1 ? "fez " + n.count + " novas publicações" : "fez uma nova publicação");
+            href = "dashboard.php";
+          } else if (n.type === "club_join") {
+            msg = "<b>" + n.actorName + "</b> entrou no seu clube" + (n.clubName ? " <b>" + n.clubName + "</b>" : "");
+            href = "clubes.php";
+          } else if (n.type === "new_challenge") {
+            msg = "<b>" + n.actorName + "</b> criou o desafio \"" + (n.challengeTitle || "") + "\"" +
+              (n.clubName ? " no clube <b>" + n.clubName + "</b>" : "");
+            href = "clubes.php";
           } else {
             msg = "<b>" + n.actorName + "</b> começou a seguir você";
-            icon = "➕";
           }
           return (
-            '<div class="notif-item' + (n.read ? "" : " unread") + '">' +
-              '<span class="notif-icon">' + icon + "</span>" +
+            '<div class="notif-item' + (n.read ? "" : " unread") + '"' +
+              (href ? ' data-href="' + href + '" style="cursor:pointer;"' : "") + ">" +
               "<div>" +
                 '<div class="notif-msg">' + msg + "</div>" +
                 '<div class="notif-time">' + timeAgoShort(n.date) + " atrás</div>" +
@@ -810,6 +1013,11 @@
             (unreadCount > 0 ? '<button class="notif-mark-read" type="button">Marcar como lidas</button>' : "") +
           "</div>" +
           '<div class="notif-list">' + items + "</div>";
+
+        // Notificações de publicação/desafio levam até a página correspondente
+        panel.querySelectorAll(".notif-item[data-href]").forEach((el) => {
+          el.addEventListener("click", () => { location.href = el.dataset.href; });
+        });
 
         const markBtn = panel.querySelector(".notif-mark-read");
         if (markBtn) {
@@ -916,6 +1124,44 @@
   }
 
   /* ---------------------------------------------------------
+     NOVO: Diálogo de confirmação (usado ao excluir atividade)
+     Devolve uma Promise<boolean>.
+     --------------------------------------------------------- */
+  function confirmDialog({ title, message, confirmLabel }) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement("div");
+      overlay.className = "overlay open";
+      overlay.innerHTML =
+        '<div class="modal confirm-modal">' +
+          "<h3></h3>" +
+          '<p class="confirm-message"></p>' +
+          '<div class="modal-actions">' +
+            '<button class="btn-secondary" type="button" data-confirm="no">Cancelar</button>' +
+            '<button class="btn-danger" type="button" data-confirm="yes"></button>' +
+          "</div>" +
+        "</div>";
+      overlay.querySelector("h3").textContent = title;
+      overlay.querySelector(".confirm-message").textContent = message;
+      overlay.querySelector('[data-confirm="yes"]').textContent = confirmLabel || "Confirmar";
+      document.body.appendChild(overlay);
+
+      function finish(result) {
+        overlay.remove();
+        document.removeEventListener("keydown", onKey);
+        resolve(result);
+      }
+      function onKey(e) { if (e.key === "Escape") finish(false); }
+      document.addEventListener("keydown", onKey);
+
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) return finish(false);
+        const btn = e.target.closest("[data-confirm]");
+        if (btn) finish(btn.dataset.confirm === "yes");
+      });
+    });
+  }
+
+  /* ---------------------------------------------------------
      NOVO: Modal de registrar atividade manualmente (dashboard)
      --------------------------------------------------------- */
   function initRegisterModal(data, rankEl, onSaved) {
@@ -931,6 +1177,7 @@
     const saveBtn = document.getElementById("saveRegisterBtn");
 
     function open() {
+      setEditMode(null);
       document.getElementById("fType").value = "Corrida";
       document.getElementById("fTitle").value = "";
       document.getElementById("fDist").value = "";
@@ -943,7 +1190,32 @@
     }
     function close() {
       overlay.classList.remove("open");
+      setEditMode(null);
     }
+
+    // Mesmo modal serve para registrar e para editar: com editId ele atualiza
+    // a atividade existente em vez de criar uma nova.
+    function setEditMode(editId) {
+      if (editId) overlay.dataset.editId = String(editId);
+      else delete overlay.dataset.editId;
+      const h = overlay.querySelector("h3");
+      if (h) h.textContent = editId ? "Editar Atividade" : "Registrar Atividade";
+      if (saveBtn) saveBtn.textContent = editId ? "Salvar alterações" : "Salvar atividade";
+    }
+
+    // Chamado pela lista de atividades (botão Editar)
+    overlay._openEdit = (a) => {
+      setEditMode(a.id);
+      document.getElementById("fType").value = a.type || "Corrida";
+      document.getElementById("fTitle").value = a.title || "";
+      document.getElementById("fDist").value = a.distanceKm;
+      document.getElementById("fDur").value = Math.round((a.durationSec / 60) * 100) / 100;
+      document.getElementById("fHr").value = a.heartRate || "";
+      document.getElementById("fElev").value = a.elevationM || "";
+      const photoInput = document.getElementById("fPhoto");
+      if (photoInput) photoInput.value = "";
+      overlay.classList.add("open");
+    };
 
     if (openBtn) openBtn.addEventListener("click", open);
     if (cancelBtn) cancelBtn.addEventListener("click", close);
@@ -967,20 +1239,30 @@
           return;
         }
 
+        const editId = overlay.dataset.editId;
         saveBtn.disabled = true;
         saveBtn.textContent = "Salvando...";
         try {
-          const { xpEarned } = await recordActivity(distanceKm, Math.round(durationMin * 60), {
-            type, title, heartRate, elevationM, photoFile
-          });
-          showToast("Atividade registrada! +" + xpEarned + " XP");
+          if (editId) {
+            const { xpDelta } = await updateActivity(editId, {
+              type, title, heartRate, elevationM,
+              distanceKm, durationSec: Math.round(durationMin * 60)
+            });
+            const xpNote = xpDelta ? " (" + (xpDelta > 0 ? "+" : "") + xpDelta + " XP)" : "";
+            showToast("Atividade atualizada!" + xpNote);
+          } else {
+            const { xpEarned } = await recordActivity(distanceKm, Math.round(durationMin * 60), {
+              type, title, heartRate, elevationM, photoFile
+            });
+            showToast("Atividade registrada! +" + xpEarned + " XP");
+          }
           close();
           if (onSaved) onSaved();
         } catch (e) {
           showToast(e.message || "Não foi possível salvar a atividade.");
         } finally {
           saveBtn.disabled = false;
-          saveBtn.textContent = "Salvar atividade";
+          saveBtn.textContent = overlay.dataset.editId ? "Salvar alterações" : "Salvar atividade";
         }
       });
     }
@@ -1010,7 +1292,7 @@
       const hour = now.getHours();
       const saud = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
       const firstName = (data.name || "Atleta").split(" ")[0];
-      greetingEl.textContent = saud + ", " + firstName.toUpperCase() + " 👋";
+      greetingEl.textContent = saud + ", " + firstName.toUpperCase();
     }
     const composerAvatar = document.getElementById("composerAvatar");
     if (composerAvatar) {
@@ -1073,6 +1355,7 @@
     renderWeeklyChart(document.getElementById("weekChart"), document.getElementById("weekTotal"), data);
     renderPersonalRecords(document.getElementById("prList"), data);
     renderGoalWidget(document.getElementById("goalWidget"), data);
+    initGoalEditModal(data);
 
     initRegisterModal(data, rankEl, () => initDashboard());
   }
@@ -1099,7 +1382,7 @@
     nameEl.textContent = profile.name;
     const handle = "@" + profile.name.toLowerCase().replace(/[^a-z0-9]+/g, "");
     document.getElementById("profileHandle").textContent =
-      handle + (profile.location ? " · 📍 " + profile.location : "");
+      handle + (profile.location ? " · " + profile.location : "");
     document.getElementById("profileBio").textContent = profile.bio || "Esse atleta ainda não escreveu uma bio.";
 
     const avatarEl = document.getElementById("profileAvatarBig");
@@ -1157,10 +1440,9 @@
       });
     }
 
-    // Publicações e Atividades fazem sentido aqui — só esconde Estatísticas
-    document.querySelectorAll(".tab-item-new").forEach((tab) => {
-      if (tab.dataset.tab === "estatisticas") tab.style.display = "none";
-    });
+    // Publicações, Atividades e Estatísticas do outro usuário — nenhuma aba fica escondida
+    const publicActs = [...(profile.activities || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+    renderProfileStats(publicActs);
 
     // Grade de atividades públicas (as mais recentes)
     const grid = document.getElementById("profileActivitiesGrid");
@@ -1177,15 +1459,15 @@
         const photoStyle = a.photoUrl ? "background-image:url('" + a.photoUrl + "');" : "";
         return (
           '<div class="pa-card activity-item" data-activity-id="' + a.id + '">' +
-            '<div class="pa-photo" style="' + photoStyle + '"><span class="pa-badge">' + type.toUpperCase() + "</span></div>" +
+            (photoStyle ? '<div class="pa-photo" style="' + photoStyle + '"><span class="pa-badge">' + type.toUpperCase() + "</span></div>" : "") +
             '<div class="pa-body">' +
+              (!photoStyle ? '<span class="pa-badge-inline">' + type.toUpperCase() + "</span>" : "") +
               '<div class="pa-title">' + (a.title || (type + " registrada")) + "</div>" +
               '<div class="pa-date">' + d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }) + "</div>" +
               '<div class="pa-stats">' +
                 "<div><b>" + a.distanceKm.toFixed(1).replace(".", ",") + " km</b>Dist.</div>" +
                 "<div><b>" + formatClock(a.durationSec) + "</b>Tempo</div>" +
                 "<div><b>" + formatPace(a.durationSec / 60, a.distanceKm) + "/km</b>Ritmo</div>" +
-                '<button class="kudos-btn pa-kudos' + (a.likedByMe ? " liked" : "") + '" data-action="like">👍 <span>' + (a.likeCount || 0) + "</span></button>" +
               "</div>" +
             "</div>" +
           "</div>"
@@ -1195,55 +1477,9 @@
     }
   }
 
-  async function initPerfil() {
-    const nameEl = document.getElementById("profileName");
-    if (!nameEl) return; // não é a página de perfil
-
-    // NOVO: se a URL tiver ?user=ID, mostra o perfil PÚBLICO de outra pessoa
-    const viewUserId = new URLSearchParams(location.search).get("user");
-    if (viewUserId) {
-      return renderPublicProfile(Number(viewUserId));
-    }
-
-    const data = await getData();
-    const stats = computeStats(data);
-    const following = await getFollowing();
-
-    function paintProfile(d) {
-      nameEl.textContent = d.name;
-      const handle = "@" + d.name.toLowerCase().replace(/[^a-z0-9]+/g, "");
-      document.getElementById("profileHandle").textContent =
-        handle + (d.location ? " · 📍 " + d.location : "");
-      document.getElementById("profileBio").textContent = d.bio || "Sem bio ainda — clique em Editar Perfil para adicionar.";
-
-      const avatarEl = document.getElementById("profileAvatarBig");
-      if (avatarEl) {
-        if (d.avatarPhotoUrl) {
-          avatarEl.style.backgroundImage = "url('" + d.avatarPhotoUrl + "')";
-          avatarEl.style.backgroundSize = "cover";
-          avatarEl.style.backgroundPosition = "center";
-          avatarEl.textContent = "";
-        } else {
-          avatarEl.style.backgroundImage = "";
-          avatarEl.textContent = initials(d.name);
-        }
-      }
-
-      const coverEl = document.getElementById("profileCover");
-      if (coverEl && d.coverPhotoUrl) {
-        coverEl.style.backgroundImage = "url('" + d.coverPhotoUrl + "')";
-      }
-
-      document.getElementById("statActivities").textContent = stats.totalActivities;
-      document.getElementById("statFollowers").textContent = d.followersCount || 0;
-      document.getElementById("statFollowing").textContent = following.length;
-      document.getElementById("statKudos").textContent = d.kudosReceived || 0;
-    }
-    paintProfile(data);
-
-    const acts = [...(data.activities || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    // Aba Estatísticas: Resumo do ano
+  // NOVO: compartilhada entre o próprio perfil e o perfil público de outro usuário,
+  // preenche a aba Estatísticas (Resumo do ano, Recordes pessoais, Consistência).
+  function renderProfileStats(acts) {
     const year = new Date().getFullYear();
     const yearActs = acts.filter((a) => new Date(a.date).getFullYear() === year);
     const yearKm = yearActs.reduce((s, a) => s + a.distanceKm, 0);
@@ -1286,9 +1522,9 @@
           "</div>";
 
         recordsEl.innerHTML =
-          row("📏", "#3b82f6", "Maior distância", longest.distanceKm.toFixed(1).replace(".", ",") + " km", longest.date) +
-          row("⚡", "#f59e0b", "Melhor ritmo", formatPace(fastest.durationSec / 60, fastest.distanceKm) + "/km", fastest.date) +
-          row("🏆", "#22c55e", "Maior duração", formatHM(longestDur.durationSec), longestDur.date);
+          row("KM", "#3b82f6", "Maior distância", longest.distanceKm.toFixed(1).replace(".", ",") + " km", longest.date) +
+          row("RIT", "#f59e0b", "Melhor ritmo", formatPace(fastest.durationSec / 60, fastest.distanceKm) + "/km", fastest.date) +
+          row("REC", "#22c55e", "Maior duração", formatHM(longestDur.durationSec), longestDur.date);
       }
     }
 
@@ -1338,6 +1574,75 @@
       if (csStreak) csStreak.textContent = longestStreak + (longestStreak === 1 ? " dia" : " dias");
       if (csPct) csPct.textContent = pct + "%";
     }
+  }
+
+  // NOVO: liga as abas Publicações/Atividades/Estatísticas — roda tanto no
+  // próprio perfil quanto no perfil público de outro usuário.
+  function wireProfileTabs() {
+    const tabs = document.querySelectorAll(".tab-item-new");
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        tabs.forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        const target = tab.getAttribute("data-tab");
+        document.querySelectorAll("[data-tab-panel-new]").forEach((p) => {
+          p.style.display = p.getAttribute("data-tab-panel-new") === target ? "" : "none";
+        });
+      });
+    });
+  }
+
+  async function initPerfil() {
+    const nameEl = document.getElementById("profileName");
+    if (!nameEl) return; // não é a página de perfil
+
+    wireProfileTabs();
+
+    // NOVO: se a URL tiver ?user=ID, mostra o perfil PÚBLICO de outra pessoa
+    const viewUserId = new URLSearchParams(location.search).get("user");
+    if (viewUserId) {
+      return renderPublicProfile(Number(viewUserId));
+    }
+
+    const data = await getData();
+    const stats = computeStats(data);
+    const following = await getFollowing();
+
+    function paintProfile(d) {
+      nameEl.textContent = d.name;
+      const handle = "@" + d.name.toLowerCase().replace(/[^a-z0-9]+/g, "");
+      document.getElementById("profileHandle").textContent =
+        handle + (d.location ? " · " + d.location : "");
+      document.getElementById("profileBio").textContent = d.bio || "Sem bio ainda — clique em Editar Perfil para adicionar.";
+
+      const avatarEl = document.getElementById("profileAvatarBig");
+      if (avatarEl) {
+        if (d.avatarPhotoUrl) {
+          avatarEl.style.backgroundImage = "url('" + d.avatarPhotoUrl + "')";
+          avatarEl.style.backgroundSize = "cover";
+          avatarEl.style.backgroundPosition = "center";
+          avatarEl.textContent = "";
+        } else {
+          avatarEl.style.backgroundImage = "";
+          avatarEl.textContent = initials(d.name);
+        }
+      }
+
+      const coverEl = document.getElementById("profileCover");
+      if (coverEl && d.coverPhotoUrl) {
+        coverEl.style.backgroundImage = "url('" + d.coverPhotoUrl + "')";
+      }
+
+      document.getElementById("statActivities").textContent = stats.totalActivities;
+      document.getElementById("statFollowers").textContent = d.followersCount || 0;
+      document.getElementById("statFollowing").textContent = following.length;
+      document.getElementById("statKudos").textContent = d.kudosReceived || 0;
+    }
+    paintProfile(data);
+
+    const acts = [...(data.activities || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    renderProfileStats(acts);
 
     // Grade de atividades (aba Atividades)
     const grid = document.getElementById("profileActivitiesGrid");
@@ -1354,15 +1659,15 @@
         const photoStyle = a.photoUrl ? "background-image:url('" + a.photoUrl + "');" : "";
         return (
           '<div class="pa-card activity-item" data-activity-id="' + a.id + '">' +
-            '<div class="pa-photo" style="' + photoStyle + '"><span class="pa-badge">' + type.toUpperCase() + "</span></div>" +
+            (photoStyle ? '<div class="pa-photo" style="' + photoStyle + '"><span class="pa-badge">' + type.toUpperCase() + "</span></div>" : "") +
             '<div class="pa-body">' +
+              (!photoStyle ? '<span class="pa-badge-inline">' + type.toUpperCase() + "</span>" : "") +
               '<div class="pa-title">' + (a.title || (type + " registrada")) + "</div>" +
               '<div class="pa-date">' + d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }) + "</div>" +
               '<div class="pa-stats">' +
                 "<div><b>" + a.distanceKm.toFixed(1).replace(".", ",") + " km</b>Dist.</div>" +
                 "<div><b>" + formatClock(a.durationSec) + "</b>Tempo</div>" +
                 "<div><b>" + formatPace(a.durationSec / 60, a.distanceKm) + "/km</b>Ritmo</div>" +
-                '<button class="kudos-btn pa-kudos' + (a.likedByMe ? " liked" : "") + '" data-action="like">👍 <span>' + (a.likeCount || 0) + "</span></button>" +
               "</div>" +
             "</div>" +
           "</div>"
@@ -1370,19 +1675,6 @@
       }).join("");
       wireActivitySocial(grid);
     }
-
-    // Abas Atividades / Estatísticas / Conquistas
-    const tabs = document.querySelectorAll(".tab-item-new");
-    tabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
-        tabs.forEach((t) => t.classList.remove("active"));
-        tab.classList.add("active");
-        const target = tab.getAttribute("data-tab");
-        document.querySelectorAll("[data-tab-panel-new]").forEach((p) => {
-          p.style.display = p.getAttribute("data-tab-panel-new") === target ? "" : "none";
-        });
-      });
-    });
 
     // Modal: editar perfil (nome, localização, bio)
     const editBtn = document.getElementById("editProfileBtn");
@@ -1440,7 +1732,7 @@
         } catch (e) {
           showToast(e.message || "Não foi possível enviar a imagem.");
         } finally {
-          editCoverBtn.textContent = "✏️ Editar capa";
+          editCoverBtn.textContent = "Editar capa";
         }
       });
     }
@@ -1500,7 +1792,7 @@
             "<div><b>" + u.activitiesCount + "</b><span>atividades</span></div>" +
             "<div><b>" + u.followersCount + "</b><span>seguidores</span></div>" +
           "</div>" +
-          (u.mutualCount > 0 ? '<div class="user-card-mutual">🤝 ' + u.mutualCount + " amigo" + (u.mutualCount > 1 ? "s" : "") + " em comum</div>" : "") +
+          (u.mutualCount > 0 ? '<div class="user-card-mutual">' + u.mutualCount + " amigo" + (u.mutualCount > 1 ? "s" : "") + " em comum</div>" : "") +
           '<div class="user-card-actions">' +
             '<button class="btn-view-profile" type="button">Ver Perfil</button>' +
             '<button class="btn-connect' + (u.isFollowing ? " connected" : "") + '" type="button">' + (u.isFollowing ? "Conectado" : "+ Seguir") + "</button>" +
@@ -1610,6 +1902,49 @@
   /* ---------------------------------------------------------
      NOVO: Página "Minhas Atividades" — histórico completo com filtros
      --------------------------------------------------------- */
+  // NOVO: botões Editar / Excluir da lista "Minhas Atividades".
+  // O listener é ligado uma vez só; a lista atual fica em listEl._acts.
+  function wireActivityActions(listEl) {
+    if (listEl.dataset.actionsWired === "1") return;
+    listEl.dataset.actionsWired = "1";
+
+    listEl.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".act-action-btn");
+      if (!btn) return;
+
+      const item = btn.closest(".activity-item");
+      const id = Number(item.dataset.activityId);
+      const act = (listEl._acts || []).find((a) => Number(a.id) === id);
+      if (!act) return;
+
+      if (btn.dataset.action === "edit") {
+        const overlay = document.getElementById("registerOverlay");
+        if (overlay && overlay._openEdit) overlay._openEdit(act);
+        return;
+      }
+
+      if (btn.dataset.action === "delete") {
+        const label = act.title || ((act.type || "Corrida") + " registrada");
+        const ok = await confirmDialog({
+          title: "Excluir atividade",
+          message: "Tem certeza que quer excluir \"" + label + "\"? O XP dessa atividade será removido e isso não pode ser desfeito.",
+          confirmLabel: "Excluir"
+        });
+        if (!ok) return;
+
+        btn.disabled = true;
+        try {
+          const { xpRemoved } = await deleteActivity(id);
+          showToast("Atividade excluída" + (xpRemoved ? " (-" + xpRemoved + " XP)" : ""));
+          initAtividades();
+        } catch (err) {
+          btn.disabled = false;
+          showToast(err.message || "Não foi possível excluir a atividade.");
+        }
+      }
+    });
+  }
+
   async function initAtividades() {
     const tabsEl = document.querySelector(".filter-tabs");
     if (!tabsEl) return; // não é a página de atividades
@@ -1645,6 +1980,9 @@
       const emptyEl = document.getElementById("atividadesEmpty");
       if (!listEl) return;
 
+      listEl._acts = data.activities || [];
+      wireActivityActions(listEl);
+
       if (filtered.length === 0) {
         listEl.innerHTML = "";
         if (emptyEl) emptyEl.style.display = "block";
@@ -1658,46 +1996,161 @@
           ", " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
         const type = a.type || "Corrida";
         const title = a.title || (type + " registrada");
-        const icon = TYPE_ICONS[type] || "🏃";
-        const hrValue = a.heartRate ? a.heartRate + " bpm" : "—";
-
+        const extraStats = (a.heartRate || a.elevationM)
+          ? '<div><div class="act-stat-label">Freq.</div><div class="act-stat-value">' + (a.heartRate ? a.heartRate + " bpm" : "—") + '</div></div>' +
+            '<div><div class="act-stat-label">Elevação</div><div class="act-stat-value">' + (a.elevationM ? a.elevationM + "m" : "—") + '</div></div>'
+          : "";
         return (
-          '<div class="activity-item" data-activity-id="' + a.id + '" style="margin-bottom:14px;">' +
+          '<div class="activity-item" data-activity-id="' + a.id + '">' +
             '<div class="activity-item-top">' +
               '<div class="activity-item-info">' +
-                '<div class="act-icon">' + icon + '</div>' +
                 "<div>" +
                   '<div class="act-type">' + type + '</div>' +
                   '<div class="act-title">' + title + '</div>' +
                   '<div class="act-date">' + dateLabel + "</div>" +
                 "</div>" +
               "</div>" +
-              '<button class="kudos-btn' + (a.likedByMe ? " liked" : "") + '" data-action="like">👍 <span>' + (a.likeCount || 0) + "</span></button>" +
+              '<div class="activity-actions">' +
+                '<button type="button" class="act-action-btn" data-action="edit">Editar</button>' +
+                '<button type="button" class="act-action-btn danger" data-action="delete">Excluir</button>' +
+              "</div>" +
             "</div>" +
-            '<div class="act-stats" style="grid-template-columns:repeat(4,1fr);">' +
+            '<div class="act-stats">' +
               '<div><div class="act-stat-label">Distância</div><div class="act-stat-value">' + a.distanceKm.toFixed(2).replace(".", ",") + ' km</div></div>' +
               '<div><div class="act-stat-label">Duração</div><div class="act-stat-value">' + formatClock(a.durationSec) + '</div></div>' +
               '<div><div class="act-stat-label">Ritmo</div><div class="act-stat-value">' + formatPace(a.durationSec / 60, a.distanceKm) + '/km</div></div>' +
-              '<div><div class="act-stat-label">FC média</div><div class="act-stat-value">' + hrValue + '</div></div>' +
+              extraStats +
             "</div>" +
           "</div>"
         );
       }).join("");
-
-      wireActivitySocial(listEl);
     }
 
-    tabsEl.querySelectorAll(".filter-pill").forEach((tab) => {
+    // initAtividades roda de novo depois de registrar/editar/excluir; os filtros
+    // são ligados uma vez só e sempre chamam o renderList mais recente.
+    tabsEl._render = () => {
+      const activePill = tabsEl.querySelector(".filter-pill.active");
+      currentType = activePill ? activePill.dataset.filter : "Todos";
+      renderList();
+    };
+    if (tabsEl.dataset.wired !== "1") {
+      tabsEl.dataset.wired = "1";
+      tabsEl.querySelectorAll(".filter-pill").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          tabsEl.querySelectorAll(".filter-pill").forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+          tabsEl._render();
+        });
+      });
+    }
+
+    tabsEl._render();
+    initRegisterModal(data, null, () => initAtividades());
+    initAtividadesStatsPeriod();
+    renderAtividadesConsistencyCalendar(data.activities || []);
+  }
+
+  // NOVO: card de Resumo da página Atividades, com seletor de período
+  // (Semana/Mês/6 Meses/Ano) — busca o agregado direto da API
+  // (/activities/summary), independente da aba Estatísticas do perfil.
+  const PERIOD_LABELS = { week: "Semana", month: "Mês", "6months": "6 Meses", year: "Ano" };
+
+  async function fetchActivitiesSummary(period) {
+    const { data } = await apiRequest("/activities/summary?period=" + encodeURIComponent(period));
+    return data;
+  }
+
+  function renderAtividadesStatsCards(summary) {
+    const label = PERIOD_LABELS[summary.period] || "Período";
+
+    const resumoTitleEl = document.getElementById("atvResumoTitle");
+    if (resumoTitleEl) resumoTitleEl.textContent = "Resumo — " + label;
+
+    const distEl = document.getElementById("atvDistancia");
+    const tempoEl = document.getElementById("atvTempo");
+    const totalEl = document.getElementById("atvTotal");
+    const diasEl = document.getElementById("atvDiasAtivos");
+    if (distEl) distEl.textContent = summary.distanceKm.toFixed(2).replace(".", ",") + " km";
+    if (tempoEl) tempoEl.textContent = formatHM(summary.durationSec);
+    if (totalEl) totalEl.textContent = summary.activitiesCount;
+    if (diasEl) diasEl.textContent = summary.activeDays + (summary.activeDays === 1 ? " dia" : " dias");
+  }
+
+  // NOVO: mesma "tabelinha" (calendário do mês atual) da aba
+  // Estatísticas do perfil, reaproveitada aqui no card de Consistência
+  // — usa os dados já carregados em data.activities, sem depender do
+  // seletor de período (que só afeta o card de Resumo).
+  function renderAtividadesConsistencyCalendar(acts) {
+    const grid = document.getElementById("atvConsistGrid");
+    if (!grid) return;
+
+    const now = new Date();
+    const monthNames = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    const titleEl = document.getElementById("atvConsistTitle");
+    if (titleEl) titleEl.textContent = "Consistência — " + monthNames[now.getMonth()] + " " + now.getFullYear();
+
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const firstWeekday = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+    const activeDaysSet = new Set(
+      acts
+        .filter((a) => {
+          const d = new Date(a.date);
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        })
+        .map((a) => new Date(a.date).getDate())
+    );
+
+    const dayLabels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+    let html = dayLabels.map((l) => '<div class="consistency-day-label">' + l + "</div>").join("");
+    for (let i = 0; i < firstWeekday; i++) html += '<div class="consistency-day empty"></div>';
+    for (let d = 1; d <= daysInMonth; d++) {
+      html += '<div class="consistency-day' + (activeDaysSet.has(d) ? " active" : "") + '"></div>';
+    }
+    grid.innerHTML = html;
+
+    // Maior sequência de dias consecutivos ativos, dentro do mês
+    let longestStreak = 0, current = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (activeDaysSet.has(d)) {
+        current++;
+        longestStreak = Math.max(longestStreak, current);
+      } else {
+        current = 0;
+      }
+    }
+    const pct = Math.round((activeDaysSet.size / daysInMonth) * 100);
+
+    const csActive = document.getElementById("atvCsActive");
+    const csStreak = document.getElementById("atvCsStreak");
+    const csPct = document.getElementById("atvCsPct");
+    if (csActive) csActive.textContent = activeDaysSet.size + " / " + daysInMonth;
+    if (csStreak) csStreak.textContent = longestStreak + (longestStreak === 1 ? " dia" : " dias");
+    if (csPct) csPct.textContent = pct + "%";
+  }
+
+  function initAtividadesStatsPeriod() {
+    const periodTabs = document.querySelectorAll(".period-tabs .period-pill");
+    if (!periodTabs.length) return;
+
+    async function loadPeriod(period) {
+      try {
+        const summary = await fetchActivitiesSummary(period);
+        renderAtividadesStatsCards(summary);
+      } catch (err) {
+        showToast(err.message || "Não foi possível carregar o resumo do período.");
+      }
+    }
+
+    periodTabs.forEach((tab) => {
       tab.addEventListener("click", () => {
-        tabsEl.querySelectorAll(".filter-pill").forEach((t) => t.classList.remove("active"));
+        periodTabs.forEach((t) => t.classList.remove("active"));
         tab.classList.add("active");
-        currentType = tab.dataset.filter;
-        renderList();
+        loadPeriod(tab.dataset.period);
       });
     });
 
-    renderList();
-    initRegisterModal(data, null, () => initAtividades());
+    const initialTab = document.querySelector(".period-tabs .period-pill.active") || periodTabs[0];
+    loadPeriod(initialTab.dataset.period);
   }
 
   /* ---------------------------------------------------------
@@ -1867,7 +2320,7 @@
   /* ---------------------------------------------------------
      NOVO: Página Explorar (rotas prontas cadastradas por usuários)
      --------------------------------------------------------- */
-  const ROUTE_TYPE_ICON = { Corrida: "🏃", Ciclismo: "🚴", Trilha: "⛰️" };
+  const ROUTE_TYPE_ICON = { Corrida: "", Ciclismo: "", Trilha: "" };
   const ROUTE_TYPE_COLOR = { Corrida: "#3b82f6", Ciclismo: "#10b981", Trilha: "#f59e0b" };
 
   function initExplorar() {
@@ -1934,7 +2387,7 @@
       emptyEl.style.display = "none";
 
       containerEl.innerHTML = routes.map((r) => {
-        const icon = ROUTE_TYPE_ICON[r.type] || "🏃";
+        const icon = ROUTE_TYPE_ICON[r.type] || "";
         const color = ROUTE_TYPE_COLOR[r.type] || "#3b82f6";
         return (
           '<div class="route-card' + (r.id === selectedId ? " selected" : "") + '" data-route-id="' + r.id + '">' +
@@ -2247,7 +2700,7 @@
       }
       listEl.innerHTML = myClubs.map((c) => (
         '<div class="club-list-item' + (c.id === selectedClubId ? " selected" : "") + '" data-club-id="' + c.id + '">' +
-          '<div class="club-icon">🏆</div>' +
+          '<div class="club-icon">' + (c.name ? c.name.charAt(0).toUpperCase() : "?") + "</div>" +
           "<div>" +
             '<div class="club-list-name">' + c.name + (c.isAdmin ? ' <span style="color:var(--primary-blue);font-size:10px;">ADMIN</span>' : "") + "</div>" +
             '<div class="club-list-meta">' + c.memberCount + " membros</div>" +
@@ -2275,8 +2728,27 @@
 
     async function renderClubDetail(club) {
       const detailEl = document.getElementById("clubDetail");
-      const medals = ["🥇", "🥈", "🥉"];
+      const medals = ["1º", "2º", "3º"];
 
+      // ---- helpers de formatação dos desafios ----
+      const METRIC_LABELS = { km: "Distância", activities: "Atividades", hours: "Tempo ativo", days: "Dias ativos" };
+      function fmtValue(metric, v) {
+        if (metric === "activities" || metric === "days") return String(Math.round(v));
+        return v.toFixed(1).replace(".", ",");
+      }
+      function unitFor(ch, v) {
+        const n = Math.round(v);
+        if (ch.metric === "activities") return n === 1 ? "atividade" : "atividades";
+        if (ch.metric === "days") return n === 1 ? "dia" : "dias";
+        return ch.unit;
+      }
+      function fmtValueUnit(ch, v) { return fmtValue(ch.metric, v) + " " + unitFor(ch, v); }
+      function fmtDate(s) {
+        const p = String(s).slice(0, 10).split("-");
+        return p[2] + "/" + p[1] + "/" + p[0];
+      }
+
+      // ---- ranking semanal (km) ----
       const rankingHtml = club.leaderboard.length
         ? club.leaderboard.map((m, i) => (
             '<div class="rank-row">' +
@@ -2289,26 +2761,129 @@
         : '<p class="empty-state">Nenhum membro registrou km essa semana ainda.</p>';
 
       let challenge = null;
+      let history = [];
       try { challenge = await getChallenge(club.id); } catch (e) { /* ignora */ }
+      try { history = await getChallengeHistory(club.id); } catch (e) { /* ignora */ }
 
-      const challengeHtml = challenge
-        ? '<div class="challenge-banner">' +
+      // ---- desafio atual: pódio + lista de progresso ----
+      function challengeBodyHtml(ch) {
+        const lb = ch.leaderboard || [];
+        if (!lb.length) return '<p class="empty-state challenge-progress-empty">Esse clube ainda não tem membros.</p>';
+
+        const topValue = lb[0].value || 0;
+        const top = lb.slice(0, 3).filter((m) => m.value > 0);
+        const rest = lb.slice(top.length);
+
+        let podium = "";
+        if (top.length) {
+          const order = top.length === 1 ? [0] : top.length === 2 ? [1, 0] : [1, 0, 2];
+          podium =
+            '<div class="podium">' +
+              order.map((i) => {
+                const m = top[i];
+                return (
+                  '<div class="podium-col place-' + (i + 1) + '">' +
+                    avatarHtml("podium-avatar", m.id, m.name, m.avatarPhotoUrl) +
+                    '<div class="podium-name">' + m.name + "</div>" +
+                    '<div class="podium-value">' + fmtValueUnit(ch, m.value) + "</div>" +
+                    '<div class="podium-step">' + medals[i] + "</div>" +
+                  "</div>"
+                );
+              }).join("") +
+            "</div>";
+        } else {
+          podium = '<p class="empty-state challenge-progress-empty">Ninguém pontuou nesse desafio ainda. Quem registrar a primeira atividade sai na frente.</p>';
+        }
+
+        const restHtml = rest.length
+          ? '<div class="challenge-progress-list">' +
+              rest.map((m, idx) => {
+                const pct = topValue > 0 ? Math.max(3, Math.round((m.value / topValue) * 100)) : 0;
+                return (
+                  '<div class="challenge-progress-row">' +
+                    '<div class="challenge-progress-pos">' + (top.length + idx + 1) + "º</div>" +
+                    avatarHtml("challenge-progress-avatar", m.id, m.name, m.avatarPhotoUrl) +
+                    '<div class="challenge-progress-info">' +
+                      '<div class="challenge-progress-name">' + m.name + "</div>" +
+                      '<div class="challenge-progress-bar"><div class="challenge-progress-bar-fill" style="width:' + pct + '%"></div></div>' +
+                    "</div>" +
+                    '<div class="challenge-progress-km">' + fmtValueUnit(ch, m.value) + "</div>" +
+                  "</div>"
+                );
+              }).join("") +
+            "</div>"
+          : "";
+
+        return podium + restHtml;
+      }
+
+      let challengeHtml;
+      if (challenge) {
+        const statusText = challenge.status === "upcoming"
+          ? "Começa em " + fmtDate(challenge.startDate)
+          : challenge.daysLeft === 0 ? "Termina hoje"
+          : "Termina em " + challenge.daysLeft + (challenge.daysLeft === 1 ? " dia" : " dias");
+        challengeHtml =
+          '<div class="challenge-card ' + challenge.status + '">' +
             '<div class="challenge-top">' +
-              '<span class="challenge-label">🏆 DESAFIO ATIVO</span>' +
-              '<span class="challenge-days">Termina em ' + challenge.daysLeft + (challenge.daysLeft === 1 ? " dia" : " dias") + "</span>" +
+              '<div class="challenge-tags">' +
+                '<span class="challenge-label">' + (challenge.status === "upcoming" ? "DESAFIO EM BREVE" : "DESAFIO ATIVO") + "</span>" +
+                '<span class="metric-badge">' + (METRIC_LABELS[challenge.metric] || "Distância") + "</span>" +
+              "</div>" +
+              '<span class="challenge-days">' + statusText + "</span>" +
             "</div>" +
             '<div class="challenge-title">' + challenge.title + "</div>" +
-          "</div>"
-        : "";
+            '<div class="challenge-period">' + fmtDate(challenge.startDate) + " até " + fmtDate(challenge.endDate) + "</div>" +
+            '<div class="challenge-time-bar"><div class="challenge-time-bar-fill" style="width:' + challenge.elapsedPct + '%"></div></div>' +
+            challengeBodyHtml(challenge) +
+          "</div>";
+      } else {
+        challengeHtml =
+          '<div class="challenge-empty">' +
+            '<div class="challenge-empty-title">Nenhum desafio ativo</div>' +
+            "<p>" + (club.isAdmin
+              ? "Crie um desafio e faça o clube competir por distância, número de atividades, tempo ativo ou dias ativos."
+              : "O administrador do clube ainda não criou um desafio.") + "</p>" +
+            (club.isAdmin ? '<button class="btn-primary" id="openChallengeBtn2">Criar desafio</button>' : "") +
+          "</div>";
+      }
+
+      // ---- histórico de desafios encerrados ----
+      const historyHtml = history.length
+        ? history.map((h) => (
+            '<div class="history-item">' +
+              '<div class="history-main">' +
+                '<div class="history-title">' + h.title + "</div>" +
+                '<div class="history-meta"><span class="metric-badge">' + (METRIC_LABELS[h.metric] || "Distância") + "</span> " +
+                  fmtDate(h.startDate) + " - " + fmtDate(h.endDate) + "</div>" +
+              "</div>" +
+              (h.winner
+                ? '<div class="history-winner">' +
+                    avatarHtml("history-avatar", h.winner.id, h.winner.name, h.winner.avatarPhotoUrl) +
+                    "<div>" +
+                      '<div class="history-winner-label">Vencedor</div>' +
+                      '<div class="history-winner-name">' + h.winner.name + "</div>" +
+                      '<div class="history-winner-value">' + fmtValueUnit(h, h.winner.value) + "</div>" +
+                    "</div>" +
+                  "</div>"
+                : '<span class="history-nowinner">Sem vencedor</span>') +
+            "</div>"
+          )).join("")
+        : '<p class="empty-state">Nenhum desafio encerrado ainda.</p>';
 
       detailEl.innerHTML =
-        '<div class="club-detail-header">' +
-          "<div>" +
+        '<div class="club-hero">' +
+          '<div class="club-hero-badge">' + (club.name ? club.name.charAt(0).toUpperCase() : "?") + "</div>" +
+          '<div class="club-hero-info">' +
             '<div class="club-detail-title">' + club.name + "</div>" +
-            '<div class="club-detail-sub">' + (club.description || "Sem descrição") + " · " + club.memberCount + " membros</div>" +
+            '<div class="club-detail-sub">' + (club.description || "Sem descrição") + "</div>" +
+            '<div class="club-chips">' +
+              '<span class="chip">' + club.memberCount + (club.memberCount === 1 ? " membro" : " membros") + "</span>" +
+              (club.isAdmin ? '<span class="chip chip-accent">Admin</span>' : "") +
+            "</div>" +
           "</div>" +
-          '<div style="display:flex;align-items:center;gap:10px;">' +
-            (club.isAdmin ? '<button class="btn-secondary" id="openChallengeBtn">🏆 Criar Desafio</button>' : "") +
+          '<div class="club-hero-actions">' +
+            (club.isAdmin ? '<button class="btn-secondary" id="openChallengeBtn">Criar Desafio</button>' : "") +
             (club.isAdmin ? "" : '<button class="btn-secondary" id="leaveClubBtn">Sair do clube</button>') +
             (club.isAdmin ? (
               '<button class="route-icon-btn" id="editClubBtn" title="Editar clube" aria-label="Editar clube">' +
@@ -2328,15 +2903,21 @@
           "</div>" +
           '<button class="btn-secondary" id="copyInviteBtn">Copiar</button>' +
         "</div>" +
-        '<div class="card">' +
-          '<div class="club-ranking-title">🏆 Ranking da semana</div>' +
-          rankingHtml +
+        '<div class="club-columns">' +
+          '<div class="card">' +
+            '<div class="club-ranking-title">Ranking da semana</div>' +
+            rankingHtml +
+          "</div>" +
+          '<div class="card">' +
+            '<div class="club-ranking-title">Histórico de desafios</div>' +
+            historyHtml +
+          "</div>" +
         "</div>";
 
-      const openChallengeBtn = document.getElementById("openChallengeBtn");
-      if (openChallengeBtn) {
-        openChallengeBtn.addEventListener("click", () => openChallengeModal(club.id));
-      }
+      ["openChallengeBtn", "openChallengeBtn2"].forEach((btnId) => {
+        const btn = document.getElementById(btnId);
+        if (btn) btn.addEventListener("click", () => openChallengeModal(club.id));
+      });
 
       const copyBtn = document.getElementById("copyInviteBtn");
       if (copyBtn) {
@@ -2398,8 +2979,13 @@
       const overlay = document.getElementById("createChallengeOverlay");
       if (!overlay) return;
       document.getElementById("chTitle").value = "";
-      const today = new Date().toISOString().slice(0, 10);
-      const in30days = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+      const metricSelect = document.getElementById("chMetric");
+      if (metricSelect) metricSelect.value = "km";
+      // Data LOCAL (toISOString usa UTC e, à noite no Brasil, já devolve o dia seguinte)
+      const toLocalISODate = (d) =>
+        d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      const today = toLocalISODate(new Date());
+      const in30days = toLocalISODate(new Date(Date.now() + 30 * 86400000));
       document.getElementById("chStart").value = today;
       document.getElementById("chEnd").value = in30days;
       overlay.classList.add("open");
@@ -2419,14 +3005,20 @@
           const startDate = document.getElementById("chStart").value;
           const endDate = document.getElementById("chEnd").value;
           const clubId = challengeOverlay.dataset.clubId;
+          const metricEl = document.getElementById("chMetric");
+          const metric = metricEl ? metricEl.value : "km";
 
           if (!title || !startDate || !endDate) {
             showToast("Preencha todos os campos.");
             return;
           }
+          if (endDate < startDate) {
+            showToast("A data de fim não pode ser antes da data de início.");
+            return;
+          }
           saveBtn.disabled = true;
           try {
-            await createChallenge(clubId, title, startDate, endDate);
+            await createChallenge(clubId, title, startDate, endDate, metric);
             showToast("Desafio criado!");
             challengeOverlay.classList.remove("open");
             selectClub(Number(clubId));

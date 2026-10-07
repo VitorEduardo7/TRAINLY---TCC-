@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="css/global.css">
 <link rel="stylesheet" href="css/dashboard-metrics.css">
 <link rel="stylesheet" href="css/clubes.css">
+<link rel="stylesheet" href="css/challenge-progress.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -64,10 +65,19 @@
 <!-- Modal: criar desafio de clube -->
 <div class="overlay" id="createChallengeOverlay">
     <div class="modal">
-        <h3>🏆 Criar Desafio</h3>
+        <h3>Criar Desafio</h3>
         <div class="field">
             <label>Título do desafio</label>
             <input type="text" id="chTitle" placeholder="Ex: Quem corre mais km em agosto?">
+        </div>
+        <div class="field">
+            <label>Tipo de desafio</label>
+            <select id="chMetric">
+                <option value="km">Distância total (km)</option>
+                <option value="activities">Número de atividades</option>
+                <option value="hours">Tempo ativo (horas)</option>
+                <option value="days">Dias ativos (constância)</option>
+            </select>
         </div>
         <div class="field-row">
             <div class="field">

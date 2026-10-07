@@ -3,13 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 21/09/2026 às 04:44
+-- Tempo de geração: 07/10/2026 às 05:23
 -- Versão do servidor: 10.4.32-MariaDB
 -- Versão do PHP: 8.2.12
-
--- Criado pra você não precisar selecionar o banco manualmente antes de importar
-CREATE DATABASE IF NOT EXISTS `trainly` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE `trainly`;
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -58,8 +54,10 @@ INSERT INTO `activities` (`id`, `user_id`, `type`, `title`, `photo_path`, `date`
 (6, 1, 'Corrida', 'jjj', NULL, '2026-09-06 00:14:32', 33, 1980, 33, 3, 363),
 (7, 1, 'Natação', 'aaaa', NULL, '2026-09-06 19:41:33', 22, 1320, 2, 2, 242),
 (8, 2, 'Corrida', 'fffffffff', NULL, '2026-09-06 22:46:31', 222, 1320, 2, 2, 2242),
-(9, 1, 'Corrida', 'teste', 'uploads/activities/2c0bf9b3256f630c172a609e5836f109.png', '2026-09-13 22:01:27', 222, 1980, 22, 33, 2253),
-(10, 1, 'Corrida', 'ccccccc', 'uploads/activities/4cdc3e4a54053af614e3533cd69941d4.png', '2026-09-13 22:07:10', 2222, 120, 2, 2, 22222);
+(11, 1, 'Corrida', 'ccccccc', NULL, '2026-10-06 23:18:35', 77, 4620, NULL, NULL, 847),
+(12, 1, 'Corrida', 'ccccccc', NULL, '2026-10-06 23:45:43', 66, 5880, NULL, NULL, 758),
+(13, 1, 'Corrida', 'teste', NULL, '2026-10-06 23:48:49', 12, 3000, NULL, NULL, 170),
+(14, 1, 'Corrida', 'ccccccc', NULL, '2026-10-06 23:56:51', 2222, 67380, NULL, NULL, 23343);
 
 -- --------------------------------------------------------
 
@@ -83,8 +81,6 @@ INSERT INTO `activity_likes` (`id`, `activity_id`, `user_id`, `created_at`) VALU
 (5, 7, 3, '2026-09-14 01:17:31'),
 (7, 6, 3, '2026-09-14 01:20:40'),
 (8, 5, 3, '2026-09-14 01:20:41'),
-(10, 10, 1, '2026-09-16 20:58:32'),
-(11, 9, 1, '2026-09-16 20:58:34'),
 (12, 8, 1, '2026-09-16 20:58:40');
 
 -- --------------------------------------------------------
@@ -107,7 +103,6 @@ CREATE TABLE `clubs` (
 --
 
 INSERT INTO `clubs` (`id`, `name`, `description`, `invite_code`, `created_by`, `created_at`) VALUES
-(1, 'aaaaaaaaaaaa', 'aaaaaaaa', '2E0CA5C3', 1, '2026-09-07 01:13:56'),
 (2, 'palmeiras', 'irbifnujro', 'C93E8508', 1, '2026-09-16 21:20:20');
 
 -- --------------------------------------------------------
@@ -120,6 +115,7 @@ CREATE TABLE `club_challenges` (
   `id` int(11) NOT NULL,
   `club_id` int(11) NOT NULL,
   `title` varchar(150) NOT NULL,
+  `metric` varchar(20) NOT NULL DEFAULT 'km',
   `start_date` date NOT NULL,
   `end_date` date NOT NULL,
   `created_by` int(11) NOT NULL,
@@ -130,8 +126,8 @@ CREATE TABLE `club_challenges` (
 -- Despejando dados para a tabela `club_challenges`
 --
 
-INSERT INTO `club_challenges` (`id`, `club_id`, `title`, `start_date`, `end_date`, `created_by`, `created_at`) VALUES
-(1, 1, 'llllllllllllllllllll', '2026-09-14', '2026-10-14', 1, '2026-09-14 01:05:50');
+INSERT INTO `club_challenges` (`id`, `club_id`, `title`, `metric`, `start_date`, `end_date`, `created_by`, `created_at`) VALUES
+(2, 2, 'amooooo', 'days', '2026-10-06', '2026-11-06', 1, '2026-10-07 02:44:22');
 
 -- --------------------------------------------------------
 
@@ -150,8 +146,8 @@ CREATE TABLE `club_members` (
 --
 
 INSERT INTO `club_members` (`club_id`, `user_id`, `joined_at`) VALUES
-(1, 1, '2026-09-07 01:13:56'),
-(2, 1, '2026-09-16 21:20:20');
+(2, 1, '2026-09-16 21:20:20'),
+(2, 3, '2026-10-07 03:20:59');
 
 -- --------------------------------------------------------
 
@@ -188,6 +184,9 @@ CREATE TABLE `notifications` (
   `type` varchar(20) NOT NULL,
   `activity_id` int(11) DEFAULT NULL,
   `post_id` int(11) DEFAULT NULL,
+  `club_id` int(11) DEFAULT NULL,
+  `challenge_id` int(11) DEFAULT NULL,
+  `item_count` int(11) NOT NULL DEFAULT 1,
   `read_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -196,21 +195,24 @@ CREATE TABLE `notifications` (
 -- Despejando dados para a tabela `notifications`
 --
 
-INSERT INTO `notifications` (`id`, `user_id`, `actor_id`, `type`, `activity_id`, `post_id`, `read_at`, `created_at`) VALUES
-(1, 2, 1, 'like', 8, NULL, NULL, '2026-09-14 01:01:47'),
-(2, 2, 1, 'follow', NULL, NULL, NULL, '2026-09-14 01:06:38'),
-(3, 2, 1, 'follow', NULL, NULL, NULL, '2026-09-14 01:06:44'),
-(4, 1, 3, 'follow', NULL, NULL, NULL, '2026-09-14 01:14:02'),
-(5, 1, 3, 'like', 10, NULL, NULL, '2026-09-14 01:17:30'),
-(6, 1, 3, 'like', 7, NULL, NULL, '2026-09-14 01:17:31'),
-(7, 1, 3, 'like', 6, NULL, NULL, '2026-09-14 01:17:32'),
-(8, 1, 3, 'like', 6, NULL, NULL, '2026-09-14 01:20:40'),
-(9, 1, 3, 'like', 5, NULL, NULL, '2026-09-14 01:20:41'),
-(10, 1, 3, 'like', 4, NULL, NULL, '2026-09-14 01:20:41'),
-(11, 2, 1, 'like', 8, NULL, NULL, '2026-09-16 20:58:40'),
-(12, 3, 1, 'follow', NULL, NULL, NULL, '2026-09-21 02:43:50'),
-(13, 3, 1, 'post_comment', NULL, 1, NULL, '2026-09-21 02:43:55'),
-(14, 3, 1, 'post_like', NULL, 1, NULL, '2026-09-21 02:43:56');
+INSERT INTO `notifications` (`id`, `user_id`, `actor_id`, `type`, `activity_id`, `post_id`, `club_id`, `challenge_id`, `item_count`, `read_at`, `created_at`) VALUES
+(1, 2, 1, 'like', 8, NULL, NULL, NULL, 1, NULL, '2026-09-14 01:01:47'),
+(2, 2, 1, 'follow', NULL, NULL, NULL, NULL, 1, NULL, '2026-09-14 01:06:38'),
+(3, 2, 1, 'follow', NULL, NULL, NULL, NULL, 1, NULL, '2026-09-14 01:06:44'),
+(4, 1, 3, 'follow', NULL, NULL, NULL, NULL, 1, NULL, '2026-09-14 01:14:02'),
+(6, 1, 3, 'like', 7, NULL, NULL, NULL, 1, NULL, '2026-09-14 01:17:31'),
+(7, 1, 3, 'like', 6, NULL, NULL, NULL, 1, NULL, '2026-09-14 01:17:32'),
+(8, 1, 3, 'like', 6, NULL, NULL, NULL, 1, NULL, '2026-09-14 01:20:40'),
+(9, 1, 3, 'like', 5, NULL, NULL, NULL, 1, NULL, '2026-09-14 01:20:41'),
+(10, 1, 3, 'like', 4, NULL, NULL, NULL, 1, NULL, '2026-09-14 01:20:41'),
+(11, 2, 1, 'like', 8, NULL, NULL, NULL, 1, NULL, '2026-09-16 20:58:40'),
+(12, 3, 1, 'follow', NULL, NULL, NULL, NULL, 1, NULL, '2026-09-21 02:43:50'),
+(13, 3, 1, 'post_comment', NULL, 1, NULL, NULL, 1, NULL, '2026-09-21 02:43:55'),
+(14, 3, 1, 'post_like', NULL, 1, NULL, NULL, 1, NULL, '2026-09-21 02:43:56'),
+(15, 1, 3, 'post_like', NULL, 4, NULL, NULL, 1, NULL, '2026-10-07 03:19:03'),
+(16, 1, 3, 'post_comment', NULL, 4, NULL, NULL, 1, NULL, '2026-10-07 03:19:09'),
+(17, 1, 3, 'club_join', NULL, NULL, 2, NULL, 1, NULL, '2026-10-07 03:20:59'),
+(18, 1, 3, 'new_post', NULL, 5, NULL, NULL, 1, NULL, '2026-10-07 03:21:27');
 
 -- --------------------------------------------------------
 
@@ -231,7 +233,10 @@ CREATE TABLE `posts` (
 --
 
 INSERT INTO `posts` (`id`, `user_id`, `content`, `photo_path`, `created_at`) VALUES
-(1, 3, 'ssssssssssss', 'uploads/posts/9b2bf5eeaf5f6093f9d8abbcdee3279e.png', '2026-09-20 23:43:16');
+(1, 3, 'ssssssssssss', 'uploads/posts/9b2bf5eeaf5f6093f9d8abbcdee3279e.png', '2026-09-20 23:43:16'),
+(3, 1, NULL, 'uploads/posts/3f8d9225accabb8ab8375df786bfa73b.png', '2026-10-07 00:13:06'),
+(4, 1, NULL, 'uploads/posts/e7932d792cfe77ae37deadf1ed34b099.png', '2026-10-07 00:13:12'),
+(5, 3, NULL, 'uploads/posts/86c69a09951ac1e75ba8f2aced827c0f.png', '2026-10-07 00:21:27');
 
 -- --------------------------------------------------------
 
@@ -253,7 +258,8 @@ CREATE TABLE `post_comments` (
 
 INSERT INTO `post_comments` (`id`, `post_id`, `user_id`, `content`, `created_at`) VALUES
 (1, 1, 3, 'ssssssssss', '2026-09-20 23:43:18'),
-(2, 1, 1, 'ssssss', '2026-09-20 23:43:55');
+(2, 1, 1, 'ssssss', '2026-09-20 23:43:55'),
+(3, 4, 3, 'opa but', '2026-10-07 00:19:09');
 
 -- --------------------------------------------------------
 
@@ -274,7 +280,8 @@ CREATE TABLE `post_likes` (
 
 INSERT INTO `post_likes` (`id`, `post_id`, `user_id`, `created_at`) VALUES
 (1, 1, 3, '2026-09-20 23:43:20'),
-(2, 1, 1, '2026-09-20 23:43:56');
+(2, 1, 1, '2026-09-20 23:43:56'),
+(3, 4, 3, '2026-10-07 00:19:03');
 
 -- --------------------------------------------------------
 
@@ -324,17 +331,19 @@ CREATE TABLE `users` (
   `xp` int(11) NOT NULL DEFAULT 0,
   `monthly_goal_km` int(11) NOT NULL DEFAULT 100,
   `last_daily_reward` date DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `monthly_goal_type` varchar(20) NOT NULL DEFAULT 'km',
+  `monthly_goal_value` float NOT NULL DEFAULT 100
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Despejando dados para a tabela `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `bio`, `location`, `cover_photo`, `avatar_photo`, `email`, `password_hash`, `xp`, `monthly_goal_km`, `last_daily_reward`, `created_at`) VALUES
-(1, 'Miguel', 'ai dento', 'Ribeirão Pires , SP', 'uploads/covers/cover_1_793275cf0a9cf47c.jpg', 'uploads/avatars/avatar_1_b509df4d0a60a115.jpg', 'teste@gmail.com', '$2y$10$SQ4C4rq3.3ONkR5QCuciguyCNh/wmejFL1bDOJK4HdlRLtoBkZ58m', 30814, 100, '2026-09-07', '2026-08-09 16:56:38'),
-(2, 'martin odegard', NULL, NULL, NULL, NULL, 'abc@gmail.com', '$2y$10$ncqyxYnZR91RVp0ZDZBUpOHiWQmFvgXswfHVomEEiP4zgJcpbLSQm', 2242, 100, NULL, '2026-09-07 01:44:31'),
-(3, 'Miguel Bizerra Silva', NULL, NULL, NULL, NULL, 'bizerrasilvamiguel@gmail.com', '$2y$10$o/hq2RUJx90BSIWyLZrD4OxCnhThBNemSS2pewigU.Gx3j6McLs6.', 0, 100, NULL, '2026-09-14 01:12:19');
+INSERT INTO `users` (`id`, `name`, `bio`, `location`, `cover_photo`, `avatar_photo`, `email`, `password_hash`, `xp`, `monthly_goal_km`, `last_daily_reward`, `created_at`, `monthly_goal_type`, `monthly_goal_value`) VALUES
+(1, 'Miguel', 'ai dento', 'Ribeirão Pires , SP', 'uploads/covers/cover_1_793275cf0a9cf47c.jpg', 'uploads/avatars/avatar_1_b509df4d0a60a115.jpg', 'teste@gmail.com', '$2y$10$SQ4C4rq3.3ONkR5QCuciguyCNh/wmejFL1bDOJK4HdlRLtoBkZ58m', 31457, 100, '2026-09-07', '2026-08-09 16:56:38', 'hours', 120),
+(2, 'martin odegard', NULL, NULL, NULL, NULL, 'abc@gmail.com', '$2y$10$ncqyxYnZR91RVp0ZDZBUpOHiWQmFvgXswfHVomEEiP4zgJcpbLSQm', 2242, 100, NULL, '2026-09-07 01:44:31', 'km', 100),
+(3, 'Miguel Bizerra Silva', NULL, NULL, NULL, NULL, 'bizerrasilvamiguel@gmail.com', '$2y$10$o/hq2RUJx90BSIWyLZrD4OxCnhThBNemSS2pewigU.Gx3j6McLs6.', 0, 100, NULL, '2026-09-14 01:12:19', 'km', 100);
 
 --
 -- Índices para tabelas despejadas
@@ -439,7 +448,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT de tabela `activities`
 --
 ALTER TABLE `activities`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT de tabela `activity_likes`
@@ -457,31 +466,31 @@ ALTER TABLE `clubs`
 -- AUTO_INCREMENT de tabela `club_challenges`
 --
 ALTER TABLE `club_challenges`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de tabela `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT de tabela `posts`
 --
 ALTER TABLE `posts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT de tabela `post_comments`
 --
 ALTER TABLE `post_comments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT de tabela `post_likes`
 --
 ALTER TABLE `post_likes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT de tabela `routes`

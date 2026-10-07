@@ -4,6 +4,19 @@
    Arquivo novo: não substitui feed.css/dashboard.css, só soma.
    ========================================================= */
 
+/* Aproxima tudo (título + composer + feed) do topo da página —
+   sobrescreve o espaçamento de dashboard.css/feed.css de propósito. */
+.metrics-grid {
+    margin-bottom: 16px !important;
+}
+.dashboard-columns {
+    margin-top: 0 !important;
+}
+.feed-title {
+    margin-top: 0 !important;
+    margin-bottom: 12px !important;
+}
+
 .feed-title-row {
     display: flex;
     align-items: center;
@@ -27,6 +40,28 @@
 }
 .field textarea:focus { outline: none; border-color: var(--primary-blue); }
 
+/* Trava o scroll do feed de amigos dentro da própria lista — o composer,
+   o título e o resto da página ficam parados, só as publicações rolam. */
+#feedList {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+/* a última publicação encosta no fim da lista (sem sobra de margem) */
+#feedList .post-item:last-child { margin-bottom: 0; }
+#feedList::-webkit-scrollbar {
+    width: 8px;
+}
+#feedList::-webkit-scrollbar-track {
+    background: transparent;
+}
+#feedList::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 8px;
+}
+
 .post-item {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
@@ -43,6 +78,29 @@
 }
 .post-author { display: flex; gap: 12px; align-items: center; }
 
+/* Botão de apagar publicação (só aparece nas publicações do próprio usuário).
+   Estilo próprio: não depende do .route-icon-btn, que só existe no clubes.css. */
+.post-delete-btn {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    color: var(--text-muted);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: color .15s ease, background .15s ease;
+}
+.post-delete-btn svg { width: 17px; height: 17px; }
+.post-delete-btn:hover {
+    color: var(--danger, #f0554e);
+    background: color-mix(in srgb, var(--danger, #f0554e) 12%, transparent);
+}
+
 .post-content {
     font-size: 14px;
     color: var(--text-dark);
@@ -53,7 +111,7 @@
 
 .post-photo {
     width: 100%;
-    max-height: 420px;
+    max-height: 340px;
     object-fit: cover;
     border-radius: 8px;
     margin-bottom: 12px;
@@ -130,3 +188,45 @@
     cursor: pointer;
 }
 .comment-send-btn:hover { opacity: 0.9; }
+
+/* =========================================================
+   Cards quadrados (grid) — aba "Publicações" do perfil e
+   ajuste dos cards de "Atividades" pra não reservar espaço de
+   foto quando a atividade não tem uma.
+   ========================================================= */
+
+/* Badge de tipo/rótulo quando NÃO há foto (substitui o .pa-badge,
+   que é posicionado absoluto por cima da foto). */
+.pa-badge-inline {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--bg-color);
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+/* Card de publicação, no mesmo formato quadrado usado pelas atividades */
+.pa-card {
+    position: relative;
+}
+.pa-card .post-delete-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+}
+.pa-card .post-delete-btn:hover {
+    background: var(--danger);
+    color: #fff;
+}
+.pa-card .pa-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}

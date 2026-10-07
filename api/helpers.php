@@ -54,7 +54,7 @@ function xp_from_activity(float $distanceKm, int $durationSec): int {
 
 // Monta o objeto no mesmo formato que o main.js espera de getData().
 function build_user_data(PDO $pdo, int $userId): ?array {
-    $stmt = $pdo->prepare('SELECT id, name, bio, location, cover_photo, avatar_photo, xp, monthly_goal_km, last_daily_reward FROM users WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT id, name, bio, location, cover_photo, avatar_photo, xp, monthly_goal_type, monthly_goal_value, last_daily_reward FROM users WHERE id = ?');
     $stmt->execute([$userId]);
     $user = $stmt->fetch();
     if (!$user) return null;
@@ -106,7 +106,10 @@ function build_user_data(PDO $pdo, int $userId): ?array {
         'coverPhotoUrl' => $user['cover_photo'],
         'avatarPhotoUrl' => $user['avatar_photo'],
         'xp' => (int) $user['xp'],
-        'monthlyGoalKm' => (int) $user['monthly_goal_km'],
+        // NOVO: meta do mês editável — tipo (km / activities / hours) + valor
+        // genérico, em vez de uma meta fixa só em km.
+        'monthlyGoalType' => $user['monthly_goal_type'] ?: 'km',
+        'monthlyGoalValue' => (float) ($user['monthly_goal_value'] ?: 100),
         'activities' => $activities,
         'followersCount' => $followersCount,
         'kudosReceived' => $kudosReceived,
@@ -195,15 +198,71 @@ function notify(PDO $pdo, int $userId, int $actorId, string $type, ?int $activit
     $stmt->execute([$userId, $actorId, $type, $activityId, $postId]);
 }
 
+// Amigos mútuos: quem eu sigo e que também me segue de volta.
+function mutual_friend_ids(PDO $pdo, int $userId): array {
+    $stmt = $pdo->prepare(
+        'SELECT f.followed_user_id AS id
+         FROM following f
+         JOIN following g ON g.user_id = f.followed_user_id AND g.followed_user_id = f.user_id
+         WHERE f.user_id = ?'
+    );
+    $stmt->execute([$userId]);
+    return array_map('intval', array_column($stmt->fetchAll(), 'id'));
+}
+
+// Nova publicação: avisa os amigos mútuos do autor. Se o amigo ainda não leu o
+// aviso anterior desse mesmo autor, só soma na contagem ("fez 3 publicações")
+// em vez de criar uma notificação nova a cada publicação.
+function notify_new_post(PDO $pdo, int $authorId, int $postId): void {
+    foreach (mutual_friend_ids($pdo, $authorId) as $friendId) {
+        $stmt = $pdo->prepare(
+            "SELECT id FROM notifications
+             WHERE user_id = ? AND actor_id = ? AND type = 'new_post' AND read_at IS NULL
+             ORDER BY id DESC LIMIT 1"
+        );
+        $stmt->execute([$friendId, $authorId]);
+        $existing = $stmt->fetch();
+
+        if ($existing) {
+            $stmt = $pdo->prepare('UPDATE notifications SET item_count = item_count + 1, post_id = ?, created_at = NOW() WHERE id = ?');
+            $stmt->execute([$postId, $existing['id']]);
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO notifications (user_id, actor_id, type, post_id, item_count) VALUES (?, ?, 'new_post', ?, 1)");
+            $stmt->execute([$friendId, $authorId, $postId]);
+        }
+    }
+}
+
+// Novo desafio no clube: avisa todos os membros, menos quem criou.
+function notify_new_challenge(PDO $pdo, int $clubId, int $actorId, int $challengeId): void {
+    $stmt = $pdo->prepare(
+        "INSERT INTO notifications (user_id, actor_id, type, club_id, challenge_id)
+         SELECT user_id, ?, 'new_challenge', ?, ? FROM club_members WHERE club_id = ? AND user_id <> ?"
+    );
+    $stmt->execute([$actorId, $clubId, $challengeId, $clubId, $actorId]);
+}
+
+// Alguém entrou no clube: avisa só o administrador (quem criou o clube).
+function notify_club_join(PDO $pdo, array $club, int $newMemberId): void {
+    $adminId = (int) $club['created_by'];
+    if ($adminId === $newMemberId) return;
+    $stmt = $pdo->prepare("INSERT INTO notifications (user_id, actor_id, type, club_id) VALUES (?, ?, 'club_join', ?)");
+    $stmt->execute([$adminId, $newMemberId, (int) $club['id']]);
+}
+
 function build_notifications(PDO $pdo, int $userId, int $limit = 20): array {
     $stmt = $pdo->prepare(
-        'SELECT n.id, n.type, n.read_at, n.created_at, u.id AS actor_id, u.name AS actor_name,
+        'SELECT n.id, n.type, n.read_at, n.created_at, n.item_count, n.club_id, n.challenge_id,
+                u.id AS actor_id, u.name AS actor_name,
                 a.id AS activity_id, a.title AS activity_title,
-                p.id AS post_id
+                p.id AS post_id,
+                cc.title AS challenge_title, cl.name AS club_name
          FROM notifications n
          JOIN users u ON u.id = n.actor_id
          LEFT JOIN activities a ON a.id = n.activity_id
          LEFT JOIN posts p ON p.id = n.post_id
+         LEFT JOIN club_challenges cc ON cc.id = n.challenge_id
+         LEFT JOIN clubs cl ON cl.id = n.club_id
          WHERE n.user_id = ?
          ORDER BY n.created_at DESC
          LIMIT ' . (int) $limit
@@ -219,6 +278,10 @@ function build_notifications(PDO $pdo, int $userId, int $limit = 20): array {
             'activityId' => $r['activity_id'] !== null ? (int) $r['activity_id'] : null,
             'activityTitle' => $r['activity_title'],
             'postId' => $r['post_id'] !== null ? (int) $r['post_id'] : null,
+            'count' => (int) $r['item_count'],
+            'clubId' => $r['club_id'] !== null ? (int) $r['club_id'] : null,
+            'clubName' => $r['club_name'],
+            'challengeTitle' => $r['challenge_title'],
             'read' => $r['read_at'] !== null,
             'date' => to_iso_local($r['created_at']),
         ];
@@ -226,29 +289,59 @@ function build_notifications(PDO $pdo, int $userId, int $limit = 20): array {
 }
 
 // ---- Desafios de clube ----
+// Tipos de desafio aceitos: o que é medido (expressão SQL fixa, nunca vinda do
+// usuário) e a unidade mostrada na tela.
+function challenge_metrics(): array {
+    return [
+        'km'         => ['sql' => 'COALESCE(SUM(a.distance_km), 0)',          'unit' => 'km'],
+        'activities' => ['sql' => 'COUNT(a.id)',                              'unit' => 'atividades'],
+        'hours'      => ['sql' => 'COALESCE(SUM(a.duration_sec), 0) / 3600',  'unit' => 'h'],
+        'days'       => ['sql' => 'COUNT(DISTINCT DATE(a.date))',             'unit' => 'dias'],
+    ];
+}
+
 function build_challenge(PDO $pdo, array $c): array {
+    $metrics = challenge_metrics();
+    $metric = isset($c['metric']) && isset($metrics[$c['metric']]) ? $c['metric'] : 'km';
+
     $stmt = $pdo->prepare(
-        "SELECT u.id, u.name, u.avatar_photo, COALESCE(SUM(CASE WHEN a.date >= ? AND a.date < DATE_ADD(?, INTERVAL 1 DAY) THEN a.distance_km ELSE 0 END), 0) AS km
+        "SELECT u.id, u.name, u.avatar_photo, " . $metrics[$metric]['sql'] . " AS value
          FROM club_members cm
          JOIN users u ON u.id = cm.user_id
          LEFT JOIN activities a ON a.user_id = u.id
+            AND a.date >= ? AND a.date < DATE_ADD(?, INTERVAL 1 DAY)
          WHERE cm.club_id = ?
          GROUP BY u.id, u.name, u.avatar_photo
-         ORDER BY km DESC"
+         ORDER BY value DESC, u.name ASC"
     );
     $stmt->execute([$c['start_date'], $c['end_date'], $c['club_id']]);
     $rows = $stmt->fetchAll();
     $leaderboard = array_map(function ($r) {
-        return ['id' => (int) $r['id'], 'name' => $r['name'], 'avatarPhotoUrl' => $r['avatar_photo'] ?: null, 'km' => (float) $r['km']];
+        return ['id' => (int) $r['id'], 'name' => $r['name'], 'avatarPhotoUrl' => $r['avatar_photo'] ?: null, 'value' => (float) $r['value']];
     }, $rows);
+
+    $today = date('Y-m-d');
+    $startTs = strtotime($c['start_date']);
+    $endTs = strtotime($c['end_date'] . ' 23:59:59');
+    $status = $c['end_date'] < $today ? 'finished' : ($c['start_date'] > $today ? 'upcoming' : 'active');
+    $totalDays = max(1, (int) round(($endTs - $startTs) / 86400));
+    $elapsedPct = $status === 'finished' ? 100 : ($status === 'upcoming' ? 0 : min(100, max(0, (int) round(((time() - $startTs) / ($endTs - $startTs)) * 100))));
+
+    $winner = ($status === 'finished' && count($leaderboard) && $leaderboard[0]['value'] > 0) ? $leaderboard[0] : null;
 
     return [
         'id' => (int) $c['id'],
         'title' => $c['title'],
+        'metric' => $metric,
+        'unit' => $metrics[$metric]['unit'],
         'startDate' => $c['start_date'],
         'endDate' => $c['end_date'],
-        'daysLeft' => max(0, (int) ceil((strtotime($c['end_date']) - time()) / 86400)),
+        'status' => $status,
+        'totalDays' => $totalDays,
+        'elapsedPct' => $elapsedPct,
+        'daysLeft' => max(0, (int) ceil(($endTs - time()) / 86400)),
         'leaderboard' => $leaderboard,
+        'winner' => $winner,
     ];
 }
 

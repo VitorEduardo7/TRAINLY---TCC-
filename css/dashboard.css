@@ -167,6 +167,30 @@
     margin-bottom: 18px;
 }
 
+/* NOVO: cabeçalho de bloco da sidebar com botão de ação (ex: "Editar"
+   na Meta do Mês) ao lado do título. */
+.sidebar-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+.sidebar-block-header h2 { margin-bottom: 0; }
+
+.goal-edit-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+}
+.goal-edit-btn:hover { color: var(--text-dark); border-color: var(--primary-blue); }
+
 .chart {
     display: flex;
     align-items: flex-end;
@@ -194,6 +218,61 @@
 .chart-bar.today { background: var(--primary-blue); }
 .chart-day { font-size: 10px; color: var(--text-muted); font-weight: 700; }
 .chart-day.today { color: var(--text-dark); }
+
+/* NOVO: colunas clicáveis (dia selecionado) + navegação entre semanas */
+button.chart-col {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    border-radius: 6px;
+}
+button.chart-col:hover .chart-bar { background: color-mix(in srgb, var(--primary-blue) 55%, var(--border-color)); }
+button.chart-col:focus-visible { outline: 2px solid var(--primary-blue); outline-offset: 2px; }
+.chart-col.selected .chart-bar { background: var(--primary-blue); }
+.chart-col.selected .chart-day { color: var(--text-dark); }
+
+.week-nav { display: flex; gap: 6px; }
+.week-nav-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-size: 18px;
+    line-height: 1;
+    font-family: inherit;
+    cursor: pointer;
+}
+.week-nav-btn:hover:not(:disabled) { color: var(--text-dark); border-color: var(--primary-blue); }
+.week-nav-btn:disabled { opacity: .35; cursor: default; }
+
+.week-range {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin: -8px 0 14px;
+}
+
+.week-day-info {
+    min-height: 64px;
+    margin: 12px 0 4px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+}
+.week-day-info:empty { display: none; }
+.week-day-title { font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--text-muted); }
+.week-day-km { font-size: 22px; font-weight: 800; color: var(--text-dark); margin: 2px 0; }
+.week-day-meta { font-size: 12px; color: var(--text-muted); }
+.week-day-empty { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 .chart-total {
     border-top: 1px solid var(--border-color);
     padding-top: 12px;

@@ -267,6 +267,92 @@
   }
 
   /* ---------------------------------------------------------
+     Card quadrado de publicação (aba "Publicações" do perfil,
+     mesmo formato dos cards de atividade — .pa-card)
+     --------------------------------------------------------- */
+  function renderPostCard(p) {
+    const photoHtml = p.photoUrl
+      ? '<div class="pa-photo" style="background-image:url(\'' + p.photoUrl + '\');"><span class="pa-badge">PUBLICAÇÃO</span></div>'
+      : "";
+    const inlineBadge = !p.photoUrl ? '<span class="pa-badge-inline">PUBLICAÇÃO</span>' : "";
+    const titleText = p.content ? escapeHtml(p.content) : "Publicação sem texto";
+    const deleteBtn = p.isMine
+      ? '<button class="route-icon-btn danger post-delete-btn" type="button" title="Apagar publicação">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+          '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>' +
+          '<path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>' +
+        "</button>"
+      : "";
+
+    return (
+      '<div class="pa-card post-card" data-post-id="' + p.id + '">' +
+        photoHtml +
+        deleteBtn +
+        '<div class="pa-body">' +
+          inlineBadge +
+          '<div class="pa-title">' + titleText + "</div>" +
+          '<div class="pa-date">' + timeAgo(p.date) + "</div>" +
+          '<div class="pa-stats">' +
+            "<div>" + (p.comments ? p.comments.length : 0) + " coment.</div>" +
+            '<button class="kudos-btn pa-kudos' + (p.likedByMe ? " liked" : "") + '" data-action="like"' + (p.canLike ? "" : " disabled") + ">👍 <span>" + (p.likeCount || 0) + "</span></button>" +
+          "</div>" +
+        "</div>" +
+      "</div>"
+    );
+  }
+
+  function renderPostsGrid(listEl, emptyEl, feed) {
+    if (!listEl) return;
+    if (!feed.length) {
+      listEl.innerHTML = "";
+      if (emptyEl) emptyEl.style.display = "block";
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = "none";
+    listEl.innerHTML = feed.map(renderPostCard).join("");
+    wirePostGridInteractions(listEl);
+  }
+
+  function wirePostGridInteractions(listEl) {
+    listEl.querySelectorAll(".post-card").forEach((item) => {
+      const postId = item.dataset.postId;
+
+      const likeBtn = item.querySelector('[data-action="like"]');
+      if (likeBtn) {
+        likeBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          if (likeBtn.disabled) return;
+          const isLiked = likeBtn.classList.contains("liked");
+          likeBtn.disabled = true;
+          try {
+            const { likeCount, likedByMe } = await togglePostLike(postId, isLiked);
+            likeBtn.querySelector("span").textContent = likeCount;
+            likeBtn.classList.toggle("liked", likedByMe);
+          } catch (err) {
+            showToast(err.message || "Não foi possível curtir agora.");
+          } finally {
+            likeBtn.disabled = false;
+          }
+        });
+      }
+
+      const deleteBtn = item.querySelector(".post-delete-btn");
+      if (deleteBtn) {
+        deleteBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          if (!confirm("Apagar essa publicação?")) return;
+          try {
+            await deletePost(postId);
+            item.remove();
+          } catch (err) {
+            showToast(err.message || "Não foi possível apagar a publicação.");
+          }
+        });
+      }
+    });
+  }
+
+  /* ---------------------------------------------------------
      Modal de criar publicação
      --------------------------------------------------------- */
   function initCreatePostModal(onCreated) {
@@ -322,9 +408,48 @@
     }
   }
 
+  // Deixa o fim da lista de publicações rente ao fim da coluna lateral
+  // (Volume Semanal, Recordes, Meta...). Se as colunas ficarem empilhadas
+  // (celular/tela estreita), volta ao limite padrão do CSS (70vh).
+  function alignFeedToSidebar(listEl) {
+    const sidebar = document.querySelector(".dashboard-sidebar");
+    if (!sidebar) return;
+
+    let queued = false;
+    function apply() {
+      queued = false;
+      const feedRect = listEl.getBoundingClientRect();
+      const sideRect = sidebar.getBoundingClientRect();
+      const sideBySide = sideRect.left >= feedRect.right - 1;
+      if (!sideBySide) {
+        listEl.style.maxHeight = "";
+        return;
+      }
+      const available = Math.round(sideRect.bottom - feedRect.top);
+      listEl.style.maxHeight = Math.max(320, available) + "px";
+    }
+    function schedule() {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(apply);
+    }
+
+    window.addEventListener("resize", schedule);
+    if (window.ResizeObserver) {
+      // a sidebar muda de altura (detalhe do dia, metas) e o topo da página
+      // muda quando as métricas carregam
+      const ro = new ResizeObserver(schedule);
+      ro.observe(sidebar);
+      ro.observe(document.body);
+    }
+    schedule();
+  }
+
   async function initPostsFeed() {
     const listEl = document.getElementById("feedList");
     if (!listEl) return; // não é o dashboard
+
+    alignFeedToSidebar(listEl);
 
     async function load() {
       try {
@@ -352,7 +477,7 @@
 
     try {
       const posts = viewUserId ? await getUserPosts(viewUserId) : await getMyPosts();
-      renderPostsFeed(listEl, emptyEl, posts);
+      renderPostsGrid(listEl, emptyEl, posts);
       if (statPostsEl) statPostsEl.textContent = posts.length;
     } catch (e) {
       showToast(e.message || "Não foi possível carregar as publicações.");

@@ -1,0 +1,341 @@
+/* =========================================================
+   Clubes — camada visual nova (carrega DEPOIS de clubes.css, então
+   sobrescreve o que for preciso sem mexer naquele arquivo).
+   Cobre: cabeçalho do clube, desafio (pódio + progresso), histórico
+   de desafios, ranking e botões da página.
+   ========================================================= */
+
+/* ---------- botões da página (btn-secondary não vem do CSS daqui) ---------- */
+.clubes-container .btn-secondary,
+.overlay .modal-actions .btn-secondary {
+    background: var(--bg-color);
+    color: var(--text-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+}
+.clubes-container .btn-secondary:hover,
+.overlay .modal-actions .btn-secondary:hover {
+    background: var(--card-bg);
+    border-color: var(--primary-blue);
+}
+
+/* ---------- lista de clubes ---------- */
+.club-icon {
+    background: linear-gradient(135deg, var(--primary-blue), #7c5cff);
+    color: #fff;
+    font-weight: 800;
+    font-size: 17px;
+}
+.club-list-item { transition: transform .15s ease, border-color .15s ease; }
+.club-list-item:hover { transform: translateY(-1px); }
+.club-list-item.selected {
+    box-shadow: 0 0 0 1px var(--primary-blue), 0 8px 24px rgba(47, 125, 253, 0.12);
+}
+
+/* ---------- cabeçalho do clube ---------- */
+.club-hero {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 24px 26px;
+    margin-bottom: 20px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    background:
+        radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--primary-blue) 22%, transparent) 0%, transparent 60%),
+        var(--card-bg);
+    flex-wrap: wrap;
+}
+.club-hero-badge {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    background: linear-gradient(135deg, var(--primary-blue), #7c5cff);
+    box-shadow: 0 8px 22px rgba(47, 125, 253, 0.35);
+}
+.club-hero-info { flex: 1; min-width: 200px; }
+.club-hero .club-detail-title { font-size: 24px; }
+.club-chips { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.chip {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-muted);
+}
+.chip-accent {
+    background: color-mix(in srgb, var(--primary-blue) 20%, transparent);
+    color: var(--primary-hover);
+}
+.club-hero-actions { display: flex; align-items: center; gap: 10px; }
+
+/* ---------- selo do tipo de desafio ---------- */
+.metric-badge {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--primary-blue) 18%, transparent);
+    color: var(--primary-hover);
+}
+
+/* ---------- desafio atual ---------- */
+.challenge-card {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 20px;
+    padding: 24px 26px 26px;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, #f5a623 55%, transparent);
+    background:
+        radial-gradient(90% 120% at 100% 0%, rgba(245, 166, 35, 0.16) 0%, transparent 60%),
+        linear-gradient(160deg, #1d1b14 0%, var(--card-bg) 70%);
+}
+.challenge-card.upcoming {
+    border-color: var(--border-color);
+    background: var(--card-bg);
+}
+.challenge-card .challenge-top { margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
+.challenge-tags { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.challenge-card .challenge-days {
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: rgba(245, 166, 35, 0.14);
+}
+.challenge-card .challenge-title { font-size: 22px; line-height: 1.25; }
+.challenge-period { font-size: 12px; color: var(--text-muted); margin: 6px 0 14px; }
+
+.challenge-time-bar {
+    height: 5px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+.challenge-time-bar-fill {
+    height: 100%;
+    border-radius: 20px;
+    background: linear-gradient(90deg, #f5a623, #ffd166);
+    transition: width .5s ease;
+}
+
+/* ---------- pódio ---------- */
+.podium {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 14px;
+    margin: 26px 0 8px;
+}
+.podium-col {
+    flex: 1;
+    max-width: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+.podium-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 800;
+    color: #fff;
+    border: 3px solid var(--card-bg);
+    box-shadow: 0 0 0 2px var(--border-color);
+}
+.podium-col.place-1 .podium-avatar {
+    width: 64px;
+    height: 64px;
+    font-size: 20px;
+    box-shadow: 0 0 0 3px #f5a623, 0 8px 22px rgba(245, 166, 35, 0.35);
+}
+.podium-col.place-2 .podium-avatar { box-shadow: 0 0 0 2px #b8c0cc; }
+.podium-col.place-3 .podium-avatar { box-shadow: 0 0 0 2px #c58b5a; }
+.podium-name {
+    margin-top: 10px;
+    max-width: 100%;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.podium-value { font-size: 12px; font-weight: 700; color: var(--text-muted); margin: 2px 0 10px; }
+.podium-step {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 10px;
+    border-radius: 10px 10px 0 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: #1a1c26;
+}
+.podium-col.place-1 .podium-step { height: 92px; background: linear-gradient(180deg, #ffd166, #f5a623); }
+.podium-col.place-2 .podium-step { height: 66px; background: linear-gradient(180deg, #dfe4ec, #aab2bf); }
+.podium-col.place-3 .podium-step { height: 48px; background: linear-gradient(180deg, #e0a672, #b9774a); }
+
+/* ---------- demais posições ---------- */
+.challenge-progress-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+}
+.challenge-progress-empty { margin-top: 14px; }
+.challenge-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+}
+.challenge-progress-pos {
+    width: 28px;
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text-muted);
+}
+.challenge-progress-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: #fff;
+}
+.challenge-progress-info { flex: 1; min-width: 0; }
+.challenge-progress-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.challenge-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--bg-color);
+    border-radius: 20px;
+    overflow: hidden;
+}
+.challenge-progress-bar-fill {
+    height: 100%;
+    background: var(--primary-blue);
+    border-radius: 20px;
+    transition: width .4s ease;
+}
+.challenge-progress-km {
+    flex-shrink: 0;
+    min-width: 72px;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-dark);
+}
+
+/* ---------- sem desafio ---------- */
+.challenge-empty {
+    margin-bottom: 20px;
+    padding: 30px 26px;
+    text-align: center;
+    border-radius: 16px;
+    border: 1px dashed var(--border-color);
+    background: var(--card-bg);
+}
+.challenge-empty-title { font-size: 16px; font-weight: 800; color: var(--text-dark); margin-bottom: 6px; }
+.challenge-empty p { font-size: 13px; color: var(--text-muted); max-width: 440px; margin: 0 auto 16px; line-height: 1.5; }
+
+/* ---------- convite ---------- */
+.club-invite-box { border-radius: 12px; }
+
+/* ---------- ranking + histórico lado a lado ---------- */
+.club-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+}
+.club-columns .card { border-radius: 14px; }
+.club-columns .rank-row { padding: 11px 0; }
+
+/* ---------- histórico ---------- */
+.history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.history-item:last-child { border-bottom: none; }
+.history-main { min-width: 0; }
+.history-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.history-meta { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.history-winner { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.history-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: #fff;
+    box-shadow: 0 0 0 2px #f5a623;
+}
+.history-winner-label { font-size: 9.5px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: #f5a623; }
+.history-winner-name { font-size: 13px; font-weight: 700; color: var(--text-dark); }
+.history-winner-value { font-size: 11px; color: var(--text-muted); }
+.history-nowinner { font-size: 12px; color: var(--text-muted); }
+
+@media (max-width: 1100px) {
+    .club-columns { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+    .podium { gap: 8px; }
+    .club-hero { padding: 18px; }
+    .challenge-card { padding: 18px; }
+}

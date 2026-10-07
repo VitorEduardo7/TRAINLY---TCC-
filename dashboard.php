@@ -62,9 +62,17 @@
         <!-- Coluna lateral -->
         <aside class="dashboard-sidebar">
             <div class="card sidebar-block">
-                <h2>Volume Semanal</h2>
+                <div class="sidebar-block-header">
+                    <h2>Volume Semanal</h2>
+                    <div class="week-nav">
+                        <button type="button" class="week-nav-btn" id="weekPrevBtn" aria-label="Semana anterior">&#8249;</button>
+                        <button type="button" class="week-nav-btn" id="weekNextBtn" aria-label="Próxima semana">&#8250;</button>
+                    </div>
+                </div>
+                <div class="week-range" id="weekRange"></div>
                 <div class="chart" id="weekChart"></div>
-                <div class="chart-total"><span>Total</span><b id="weekTotal">0 km</b></div>
+                <div class="week-day-info" id="weekDayInfo"></div>
+                <div class="chart-total"><span>Total da semana</span><b id="weekTotal">0 km</b></div>
             </div>
 
             <div class="card sidebar-block">
@@ -78,7 +86,10 @@
             </div>
 
             <div class="card sidebar-block">
-                <h2>Meta do Mês</h2>
+                <div class="sidebar-block-header">
+                    <h2>Meta do Mês</h2>
+                    <button class="goal-edit-btn" id="editGoalBtn" type="button">Editar</button>
+                </div>
                 <div id="goalWidget"></div>
             </div>
         </aside>
@@ -101,6 +112,29 @@
         <div class="modal-actions">
             <button class="btn-secondary" id="cancelPostBtn" type="button">Cancelar</button>
             <button class="btn-primary" id="savePostBtn" type="button">Publicar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: editar meta do mês -->
+<div class="overlay" id="editGoalOverlay">
+    <div class="modal">
+        <h3>Editar Meta do Mês</h3>
+        <div class="field">
+            <label>Tipo de meta</label>
+            <select id="goalType">
+                <option value="km">Distância (km)</option>
+                <option value="activities">Número de atividades</option>
+                <option value="hours">Tempo ativo (horas)</option>
+            </select>
+        </div>
+        <div class="field">
+            <label>Valor da meta</label>
+            <input type="number" id="goalValue" step="0.1" min="0.1" placeholder="Ex: 50">
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" id="cancelGoalBtn" type="button">Cancelar</button>
+            <button class="btn-primary" id="saveGoalBtn" type="button">Salvar meta</button>
         </div>
     </div>
 </div>

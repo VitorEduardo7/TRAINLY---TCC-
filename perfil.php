@@ -70,7 +70,7 @@
     </nav>
 
     <div data-tab-panel-new="publicacoes">
-        <div id="profilePostsList"></div>
+        <div class="activities-grid" id="profilePostsList"></div>
         <p class="empty-state" id="profilePostsEmpty" style="display:none; padding:32px 0; text-align:center;">
             Nenhuma publicação por aqui ainda.
         </p>

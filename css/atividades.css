@@ -94,11 +94,234 @@
     font-size: 14px;
 }
 
+/* =========================================================
+   Resumo + Consistência do período (mesmas duas telas da aba
+   Estatísticas do perfil), com seletor de período próprio
+   (Semana/Mês/6 Meses/Ano) — dados vêm de /activities/summary.
+   ========================================================= */
+.period-tabs {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.period-pill {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 7px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.period-pill:hover { color: var(--text-dark); border-color: var(--primary-blue); }
+.period-pill.active {
+    color: var(--primary-blue);
+    border-color: var(--primary-blue);
+    background: color-mix(in srgb, var(--primary-blue) 12%, var(--card-bg));
+}
+
+/* Layout de duas colunas: lista de atividades (principal) + a
+   lateral com o seletor de período e os cards de Resumo/Consistência
+   — mesma ideia do dashboard (conteúdo + sidebar). */
+.atividades-columns {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 24px;
+    align-items: start;
+}
+
+.atividades-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: sticky;
+    top: 24px;
+}
+
+.stats-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 20px 22px;
+}
+
+.stats-card-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin-bottom: 16px;
+}
+
+.stats-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.stats-card-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.stats-card-label {
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.stats-card-value {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-dark);
+}
+
+.consistency-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    text-align: center;
+}
+
+.consistency-summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.consistency-summary-item span {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--primary-blue);
+}
+
+.consistency-summary-item label {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* Calendário do mês atual (a "tabelinha" da aba Estatísticas do
+   perfil), reaproveitado aqui dentro do card de Consistência. */
+.consistency-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 16px;
+}
+
+.consistency-day-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--text-muted);
+    padding-bottom: 2px;
+}
+
+.consistency-day {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+}
+
+.consistency-day.active {
+    background: var(--primary-blue);
+    border-color: var(--primary-blue);
+}
+
+.consistency-day.empty {
+    background: transparent;
+    border: none;
+}
+
+/* Trava o scroll da lista de atividades dentro da própria lista —
+   igual ao feed de amigos no dashboard: só a lista rola, o resto da
+   página (cabeçalho, filtros, lateral) fica parado. */
+#atividadesList {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+#atividadesList::-webkit-scrollbar { width: 8px; }
+#atividadesList::-webkit-scrollbar-track { background: transparent; }
+#atividadesList::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 8px; }
+
 @media (max-width: 900px) {
     .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    .atividades-columns { grid-template-columns: 1fr; }
+    .atividades-sidebar { position: static; }
 }
 @media (max-width: 600px) {
     .page-header-top { flex-direction: column; }
     .page-header-top .btn-primary { width: 100%; }
     .summary-grid { grid-template-columns: 1fr; }
+}
+
+
+/* Botões Editar / Excluir das atividades + diálogo de confirmação */
+
+.activity-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+
+.act-action-btn {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.act-action-btn:hover {
+    color: var(--text-dark);
+    border-color: var(--primary-blue);
+    background: color-mix(in srgb, var(--primary-blue) 10%, transparent);
+}
+.act-action-btn.danger:hover {
+    color: var(--danger, #f0554e);
+    border-color: var(--danger, #f0554e);
+    background: color-mix(in srgb, var(--danger, #f0554e) 10%, transparent);
+}
+.act-action-btn:disabled { opacity: .5; cursor: default; }
+
+/* Diálogo de confirmação */
+.confirm-modal { max-width: 380px; }
+.confirm-message {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-muted);
+    margin: 0;
+}
+.modal-actions .btn-secondary,
+.modal-actions .btn-danger { flex: 1; padding: 11px; }
+.btn-danger {
+    background: var(--danger, #f0554e);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: filter .15s ease;
+}
+.btn-danger:hover { filter: brightness(1.1); }
+
+/* Modal "Editar atividade" no celular: botões embaixo do cabeçalho */
+@media (max-width: 520px) {
+    .activity-item-top { flex-wrap: wrap; gap: 10px; }
+    .activity-actions { margin-left: 0; }
 }

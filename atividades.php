@@ -53,8 +53,64 @@
             </div>
         </div>
 
-        <div id="atividadesList"></div>
-        <p class="atividades-empty" id="atividadesEmpty" style="display:none;">Nenhuma atividade encontrada. Registre a primeira em "+ Nova Atividade".</p>
+        <div class="atividades-columns">
+            <div class="atividades-main">
+                <div id="atividadesList"></div>
+                <p class="atividades-empty" id="atividadesEmpty" style="display:none;">Nenhuma atividade encontrada. Registre a primeira em "+ Nova Atividade".</p>
+            </div>
+
+            <!-- Resumo + Consistência do período (mesmas duas telas da aba
+                 Estatísticas do perfil, com seletor de período próprio) -->
+            <aside class="atividades-sidebar">
+                <div class="period-tabs">
+                    <button class="period-pill" data-period="week">Semana</button>
+                    <button class="period-pill" data-period="month">Mês</button>
+                    <button class="period-pill" data-period="6months">6 Meses</button>
+                    <button class="period-pill active" data-period="year">Ano</button>
+                </div>
+
+                <div class="stats-card">
+                    <div class="stats-card-title" id="atvResumoTitle">Resumo</div>
+                    <div class="stats-card-grid">
+                        <div class="stats-card-item">
+                            <div class="stats-card-label">Distância Total</div>
+                            <div class="stats-card-value" id="atvDistancia">0 km</div>
+                        </div>
+                        <div class="stats-card-item">
+                            <div class="stats-card-label">Tempo Ativo</div>
+                            <div class="stats-card-value" id="atvTempo">0h 0m</div>
+                        </div>
+                        <div class="stats-card-item">
+                            <div class="stats-card-label">Atividades</div>
+                            <div class="stats-card-value" id="atvTotal">0</div>
+                        </div>
+                        <div class="stats-card-item">
+                            <div class="stats-card-label">Dias Ativos</div>
+                            <div class="stats-card-value" id="atvDiasAtivos">0 dias</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-card">
+                    <div class="stats-card-title" id="atvConsistTitle">Consistência</div>
+                    <div class="consistency-grid" id="atvConsistGrid"></div>
+                    <div class="consistency-summary">
+                        <div class="consistency-summary-item">
+                            <span id="atvCsActive">0</span>
+                            <label>Dias ativos</label>
+                        </div>
+                        <div class="consistency-summary-item">
+                            <span id="atvCsStreak">0 dias</span>
+                            <label>Maior sequência</label>
+                        </div>
+                        <div class="consistency-summary-item">
+                            <span id="atvCsPct">0%</span>
+                            <label>Taxa de consistência</label>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
     </div>
 
     <!-- Modal de registrar atividade manualmente (movido do dashboard) -->
