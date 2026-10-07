@@ -1,4 +1,4 @@
-/* =========================================================
+/* 
    TRAINLY - main.js
    Camada de dados + interações compartilhadas entre páginas.
 
@@ -6,7 +6,7 @@
    Só a seção 2 (CAMADA DE DADOS) e os pontos que chamavam
    getData()/saveData() de forma síncrona mudaram — o resto
    (patentes, XP, mapa GPS) continua igual.
-   ========================================================= */
+   */
 
 (function () {
   "use strict";
