@@ -22,6 +22,19 @@
   }
 
   async function apiRequest(path, options = {}) {
+    // Banco do app (Supabase): ver js/supabase-api.js
+    if (window.TrainlySupabase && window.TrainlySupabase.enabled) {
+      try {
+        return await window.TrainlySupabase.request(path, options);
+      } catch (err) {
+        if (err.status === 401) {
+          localStorage.removeItem(TOKEN_KEY);
+          if (!location.pathname.endsWith("login.php")) location.href = "login.php";
+        }
+        throw err;
+      }
+    }
+
     const token = getToken();
     const isFormData = options.body instanceof FormData;
     const clean = path.replace(/^\//, "");

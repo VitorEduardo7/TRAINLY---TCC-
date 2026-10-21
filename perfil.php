@@ -154,6 +154,7 @@
 </div>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
+<?php include __DIR__ . '/includes/data-scripts.php'; ?>
 <script src="js/main.js"></script>
 <script src="js/posts.js"></script>
 </body>

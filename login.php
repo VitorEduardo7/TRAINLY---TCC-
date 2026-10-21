@@ -102,6 +102,7 @@
     </script>
     <!-- O envio dos formulários (login/cadastro) agora é tratado pelo main.js,
          que chama a API real e guarda o token de sessão. -->
+    <?php include __DIR__ . '/includes/data-scripts.php'; ?>
     <script src="js/main.js"></script>
 </body>
 </html>

@@ -1,11 +1,11 @@
-/* 
+/*
    TRAINLY - main.js
    Camada de dados + interações compartilhadas entre páginas.
 
-   Agora conectado a uma API real (Node/Express + MySQL).
-   Só a seção 2 (CAMADA DE DADOS) e os pontos que chamavam
-   getData()/saveData() de forma síncrona mudaram — o resto
-   (patentes, XP, mapa GPS) continua igual.
+   Os dados vêm do Supabase, o MESMO banco do app (ver js/supabase-api.js
+   e js/supabase-config.js). O apiRequest() continua com a mesma cara de
+   antes; ele só repassa a chamada para o Supabase. Com DATA_SOURCE =
+   "mysql" no supabase-config.js, volta a usar a API PHP + MySQL antiga.
    */
 
 (function () {
@@ -70,7 +70,31 @@
     localStorage.removeItem(TOKEN_KEY);
   }
 
+  // true quando o site está usando o banco do app (Supabase)
+  function usingSupabase() {
+    return !!(window.TrainlySupabase && window.TrainlySupabase.enabled);
+  }
+
+  // Páginas protegidas: tem alguém logado?
+  async function isLoggedIn() {
+    if (usingSupabase()) return window.TrainlySupabase.hasSession();
+    return !!getToken();
+  }
+
   async function apiRequest(path, options = {}) {
+    // Banco do app (Supabase): mesmas rotas, mesmas respostas
+    if (usingSupabase()) {
+      try {
+        return await window.TrainlySupabase.request(path, options);
+      } catch (err) {
+        if (err.status === 401) {
+          clearToken();
+          if (!location.pathname.endsWith("login.php")) location.href = "login.php";
+        }
+        throw err;
+      }
+    }
+
     const token = getToken();
     const isFormData = options.body instanceof FormData;
 
@@ -131,8 +155,11 @@
     return data;
   }
 
-  function logout() {
+  async function logout() {
     clearToken();
+    if (usingSupabase()) {
+      try { await window.TrainlySupabase.signOut(); } catch (e) { /* sai mesmo assim */ }
+    }
     location.href = "login.php";
   }
 
@@ -980,6 +1007,9 @@
           let href = "";
           if (n.type === "like") {
             msg = "<b>" + n.actorName + "</b> curtiu sua atividade" + (n.activityTitle ? ' "' + n.activityTitle + '"' : "");
+          } else if (n.type === "comment") {
+            // Comentários em atividade são feitos pelo app
+            msg = "<b>" + n.actorName + "</b> comentou na sua atividade" + (n.activityTitle ? ' "' + n.activityTitle + '"' : "");
           } else if (n.type === "post_like") {
             msg = "<b>" + n.actorName + "</b> curtiu sua publicação";
           } else if (n.type === "post_comment") {
@@ -1601,7 +1631,8 @@
     // NOVO: se a URL tiver ?user=ID, mostra o perfil PÚBLICO de outra pessoa
     const viewUserId = new URLSearchParams(location.search).get("user");
     if (viewUserId) {
-      return renderPublicProfile(Number(viewUserId));
+      // ID como texto: no Supabase os IDs são UUID (ex.: "3f2a..."), não números
+      return renderPublicProfile(viewUserId);
     }
 
     const data = await getData();
@@ -1913,8 +1944,8 @@
       if (!btn) return;
 
       const item = btn.closest(".activity-item");
-      const id = Number(item.dataset.activityId);
-      const act = (listEl._acts || []).find((a) => Number(a.id) === id);
+      const id = item.dataset.activityId;
+      const act = (listEl._acts || []).find((a) => String(a.id) === id);
       if (!act) return;
 
       if (btn.dataset.action === "edit") {
@@ -2320,8 +2351,9 @@
   /* ---------------------------------------------------------
      NOVO: Página Explorar (rotas prontas cadastradas por usuários)
      --------------------------------------------------------- */
-  const ROUTE_TYPE_ICON = { Corrida: "", Ciclismo: "", Trilha: "" };
-  const ROUTE_TYPE_COLOR = { Corrida: "#3b82f6", Ciclismo: "#10b981", Trilha: "#f59e0b" };
+  // Mesmos tipos de rota do app: Corrida, Ciclismo e Caminhada
+  const ROUTE_TYPE_ICON = { Corrida: "", Ciclismo: "", Caminhada: "" };
+  const ROUTE_TYPE_COLOR = { Corrida: "#3b82f6", Ciclismo: "#10b981", Caminhada: "#f59e0b" };
 
   function initExplorar() {
     const myListEl = document.getElementById("myRoutesList");
@@ -2371,9 +2403,9 @@
     }
 
     function selectRoute(id) {
-      selectedId = id;
-      const route = allRoutes.find((r) => r.id === id);
-      document.querySelectorAll(".route-card").forEach((c) => c.classList.toggle("selected", Number(c.dataset.routeId) === id));
+      selectedId = String(id);
+      const route = allRoutes.find((r) => String(r.id) === selectedId);
+      document.querySelectorAll(".route-card").forEach((c) => c.classList.toggle("selected", c.dataset.routeId === selectedId));
       drawRouteOnMap(route);
       renderDetailBar(route);
     }
@@ -2390,7 +2422,7 @@
         const icon = ROUTE_TYPE_ICON[r.type] || "";
         const color = ROUTE_TYPE_COLOR[r.type] || "#3b82f6";
         return (
-          '<div class="route-card' + (r.id === selectedId ? " selected" : "") + '" data-route-id="' + r.id + '">' +
+          '<div class="route-card' + (String(r.id) === selectedId ? " selected" : "") + '" data-route-id="' + r.id + '">' +
             '<div class="route-card-top">' +
               '<div class="route-icon" style="background:' + color + '22; color:' + color + ';">' + icon + "</div>" +
               '<div class="route-card-main">' +
@@ -2418,7 +2450,7 @@
       containerEl.querySelectorAll(".route-card").forEach((card) => {
         card.addEventListener("click", (e) => {
           if (e.target.closest("[data-edit-route], [data-delete-route]")) return;
-          selectRoute(Number(card.dataset.routeId));
+          selectRoute(card.dataset.routeId);
         });
       });
     }
@@ -2436,7 +2468,7 @@
       }
 
       // Seleciona a primeira rota automaticamente (prioriza as minhas)
-      if (!selectedId || !routes.some((r) => r.id === selectedId)) {
+      if (!selectedId || !routes.some((r) => String(r.id) === selectedId)) {
         selectRoute((myRoutes[0] || friendsRoutes[0]).id);
       }
     }
@@ -2529,7 +2561,7 @@
       document.getElementById("rElev").value = "";
       document.getElementById("rTerrain").value = "";
       document.getElementById("rType").value = "Corrida";
-      document.getElementById("rDifficulty").value = "Iniciante";
+      document.getElementById("rDifficulty").value = "Moderada";
       drawPoints = [];
       setTimeout(() => {
         setupDrawMap();
@@ -2613,14 +2645,14 @@
       const delBtn = e.target.closest("[data-delete-route]");
       if (editBtn) {
         e.stopPropagation();
-        const route = allRoutes.find((r) => r.id === Number(editBtn.dataset.editRoute));
+        const route = allRoutes.find((r) => String(r.id) === editBtn.dataset.editRoute);
         if (route) openEditModal(route);
         return;
       }
       if (delBtn) {
         e.stopPropagation();
-        const id = Number(delBtn.dataset.deleteRoute);
-        const route = allRoutes.find((r) => r.id === id);
+        const id = delBtn.dataset.deleteRoute;
+        const route = allRoutes.find((r) => String(r.id) === id);
         if (!confirm('Tem certeza que quer apagar a rota "' + (route ? route.name : "") + '"?')) return;
         try {
           await deleteRoute(id);
@@ -2699,7 +2731,7 @@
         return;
       }
       listEl.innerHTML = myClubs.map((c) => (
-        '<div class="club-list-item' + (c.id === selectedClubId ? " selected" : "") + '" data-club-id="' + c.id + '">' +
+        '<div class="club-list-item' + (String(c.id) === String(selectedClubId) ? " selected" : "") + '" data-club-id="' + c.id + '">' +
           '<div class="club-icon">' + (c.name ? c.name.charAt(0).toUpperCase() : "?") + "</div>" +
           "<div>" +
             '<div class="club-list-name">' + c.name + (c.isAdmin ? ' <span style="color:var(--primary-blue);font-size:10px;">ADMIN</span>' : "") + "</div>" +
@@ -2709,7 +2741,7 @@
       )).join("");
 
       listEl.querySelectorAll(".club-list-item").forEach((item) => {
-        item.addEventListener("click", () => selectClub(Number(item.dataset.clubId)));
+        item.addEventListener("click", () => selectClub(item.dataset.clubId));
       });
     }
 
@@ -3021,7 +3053,7 @@
             await createChallenge(clubId, title, startDate, endDate, metric);
             showToast("Desafio criado!");
             challengeOverlay.classList.remove("open");
-            selectClub(Number(clubId));
+            selectClub(clubId);
           } catch (e) {
             showToast(e.message || "Não foi possível criar o desafio.");
           } finally {
@@ -3074,7 +3106,7 @@
             createOverlay.classList.remove("open");
             delete createOverlay.dataset.editingClubId;
             await loadMyClubs();
-            selectClub(Number(editingId));
+            selectClub(editingId);
           } else {
             const club = await createClub(name, description);
             showToast("Clube criado!");
@@ -3154,21 +3186,23 @@
   /* ---------------------------------------------------------
      BOOT
      --------------------------------------------------------- */
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", async () => {
     initTheme();
-    initNavbar();
 
     if (isPublicPage()) {
+      initNavbar();
       initAuthForms();
       return;
     }
 
-    // Páginas protegidas: sem token, manda pro login.
-    if (!getToken()) {
+    // Páginas protegidas: sem sessão, manda pro login (antes de carregar
+    // qualquer coisa, inclusive as notificações da navbar).
+    if (!(await isLoggedIn())) {
       window.location.href = "login.php";
       return;
     }
 
+    initNavbar();
     initDashboard();
     initPerfil();
     initAmizades();

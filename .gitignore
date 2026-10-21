@@ -1,0 +1,5 @@
+# Senhas e segredos da API PHP antiga (cada PC cria o seu a partir do api/.env.example)
+api/.env
+
+# Fotos enviadas quando o site usava o MySQL (agora as fotos ficam no Supabase Storage)
+uploads/

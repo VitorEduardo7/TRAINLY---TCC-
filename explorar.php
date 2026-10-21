@@ -28,7 +28,7 @@
             <button class="filter-pill active" data-filter="Todos">Todos</button>
             <button class="filter-pill" data-filter="Corrida">Corrida</button>
             <button class="filter-pill" data-filter="Ciclismo">Ciclismo</button>
-            <button class="filter-pill" data-filter="Trilha">Trilha</button>
+            <button class="filter-pill" data-filter="Caminhada">Caminhada</button>
         </div>
         <button class="btn-primary" id="openAddRouteBtn">+ Adicionar Rota</button>
     </div>
@@ -77,15 +77,15 @@
                 <select id="rType">
                     <option value="Corrida">Corrida</option>
                     <option value="Ciclismo">Ciclismo</option>
-                    <option value="Trilha">Trilha</option>
+                    <option value="Caminhada">Caminhada</option>
                 </select>
             </div>
             <div class="field">
                 <label>Dificuldade</label>
                 <select id="rDifficulty">
-                    <option value="Iniciante">Iniciante</option>
-                    <option value="Intermediário">Intermediário</option>
-                    <option value="Avançado">Avançado</option>
+                    <option value="Fácil">Fácil</option>
+                    <option value="Moderada" selected>Moderada</option>
+                    <option value="Difícil">Difícil</option>
                 </select>
             </div>
         </div>
@@ -113,6 +113,7 @@
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<?php include __DIR__ . '/includes/data-scripts.php'; ?>
 <script src="js/main.js"></script>
 </body>
 </html>
