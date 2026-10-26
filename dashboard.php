@@ -20,6 +20,9 @@
         <h1 class="greeting" id="greetingText">Bom dia! 👋</h1>
     </div>
 
+    <!-- Nível, barra de XP e chama de sequência (preenchido pelo main.js) -->
+    <section class="level-card" id="levelCard" aria-label="Seu nível"></section>
+
     <div class="metrics-grid" id="metricsGrid"></div>
 
     <div class="dashboard-columns">
@@ -61,6 +64,14 @@
 
         <!-- Coluna lateral -->
         <aside class="dashboard-sidebar">
+            <div class="card sidebar-block quests-card" id="questsCard" style="display:none;">
+                <div class="sidebar-block-header">
+                    <h2>Desafios</h2>
+                    <span class="quests-count" id="questsCount"></span>
+                </div>
+                <div id="questsList"></div>
+            </div>
+
             <div class="card sidebar-block">
                 <div class="sidebar-block-header">
                     <h2>Volume Semanal</h2>

@@ -856,7 +856,7 @@
   function renderActiveToday(el, active) {
     if (!el) return;
     if (!active.length) {
-      el.innerHTML = '<p class="empty-state">Ninguém que você segue treinou hoje ainda.</p>';
+      el.innerHTML = emptyBlock("activity", "Ninguém treinou hoje", "Quando quem você segue registrar uma atividade, ela aparece aqui.", true);
       return;
     }
     el.innerHTML = active.map((a) => {
@@ -934,6 +934,29 @@
     const m = Math.floor(totalSeconds / 60);
     const s = totalSeconds % 60;
     return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+  }
+
+  /* ---------------------------------------------------------
+     NOVO: Estados vazios com ícone (Clubes, Amigos, Explorar...)
+     emptyBlock(icone, título, texto, compacto)
+     --------------------------------------------------------- */
+  const EMPTY_ICONS = {
+    trophy: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    map: '<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>',
+    flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
+    activity: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>'
+  };
+
+  function emptyBlock(icon, title, text, compact) {
+    return (
+      '<div class="empty-block' + (compact ? " compact" : "") + '">' +
+        '<div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          (EMPTY_ICONS[icon] || EMPTY_ICONS.activity) + "</svg></div>" +
+        '<div class="empty-title">' + title + "</div>" +
+        (text ? '<p class="empty-text">' + text + "</p>" : "") +
+      "</div>"
+    );
   }
 
   /* ---------------------------------------------------------
@@ -1151,6 +1174,260 @@
       "</div>" +
       '<div class="xp-bar"><div class="xp-bar-fill" style="width:' + info.progressPct + "%; background:" + info.rank.color + ';"></div></div>' +
       '<span class="xp-label">' + info.xpIntoLevel + " / " + info.xpToNext + " XP para o próximo nível</span>";
+  }
+
+  /* ---------------------------------------------------------
+     NOVO: GAMIFICAÇÃO NO PAINEL (nível/XP, sequência e desafios)
+     Mesmo visual do app: barra de XP "nesta volta", chama de sequência
+     semanal e desafios Hoje / Esta semana com barras segmentadas.
+     --------------------------------------------------------- */
+  const GAMIF_ICONS = {
+    flame: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
+    distance_km: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg>',
+    activity_count: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+    duration_min: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>',
+    snow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>'
+  };
+
+  function gEsc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function gFmt(n, max) {
+    return Number(n).toLocaleString("pt-BR", { maximumFractionDigits: max == null ? 1 : max });
+  }
+  function gPlural(n, one, many) {
+    return n === 1 ? one : many;
+  }
+
+  async function getStreak() {
+    try {
+      const r = await apiRequest("/streak");
+      return r && r.streak ? r.streak : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  async function getQuests() {
+    try {
+      const r = await apiRequest("/quests");
+      return r && Array.isArray(r.quests) ? r.quests : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // O banco só mexe na sequência quando entra uma atividade nova. Aqui estimamos
+  // o estado "de hoje" com a mesma regra do gatilho evaluate_weekly_streak:
+  //  - treinou nesta semana              -> ativa
+  //  - treinou só na semana passada      -> pendente (treine esta semana)
+  //  - pulou semanas, congelamentos cobrem -> em risco (usará congelamento)
+  //  - pulou semanas, não cobrem          -> quebrada (mostra 0)
+  function streakStatus(st) {
+    const base = { shown: 0, state: "none", missed: 0 };
+    if (!st || !st.current || !st.lastActiveWeek) return base;
+    const p = st.lastActiveWeek.split("-").map(Number);
+    const last = new Date(p[0], p[1] - 1, p[2]);
+    const diffWeeks = Math.round((startOfWeek(new Date()) - last) / (7 * 86400000));
+    if (diffWeeks <= 0) return { shown: st.current, state: "active", missed: 0 };
+    if (diffWeeks === 1) return { shown: st.current, state: "pending", missed: 0 };
+    const missed = diffWeeks - 1;
+    if (st.freezes >= missed) return { shown: st.current, state: "frozen", missed };
+    return { shown: 0, state: "broken", missed };
+  }
+
+  function renderLevelCard(el, data, streak, opts) {
+    opts = opts || {};
+    if (!el) return;
+    const info = levelInfo(data.xp || 0);
+    const color = info.rank.color;
+    const remaining = info.xpToNext - info.xpIntoLevel;
+    const stt = streakStatus(streak);
+    const chipClass = "streak-chip" + (stt.shown > 0 ? " on" : "") + (stt.state === "pending" || stt.state === "frozen" ? " warn" : "");
+    const chip = streak
+      ? '<button type="button" class="' + chipClass + '" aria-label="Ver detalhes da sequência">' +
+        GAMIF_ICONS.flame + "<b>" + stt.shown + "</b><span>" + gPlural(stt.shown, "semana", "semanas") + "</span></button>"
+      : "";
+    el.style.setProperty("--rank-color", color);
+    el.innerHTML =
+      '<div class="level-top">' +
+      '<div class="level-id">' +
+      '<span class="rank-badge" style="--rank-color:' + color + '">' + gEsc(info.rank.name) + "</span>" +
+      '<span class="level-name">Nível ' + info.level + "</span>" +
+      "</div>" + chip + "</div>" +
+      '<div class="level-xp"><b>' + gFmt(info.xpIntoLevel, 0) + "</b> de " + gFmt(info.xpToNext, 0) + " XP nesta volta</div>" +
+      '<div class="level-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + info.xpToNext + '" aria-valuenow="' + info.xpIntoLevel + '">' +
+      '<div class="level-bar-fill" style="width:' + info.progressPct + "%; background:" + color + ';"></div></div>' +
+      '<div class="level-foot">faltam <b>' + gFmt(remaining, 0) + "</b> XP pro nível " + (info.level + 1) + "</div>";
+
+    const chipEl = el.querySelector(".streak-chip");
+    if (chipEl) chipEl.addEventListener("click", () => openStreakModal(streak, data, opts));
+  }
+
+  // Versão minimalista (aba Estatísticas do perfil): mesma tipografia do "Resumo".
+  function renderProfileProgress(el, data, streak, opts) {
+    if (!el) return;
+    opts = opts || {};
+    const self = opts.self !== false;
+    const info = levelInfo(data.xp || 0);
+    const color = info.rank.color;
+    const remaining = info.xpToNext - info.xpIntoLevel;
+    const stt = streakStatus(streak);
+    const notes = self ? {
+      none: "Treine esta semana para começar.",
+      active: "Você já treinou nesta semana.",
+      pending: "Treine até domingo para manter.",
+      frozen: "Um congelamento cobre o intervalo.",
+      broken: "Sequência interrompida."
+    } : {
+      none: "Ainda sem sequência.",
+      active: "Treinou nesta semana.",
+      pending: "Ainda não treinou nesta semana.",
+      frozen: "Congelamento cobrindo o intervalo.",
+      broken: "Sequência interrompida."
+    };
+    const flameOn = stt.shown > 0;
+    el.innerHTML =
+      '<div class="resumo-item">' +
+      '<span class="resumo-label">Nível</span>' +
+      '<span class="resumo-value">' + info.level + '<span class="pl-rank" style="color:' + color + '">' + gEsc(info.rank.name) + "</span></span>" +
+      '<div class="pl-bar"><i style="width:' + info.progressPct + "%;background:" + color + '"></i></div>' +
+      '<span class="pl-note">' + gFmt(info.xpIntoLevel, 0) + " / " + gFmt(info.xpToNext, 0) + " XP · faltam " + gFmt(remaining, 0) + " pro nível " + (info.level + 1) + "</span>" +
+      "</div>" +
+      '<div class="resumo-item">' +
+      '<span class="resumo-label">Sequência</span>' +
+      (streak
+        ? '<button type="button" class="pl-streak' + (flameOn ? " on" : "") + '" aria-label="Ver detalhes da sequência">' +
+          GAMIF_ICONS.flame + '<span class="resumo-value">' + stt.shown + " " + gPlural(stt.shown, "semana", "semanas") + "</span></button>" +
+          '<span class="pl-note">' + notes[stt.state] + " Toque para ver detalhes.</span>"
+        : '<span class="resumo-value">—</span>') +
+      "</div>";
+    const btn = el.querySelector(".pl-streak");
+    if (btn) btn.addEventListener("click", () => openStreakModal(streak, data, opts));
+  }
+
+  function openStreakModal(streak, data, opts) {
+    const self = !opts || opts.self !== false;
+    const stt = streakStatus(streak);
+    const messages = self ? {
+      none: "Treine pelo menos uma vez nesta semana para começar sua sequência.",
+      active: "Você já treinou nesta semana. Sua sequência está garantida!",
+      pending: "Você treinou na semana passada. Registre uma atividade até domingo para a sequência continuar.",
+      frozen: "Você ficou " + stt.missed + " " + gPlural(stt.missed, "semana", "semanas") + " sem treinar. Ao registrar uma atividade, " + stt.missed + " " + gPlural(stt.missed, "congelamento cobre", "congelamentos cobrem") + " o intervalo e a sequência continua.",
+      broken: "Sua sequência foi interrompida. Registre uma atividade para recomeçar do zero."
+    } : {
+      none: "Esse atleta ainda não começou uma sequência.",
+      active: "Treinou nesta semana. A sequência está garantida.",
+      pending: "Treinou na semana passada e ainda não treinou nesta.",
+      frozen: "Está " + stt.missed + " " + gPlural(stt.missed, "semana", "semanas") + " sem treinar, mas os congelamentos cobrem o intervalo.",
+      broken: "A sequência foi interrompida."
+    };
+
+    // Barras de segunda a domingo da semana atual (verde = dia com atividade)
+    const monday = startOfWeek(new Date());
+    const names = ["S", "T", "Q", "Q", "S", "S", "D"];
+    const acts = (data && data.activities) || [];
+    const todayStr = new Date().toDateString();
+    let days = "";
+    for (let i = 0; self && i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const ds = d.toDateString();
+      const has = acts.some((a) => new Date(a.date).toDateString() === ds);
+      days +=
+        '<div class="sm-day' + (has ? " done" : "") + (ds === todayStr ? " today" : "") + '">' +
+        "<i></i><span>" + names[i] + "</span></div>";
+    }
+
+    const freezes = streak ? streak.freezes : 2;
+    const overlay = document.createElement("div");
+    overlay.className = "overlay open";
+    overlay.innerHTML =
+      '<div class="modal streak-modal" role="dialog" aria-modal="true" aria-label="Sua sequência">' +
+      '<div class="sm-hero' + (stt.shown > 0 ? " on" : "") + '">' + GAMIF_ICONS.flame + "<b>" + stt.shown + "</b></div>" +
+      '<h3>' + gPlural(stt.shown, "semana seguida", "semanas seguidas") + "</h3>" +
+      '<p class="sm-msg">' + messages[stt.state] + "</p>" +
+      (self ? '<div class="sm-days">' + days + "</div>" : "") +
+      '<div class="sm-stats">' +
+      '<div><span>Recorde</span><b>' + (streak ? streak.longest : 0) + " " + gPlural(streak ? streak.longest : 0, "semana", "semanas") + "</b></div>" +
+      '<div><span>Congelamentos</span><b class="sm-freeze">' + GAMIF_ICONS.snow + freezes + " / 2</b></div>" +
+      "</div>" +
+      '<p class="sm-help">A semana vai de segunda a domingo e uma atividade já conta. A cada 4 semanas seguidas você ganha 1 congelamento (máximo de 2), que cobre uma semana sem treino.</p>' +
+      '<div class="modal-actions"><button type="button" class="btn-primary" id="streakCloseBtn">Entendi</button></div>' +
+      "</div>";
+    document.body.appendChild(overlay);
+
+    const close = () => {
+      overlay.remove();
+      document.removeEventListener("keydown", onKey);
+    };
+    const onKey = (e) => { if (e.key === "Escape") close(); };
+    document.addEventListener("keydown", onKey);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+    overlay.querySelector("#streakCloseBtn").addEventListener("click", close);
+    overlay.querySelector("#streakCloseBtn").focus();
+  }
+
+  function questProgressText(q) {
+    const p = Math.min(q.progress, q.goal);
+    if (q.goalType === "distance_km") return gFmt(p, 1) + " de " + gFmt(q.goal, 1) + " km";
+    if (q.goalType === "duration_min") return gFmt(p, 0) + " de " + gFmt(q.goal, 0) + " min";
+    return gFmt(p, 0) + " de " + gFmt(q.goal, 0) + " " + gPlural(q.goal, "atividade", "atividades");
+  }
+
+  function questSegments(q) {
+    const n = q.goalType === "activity_count" && q.goal >= 1 && q.goal <= 6 ? Math.round(q.goal) : 5;
+    const ratio = q.goal > 0 ? Math.min(1, q.progress / q.goal) : 0;
+    let html = "";
+    for (let i = 0; i < n; i++) {
+      const fill = Math.max(0, Math.min(1, ratio * n - i));
+      html += '<i><b style="width:' + Math.round(fill * 100) + '%"></b></i>';
+    }
+    return html;
+  }
+
+  function renderQuests(listEl, countEl, cardEl, quests) {
+    if (!listEl) return;
+    if (!quests || !quests.length) {
+      // Sem desafios (ou rota indisponível): esconde o card em vez de mostrar erro.
+      if (cardEl) cardEl.style.display = "none";
+      return;
+    }
+    if (cardEl) cardEl.style.display = "";
+    const done = quests.filter((q) => q.completed).length;
+    if (countEl) countEl.textContent = done + " de " + quests.length + " concluídos";
+
+    const group = (title, cls, items) => {
+      if (!items.length) return "";
+      return (
+        '<div class="quest-group ' + cls + '"><div class="quest-group-title">' + title + "</div>" +
+        items.map((q) =>
+          '<div class="quest-row' + (q.completed ? " done" : "") + '"' + (q.description ? ' title="' + gEsc(q.description) + '"' : "") + ">" +
+          '<div class="quest-icon">' + (GAMIF_ICONS[q.goalType] || GAMIF_ICONS.activity_count) + "</div>" +
+          '<div class="quest-body">' +
+          '<div class="quest-top"><span class="quest-title">' + gEsc(q.title) + '</span><span class="quest-xp">+' + q.xp + " XP</span></div>" +
+          '<div class="quest-segs">' + questSegments(q) + "</div>" +
+          '<div class="quest-meta">' +
+          (q.completed ? '<span class="quest-done">' + GAMIF_ICONS.check + "Concluída</span>" : "<span>" + questProgressText(q) + "</span>") +
+          "</div></div></div>"
+        ).join("") +
+        "</div>"
+      );
+    };
+    listEl.innerHTML =
+      group("Hoje", "daily", quests.filter((q) => q.period === "daily")) +
+      group("Esta semana", "weekly", quests.filter((q) => q.period === "weekly"));
+  }
+
+  // Chamada pelo initDashboard. Não bloqueia o resto da página: o card de nível
+  // aparece na hora e sequência/desafios chegam quando a rede responder.
+  async function initGamification(data) {
+    const levelEl = document.getElementById("levelCard");
+    const questsCard = document.getElementById("questsCard");
+    renderLevelCard(levelEl, data, null);
+    const [streak, quests] = await Promise.all([getStreak(), getQuests()]);
+    renderLevelCard(levelEl, data, streak);
+    renderQuests(document.getElementById("questsList"), document.getElementById("questsCount"), questsCard, quests);
   }
 
   /* ---------------------------------------------------------
@@ -1387,6 +1664,9 @@
     renderGoalWidget(document.getElementById("goalWidget"), data);
     initGoalEditModal(data);
 
+    // Nível/XP, sequência semanal e desafios (sem await: não trava o painel)
+    initGamification(data);
+
     initRegisterModal(data, rankEl, () => initDashboard());
   }
 
@@ -1434,7 +1714,6 @@
     document.getElementById("statActivities").textContent = profile.activitiesCount;
     document.getElementById("statFollowers").textContent = profile.followersCount;
     document.getElementById("statFollowing").textContent = profile.followingCount;
-    document.getElementById("statKudos").textContent = profile.kudosReceived;
 
     // Esconde tudo que só faz sentido no PRÓPRIO perfil
     ["editCoverBtn", "editAvatarBtn", "editProfileBtn"].forEach((id) => {
@@ -1473,6 +1752,12 @@
     // Publicações, Atividades e Estatísticas do outro usuário — nenhuma aba fica escondida
     const publicActs = [...(profile.activities || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
     renderProfileStats(publicActs);
+    renderProfileProgress(
+      document.getElementById("profileProgress"),
+      { xp: profile.xp || 0, activities: null },
+      profile.streak || { current: 0, longest: 0, freezes: 2, lastActiveWeek: null },
+      { self: false }
+    );
 
     // Grade de atividades públicas (as mais recentes)
     const grid = document.getElementById("profileActivitiesGrid");
@@ -1667,9 +1952,13 @@
       document.getElementById("statActivities").textContent = stats.totalActivities;
       document.getElementById("statFollowers").textContent = d.followersCount || 0;
       document.getElementById("statFollowing").textContent = following.length;
-      document.getElementById("statKudos").textContent = d.kudosReceived || 0;
     }
     paintProfile(data);
+
+    // Aba Estatísticas: nível, barra de XP e chama de sequência
+    const progressEl = document.getElementById("profileProgress");
+    renderProfileProgress(progressEl, data, null, { self: true });
+    getStreak().then((st) => renderProfileProgress(progressEl, data, st, { self: true }));
 
     const acts = [...(data.activities || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -1808,6 +2097,9 @@
     function renderUserCards(users) {
       if (!users.length) {
         grid.innerHTML = "";
+        emptyEl.innerHTML = searchInput.value.trim().length >= 2
+          ? emptyBlock("users", "Nenhum atleta encontrado", "Tente buscar por outro nome.")
+          : emptyBlock("users", "Nenhum atleta sugerido", "Quando mais gente entrar no Trainly, os perfis aparecem aqui.");
         emptyEl.style.display = "block";
         return;
       }
@@ -1914,7 +2206,7 @@
       const { leaderboard } = await apiRequest("/friends/leaderboard");
       const lbEl = document.getElementById("friendsLeaderboard");
       if (!leaderboard.length) {
-        lbEl.innerHTML = '<p class="empty-state">Siga outros atletas para ver o ranking aqui.</p>';
+        lbEl.innerHTML = emptyBlock("trophy", "Ranking vazio", "Siga outros atletas para ver o ranking aqui.", true);
       } else {
         lbEl.innerHTML = leaderboard.map((m, i) => (
           '<div class="lb-row">' +
@@ -2392,12 +2684,12 @@
       bar.innerHTML =
         "<div>" +
           '<div class="route-detail-title">' + route.name + "</div>" +
-          '<div class="route-detail-sub">' + route.type + " · " + route.difficulty + (route.terrain ? " · " + route.terrain : "") + (route.isMine ? "" : " · por " + route.creatorName) + "</div>" +
+          '<div class="route-detail-sub">' + route.type + (route.terrain ? " · " + route.terrain : "") + "</div>" +
         "</div>" +
         '<div class="route-detail-stats">' +
-          '<div><div class="rd-label">Distância</div><div class="rd-value">' + route.distanceKm.toFixed(1).replace(".", ",") + " km</div></div>" +
-          '<div><div class="rd-label">Elevação</div><div class="rd-value">' + route.elevationM + " m</div></div>" +
-          '<div><div class="rd-label">Avaliação</div><div class="rd-value">' + (route.ratingAvg ? "★ " + route.ratingAvg : "—") + "</div></div>" +
+          '<div><div class="rd-label">Dificuldade</div><div class="rd-value">' + route.difficulty + "</div></div>" +
+          '<div><div class="rd-label">Avaliação</div><div class="rd-value">' + (route.ratingAvg ? "★ " + route.ratingAvg + (route.ratingCount ? " (" + route.ratingCount + ")" : "") : "Sem notas") + "</div></div>" +
+          '<div><div class="rd-label">Criada por</div><div class="rd-value">' + (route.isMine ? "Você" : route.creatorName) + "</div></div>" +
         "</div>" +
         '<a class="btn-primary" href="mapa.php?startLat=' + route.startLat + "&startLng=" + route.startLng + '" style="text-decoration:none;">Iniciar Rota →</a>';
     }
@@ -2413,6 +2705,9 @@
     function renderGroup(containerEl, emptyEl, routes, showCreator) {
       if (!routes.length) {
         containerEl.innerHTML = "";
+        emptyEl.innerHTML = showCreator
+          ? emptyBlock("users", "Nenhuma rota de amigos", "Quando quem você segue cadastrar rotas, elas aparecem aqui.", true)
+          : emptyBlock("map", "Nenhuma rota sua ainda", "Desenhe um trajeto no mapa e ele aparece aqui.", true);
         emptyEl.style.display = "block";
         return;
       }
@@ -2428,8 +2723,7 @@
               '<div class="route-card-main">' +
                 '<div class="route-name">' + r.name + "</div>" +
                 '<div class="route-meta">' + r.type + (r.ratingAvg ? " · ★ " + r.ratingAvg + " (" + r.ratingCount + ")" : "") + "</div>" +
-                '<div class="route-stats">' + r.distanceKm.toFixed(1).replace(".", ",") + " km <span>↑ " + r.elevationM + "m</span></div>" +
-                '<div class="route-tags"><span class="route-tag">' + r.difficulty + "</span>" + (r.terrain ? '<span class="route-tag">' + r.terrain + "</span>" : "") + "</div>" +
+                '<div class="route-tags"><span class="route-tag">' + r.difficulty + "</span>" + "" + "</div>" +
                 (showCreator ? '<div class="route-creator">por ' + r.creatorName + "</div>" : "") +
               "</div>" +
               (!showCreator ? (
@@ -2442,6 +2736,11 @@
                   "</button>" +
                 "</div>"
               ) : "") +
+            "</div>" +
+            '<div class="route-stats3">' +
+              "<div><b>" + r.distanceKm.toFixed(2).replace(".", ",") + " km</b><span>Distância</span></div>" +
+              "<div><b>" + r.elevationM + " m</b><span>Elevação</span></div>" +
+              "<div><b>" + (r.terrain || "—") + "</b><span>Terreno</span></div>" +
             "</div>" +
           "</div>"
         );
@@ -2727,7 +3026,7 @@
 
     function renderMyClubs() {
       if (!myClubs.length) {
-        listEl.innerHTML = '<p class="empty-state" style="font-size:13px;">Você ainda não está em nenhum clube.</p>';
+        listEl.innerHTML = emptyBlock("trophy", "Nenhum clube ainda", "Crie um clube pra treinar com a sua turma, ou entre com um código de convite.");
         return;
       }
       listEl.innerHTML = myClubs.map((c) => (
@@ -2966,7 +3265,7 @@
             await leaveClub(club.id);
             showToast("Você saiu do clube.");
             selectedClubId = null;
-            document.getElementById("clubDetail").innerHTML = '<p class="empty-state" style="padding:60px 0;text-align:center;">Selecione um clube na lista ao lado.</p>';
+            document.getElementById("clubDetail").innerHTML = emptyBlock("flag", "Selecione um clube", "Escolha um clube na lista para ver o ranking e os desafios.");
             loadMyClubs();
           } catch (e) {
             showToast(e.message || "Não foi possível sair do clube.");
@@ -2986,7 +3285,7 @@
             await deleteClub(club.id);
             showToast("Clube apagado.");
             selectedClubId = null;
-            document.getElementById("clubDetail").innerHTML = '<p class="empty-state" style="padding:60px 0;text-align:center;">Selecione um clube na lista ao lado.</p>';
+            document.getElementById("clubDetail").innerHTML = emptyBlock("flag", "Selecione um clube", "Escolha um clube na lista para ver o ranking e os desafios.");
             loadMyClubs();
           } catch (e) {
             showToast(e.message || "Não foi possível apagar o clube.");
@@ -3161,27 +3460,155 @@
     });
   }
 
+  // Preferência de tema: "dark" | "light" | "system" (segue o aparelho).
+  function safeGet(key) {
+    try { return localStorage.getItem(key); } catch (e) { return null; }
+  }
+  function safeSet(key, value) {
+    try { localStorage.setItem(key, value); } catch (e) {}
+  }
+  function getThemePref() {
+    const v = safeGet(THEME_KEY);
+    return v === "light" || v === "system" ? v : "dark";
+  }
+  function resolveTheme(pref) {
+    if (pref === "system") {
+      return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    }
+    return pref === "light" ? "light" : "dark";
+  }
+  // Mostra no botão do topo o ícone do modo PRA ONDE vai mudar
+  // (lua = "trocar pra escuro" quando já está claro, e vice-versa).
+  function paintThemeToggle() {
+    const toggle = document.querySelector("[data-theme-toggle]");
+    if (!toggle) return;
+    const isLight = document.documentElement.getAttribute("data-theme") === "light";
+    toggle.innerHTML = isLight ? MOON_ICON : SUN_ICON;
+  }
+  function setThemePref(pref) {
+    safeSet(THEME_KEY, pref);
+    applyTheme(resolveTheme(pref));
+    paintThemeToggle();
+  }
+
+  /* ---------------------------------------------------------
+     NOVO: Preferências de acessibilidade (página Configurações)
+     Guardadas neste aparelho/navegador, como no app. Cada uma vira um
+     atributo no <html> (data-text, data-contrast, data-motion, data-cb)
+     que o global.css lê — por isso valem em todas as páginas.
+     --------------------------------------------------------- */
+  const PREFS_KEY = "trainly_prefs";
+  const PREF_DEFAULTS = { textSize: "normal", contrast: false, reduceMotion: false, colorBlind: "none" };
+
+  function readPrefs() {
+    try {
+      return Object.assign({}, PREF_DEFAULTS, JSON.parse(safeGet(PREFS_KEY) || "{}"));
+    } catch (e) {
+      return Object.assign({}, PREF_DEFAULTS);
+    }
+  }
+  function savePrefs(p) {
+    safeSet(PREFS_KEY, JSON.stringify(p));
+  }
+  function applyA11yPrefs(p) {
+    const h = document.documentElement;
+    const put = (attr, value) => (value ? h.setAttribute(attr, value) : h.removeAttribute(attr));
+    put("data-text", p.textSize !== "normal" ? p.textSize : "");
+    put("data-contrast", p.contrast ? "high" : "");
+    put("data-motion", p.reduceMotion ? "reduce" : "");
+    put("data-cb", p.colorBlind !== "none" ? p.colorBlind : "");
+  }
+
+  let refreshSettingsUi = null; // preenchido por initSettings()
+
   function initTheme() {
-    const saved = localStorage.getItem(THEME_KEY) || "dark";
-    applyTheme(saved);
+    applyTheme(resolveTheme(getThemePref()));
+    applyA11yPrefs(readPrefs());
+
+    // Tema "Sistema": acompanha o aparelho se ele mudar com o site aberto.
+    if (window.matchMedia) {
+      const mq = window.matchMedia("(prefers-color-scheme: light)");
+      const onChange = () => {
+        if (getThemePref() !== "system") return;
+        applyTheme(resolveTheme("system"));
+        paintThemeToggle();
+      };
+      if (mq.addEventListener) mq.addEventListener("change", onChange);
+      else if (mq.addListener) mq.addListener(onChange);
+    }
 
     const toggle = document.querySelector("[data-theme-toggle]");
     if (!toggle) return;
-
-    // Mostra o ícone do modo PRA ONDE vai mudar (lua = "trocar pra escuro" quando já tá claro, etc.)
-    const paintIcon = (theme) => {
-      toggle.innerHTML = theme === "light" ? MOON_ICON : SUN_ICON;
-    };
-    paintIcon(saved);
+    paintThemeToggle();
 
     toggle.addEventListener("click", () => {
       const current = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
-      const next = current === "light" ? "dark" : "light";
-      applyTheme(next);
-      localStorage.setItem(THEME_KEY, next);
-      paintIcon(next);
+      setThemePref(current === "light" ? "dark" : "light");
+      if (refreshSettingsUi) refreshSettingsUi();
     });
   }
+
+  // Página configuracoes.php
+  function initSettings() {
+    const root = document.getElementById("settingsPage");
+    if (!root) return;
+    const groups = root.querySelectorAll(".seg-group[data-pref]");
+    const switches = root.querySelectorAll(".switch[data-pref]");
+
+    const valueOf = (key) => (key === "theme" ? getThemePref() : readPrefs()[key]);
+
+    function refresh() {
+      groups.forEach((g) => {
+        const current = String(valueOf(g.dataset.pref));
+        g.querySelectorAll("button[data-value]").forEach((b) => {
+          b.setAttribute("aria-pressed", b.dataset.value === current ? "true" : "false");
+        });
+      });
+      const prefs = readPrefs();
+      switches.forEach((s) => s.setAttribute("aria-checked", prefs[s.dataset.pref] ? "true" : "false"));
+    }
+
+    function setPref(key, value) {
+      if (key === "theme") {
+        setThemePref(value);
+      } else {
+        const p = readPrefs();
+        p[key] = value;
+        savePrefs(p);
+        applyA11yPrefs(p);
+      }
+      refresh();
+    }
+
+    groups.forEach((g) => {
+      g.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-value]");
+        if (b) setPref(g.dataset.pref, b.dataset.value);
+      });
+    });
+    switches.forEach((s) => {
+      s.addEventListener("click", () => setPref(s.dataset.pref, !readPrefs()[s.dataset.pref]));
+    });
+
+    const reset = document.getElementById("settingsReset");
+    if (reset) {
+      reset.addEventListener("click", () => {
+        savePrefs(Object.assign({}, PREF_DEFAULTS));
+        applyA11yPrefs(PREF_DEFAULTS);
+        setThemePref("dark");
+        refresh();
+        showToast("Configurações restauradas");
+      });
+    }
+
+    refreshSettingsUi = refresh;
+    refresh();
+  }
+
+  // Aplica tema e acessibilidade já na carga do script (antes do DOMContentLoaded),
+  // pra a página não "piscar" no visual padrão.
+  applyTheme(resolveTheme(getThemePref()));
+  applyA11yPrefs(readPrefs());
 
   /* ---------------------------------------------------------
      BOOT
@@ -3208,6 +3635,7 @@
     initAmizades();
     initAtividades();
     initExplorar();
+    initSettings();
     initClubes();
     initMapa();
     initNavbarAvatar();

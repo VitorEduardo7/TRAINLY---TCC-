@@ -336,11 +336,29 @@
     };
   }
 
+  // user_streaks -> objeto usado pelo site (zeros se a pessoa ainda não tem linha)
+  function mapStreak(row) {
+    row = row || {};
+    return {
+      current: num(row.current_streak),
+      longest: num(row.longest_streak),
+      freezes: row.freezes_available == null ? 2 : num(row.freezes_available),
+      lastActiveWeek: row.last_active_week ? String(row.last_active_week).slice(0, 10) : null
+    };
+  }
+
   async function buildPublicProfile(targetId, viewerId) {
     const user = unwrap(await sb.from("profiles")
-      .select("id, name, bio, location, cover_url, avatar_url, created_at")
+      .select("id, name, bio, location, cover_url, avatar_url, created_at, xp")
       .eq("id", targetId).maybeSingle());
     if (!user) return null;
+
+    // Sequência semanal da pessoa (user_streaks é legível por qualquer usuário
+    // logado). Se a tabela falhar, o perfil carrega mesmo assim, sem a chama.
+    const streakRes = await sb.from("user_streaks")
+      .select("current_streak, longest_streak, freezes_available, last_active_week")
+      .eq("user_id", targetId).maybeSingle();
+    const streakRow = streakRes.error ? null : streakRes.data;
 
     const recent = unwrap(await sb.from("activities").select(ACTIVITY_COLUMNS)
       .eq("user_id", targetId).order("date", { ascending: false }).limit(12));
@@ -364,6 +382,8 @@
       coverPhotoUrl: user.cover_url || null,
       avatarPhotoUrl: user.avatar_url || null,
       memberSince: toLocalIso(user.created_at),
+      xp: num(user.xp),
+      streak: mapStreak(streakRow),
       activitiesCount: allIds.length,
       followersCount,
       followingCount,
@@ -1189,6 +1209,99 @@
     ["POST", /^notifications\/read-all$/, async (m, body, query, me) => {
       unwrap(await sb.from("notifications").update({ read_at: new Date().toISOString() }).eq("user_id", me).is("read_at", null));
       return { ok: true };
+    }],
+
+    // ---------- Gamificação: sequência semanal e desafios (passo 3 do tema) ----------
+    // Lê user_streaks (gatilho evaluate_weekly_streak do streak_schema.sql).
+    // O banco só atualiza a sequência quando há atividade nova, então quem
+    // decide se ela "ainda está viva" é o main.js (veja streakStatus).
+    ["GET", /^streak$/, async (m, body, query, me) => {
+      const res = await sb.from("user_streaks")
+        .select("current_streak, longest_streak, freezes_available, last_active_week")
+        .eq("user_id", me)
+        .maybeSingle();
+      return { streak: mapStreak(unwrap(res, "Erro ao carregar a sequência")) };
+    }],
+
+    // Desafios do dia e da semana. 1) chama o RPC get_current_quests do app, que
+    // cria (sob demanda) os desafios do período atual — o formato do retorno não
+    // importa, só o efeito. 2) lê as tabelas user_quests + quest_templates, que
+    // têm colunas conhecidas (gamification_schema.sql).
+    ["GET", /^quests$/, async (m, body, query, me) => {
+      let rpcRows = [];
+      let rpc = await sb.rpc("get_current_quests");
+      if (rpc.error && rpc.error.code === "PGRST202") {
+        // Função com parâmetro explícito: tenta os nomes mais comuns.
+        for (const args of [{ p_user_id: me }, { user_id: me }]) {
+          rpc = await sb.rpc("get_current_quests", args);
+          if (!rpc.error || rpc.error.code !== "PGRST202") break;
+        }
+      }
+      if (rpc.error) console.warn("[Trainly] get_current_quests falhou:", rpc.error.message);
+      else if (Array.isArray(rpc.data)) rpcRows = rpc.data;
+
+      const monday = startOfWeek();
+      const from = new Date(monday); from.setDate(from.getDate() - 8);
+      const res = await sb.from("user_quests")
+        .select("id, quest_id, period_start, progress, completed, completed_at, quest_templates(id, title, description, icon, period, goal_type, goal_value, xp_reward)")
+        .eq("user_id", me)
+        .gte("period_start", localDateStr(from))
+        .order("period_start", { ascending: false });
+      const rows = unwrap(res, "Erro ao carregar os desafios") || [];
+
+      // Só vale o período vigente. O servidor pode estar em UTC (a "data de
+      // hoje" dele adianta até 1 dia à noite no Brasil), então há tolerância.
+      const today = startOfToday();
+      const dayMs = 86400000;
+      const diffDays = (s) => Math.round((parseLocalDate(s) - today) / dayMs);
+      const mondayDiff = (s) => Math.round((parseLocalDate(s) - monday) / dayMs);
+
+      const latest = { daily: null, weekly: null };
+      for (const r of rows) {
+        const tpl = Array.isArray(r.quest_templates) ? r.quest_templates[0] : r.quest_templates;
+        if (!tpl || (tpl.period !== "daily" && tpl.period !== "weekly")) continue;
+        const ps = String(r.period_start).slice(0, 10);
+        const valid = tpl.period === "daily"
+          ? Math.abs(diffDays(ps)) <= 1
+          : mondayDiff(ps) >= -1 && mondayDiff(ps) <= 7;
+        if (!valid) continue;
+        if (!latest[tpl.period] || ps > latest[tpl.period]) latest[tpl.period] = ps;
+      }
+
+      const quests = [];
+      for (const r of rows) {
+        const tpl = Array.isArray(r.quest_templates) ? r.quest_templates[0] : r.quest_templates;
+        if (!tpl) continue;
+        const ps = String(r.period_start).slice(0, 10);
+        if (ps !== latest[tpl.period]) continue;
+
+        // Se o RPC devolveu o progresso por conta própria (por exemplo calculado
+        // na hora, sem gravar), usa o maior valor entre os dois.
+        let progress = num(r.progress);
+        const live = rpcRows.find((x) => x && (x.quest_id === r.quest_id || x.id === r.quest_id || x.id === r.id));
+        if (live) {
+          const lp = num(live.progress !== undefined ? live.progress : live.current_progress);
+          if (lp > progress) progress = lp;
+        }
+        const goal = num(tpl.goal_value);
+        quests.push({
+          id: r.id,
+          questId: r.quest_id,
+          period: tpl.period,
+          title: tpl.title,
+          description: tpl.description || "",
+          icon: tpl.icon || "flag",
+          goalType: tpl.goal_type,
+          goal,
+          progress,
+          completed: !!r.completed || (goal > 0 && progress >= goal),
+          xp: num(tpl.xp_reward),
+          periodStart: ps
+        });
+      }
+      // Diários primeiro, depois semanais; dentro de cada grupo, ordem estável.
+      quests.sort((a, b) => (a.period === b.period ? String(a.questId).localeCompare(String(b.questId)) : a.period === "daily" ? -1 : 1));
+      return { quests };
     }],
 
     ["GET", /^health$/, async () => ({ ok: true })]

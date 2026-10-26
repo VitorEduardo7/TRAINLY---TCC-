@@ -1,33 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&display=swap');
+
 /* =========================================
    1. VARIÁVEIS E RESET GERAL
    ========================================= */
 :root {
-    --primary-blue: #2f7dfd;
-    --primary-hover: #5c9aff;
-    --bg-color: #0a0b0f;
-    --card-bg: #14161f;
-    --text-dark: #f2f3f6;
-    --text-muted: #9a9caa;
-    --border-color: rgba(255,255,255,0.08);
+    --primary-blue: #2c6bd9;
+    --primary-hover: #5a8cf0;
+    --bg-color: #171326;
+    --card-bg: #201b36;
+    --text-dark: #f3f1fa;
+    --text-muted: #a39fbd;
+    --border-color: rgba(170,150,255,0.12);
     --avatar-bg: #2b5d34;
     --danger: #f0554e;
-    --focus-ring: #2f7dfd;
-    --toast-bg: #1c1e29;
+    --focus-ring: #5a8cf0;
+    --toast-bg: #2a2445;
+
+    /* Tokens do tema do app */
+    --radius-card: 16px;
+    --radius-pill: 999px;
+    --xp-gold: #f4b942;
+    --font-display: 'Barlow Condensed', 'Inter', sans-serif;
+
+    /* Cores de "deu certo" (verde) — trocadas nos modos de daltonismo */
+    --ok: #22c55e;
+    --ok-soft: rgba(34,197,94,0.14);
 }
 
 /* Modo claro — ativado via <html data-theme="light"> pelo theme-toggle.js */
 html[data-theme="light"] {
-    --primary-blue: #267cee;
-    --primary-hover: #1a63c6;
-    --bg-color: #f4f5f7;
+    --primary-blue: #2c6bd9;
+    --primary-hover: #1f55b3;
+    --bg-color: #f3f2f9;
     --card-bg: #ffffff;
-    --text-dark: #242428;
-    --text-muted: #666666;
-    --border-color: #e6e6eb;
+    --text-dark: #1f1b2e;
+    --text-muted: #6a667d;
+    --border-color: #e4e1f0;
     --avatar-bg: #2b5d34;
     --danger: #e0473e;
-    --focus-ring: #267cee;
-    --toast-bg: #242428;
+    --focus-ring: #2c6bd9;
+    --toast-bg: #1f1b2e;
+
+    --xp-gold: #c98a0a;
 }
 
 /* Acessibilidade: foco visível em qualquer elemento navegável por teclado */
@@ -233,7 +247,7 @@ body > *:not(.navbar):not(.footer) {
     width: 180px;
     background: var(--card-bg);
     border: 1px solid var(--border-color);
-    border-radius: 10px;
+    border-radius: var(--radius-card);
     box-shadow: 0 12px 32px rgba(0,0,0,0.45);
     opacity: 0;
     visibility: hidden;
@@ -304,7 +318,7 @@ button {
     width: 320px;
     background: var(--card-bg);
     border: 1px solid var(--border-color);
-    border-radius: 10px;
+    border-radius: var(--radius-card);
     box-shadow: 0 12px 32px rgba(0,0,0,0.45);
     opacity: 0;
     visibility: hidden;
@@ -488,40 +502,74 @@ button {
    4. RESPONSIVIDADE
    ========================================= */
 @media (max-width: 768px) {
+    /* Celular: o menu vira uma barra de abas FIXA EMBAIXO (igual ao app).
+       É o mesmo <ul class="nav-links"> do desktop, só reposicionado — sem
+       HTML duplicado. O topo fica só com logo, tema, sino e avatar. */
     .hamburger-btn {
-        display: flex;
+        display: none;
+    }
+
+    .nav-container {
+        grid-template-columns: 1fr auto;
+        height: 56px;
+        padding: 0 16px;
+        gap: 12px;
     }
 
     .nav-links {
-        display: none;
-        position: absolute;
-        top: 60px;
+        position: fixed;
         left: 0;
         right: 0;
-        background: var(--card-bg);
-        border-bottom: 1px solid var(--border-color);
-        flex-direction: column;
-        gap: 0;
-        padding: 8px 0;
-        box-shadow: 0 12px 24px rgba(0,0,0,0.35);
-    }
-
-    .nav-links.open {
+        bottom: 0;
+        top: auto;
+        width: 100%;
+        justify-self: stretch;
+        z-index: 150;
         display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        gap: 0;
+        padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+        background: var(--card-bg);
+        border-top: 1px solid var(--border-color);
+        border-bottom: none;
+        box-shadow: 0 -8px 24px rgba(0,0,0,0.35);
     }
 
     .nav-links li {
-        width: 100%;
+        flex: 1;
+        width: auto;
     }
 
     .nav-links a {
-        display: block;
-        padding: 14px 24px;
-        font-size: 15px;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 3px;
+        padding: 7px 2px;
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: 12px;
+    }
+
+    .nav-links a svg {
+        width: 22px;
+        height: 22px;
     }
 
     .nav-links a.active {
-        background: var(--bg-color);
+        color: var(--primary-blue);
+        background: color-mix(in srgb, var(--primary-blue) 14%, transparent);
+    }
+
+    /* Espaço pro conteúdo não ficar escondido atrás da barra */
+    body {
+        padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* O aviso (toast) sobe pra não ficar por cima da barra */
+    .trainly-toast {
+        bottom: calc(84px + env(safe-area-inset-bottom, 0px));
     }
 
     .notif-panel {
@@ -639,7 +687,7 @@ button {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #22c55e;
+    background: var(--ok);
     display: inline-block;
 }
 
@@ -650,4 +698,404 @@ button {
 }
 @media (max-width: 560px) {
     .footer-container { grid-template-columns: 1fr; }
+}
+
+/* =========================================
+   9. TEMA DO APP — cantos arredondados + títulos condensados
+   (body na frente para ganhar dos CSS de cada página)
+   ========================================= */
+body .card,
+body .metric-card,
+body .activities-card,
+body .post-item,
+body .club-list-item,
+body .club-detail-header,
+body .club-invite-box,
+body .profile-stat-card,
+body .pa-card {
+    border-radius: var(--radius-card);
+}
+
+body .modal {
+    border-radius: 20px;
+}
+
+body .page-title-big,
+body .club-detail-title,
+body .challenge-title,
+body .stats-card-title,
+body .sidebar-block h2 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+body .page-title-big { font-size: 38px; }
+
+body .stats-card-title,
+body .sidebar-block h2 { font-size: 16px; }
+
+body .club-detail-title { font-size: 24px; }
+body .challenge-title   { font-size: 20px; }
+
+/* =========================================
+   10. TEMA DO APP — botões, filtros em pílula e estados vazios
+   ========================================= */
+
+/* Botões: cantos de 12px e peso mais forte */
+body .btn-primary,
+body .btn-secondary,
+body .btn-outline,
+body .btn-danger,
+body .btn-connect,
+body .btn-view-profile {
+    border-radius: 12px;
+    font-weight: 700;
+}
+
+body .btn-primary:hover {
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--primary-blue) 35%, transparent);
+}
+
+/* Botão secundário no tom do tema (antes era cinza fixo / preto no hover) */
+body .btn-secondary {
+    background-color: color-mix(in srgb, var(--text-dark) 8%, var(--card-bg));
+    color: var(--text-dark);
+    border: 1px solid var(--border-color);
+}
+body .btn-secondary:hover {
+    background-color: color-mix(in srgb, var(--primary-blue) 16%, var(--card-bg));
+    border-color: var(--primary-blue);
+}
+
+body .btn-outline:hover {
+    background-color: color-mix(in srgb, var(--primary-blue) 12%, transparent);
+}
+
+/* Filtros em pílula (Todos / Corrida / Ciclismo ...) */
+body .filter-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+body .filter-pill {
+    border-radius: var(--radius-pill);
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--card-bg);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+}
+
+body .filter-pill:hover {
+    color: var(--text-dark);
+    border-color: var(--primary-blue);
+}
+
+body .filter-pill.active {
+    background: var(--primary-blue);
+    border-color: var(--primary-blue);
+    color: #fff;
+}
+
+/* Chips (tags do clube) e botão de kudos em pílula */
+body .chip,
+body .kudos-btn {
+    border-radius: var(--radius-pill);
+}
+
+/* Alternador Entrar / Criar conta (login) */
+body .auth-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+body .auth-tabs .tab-btn {
+    flex: 1;
+    border: none;
+    border-bottom: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 9px;
+    padding: 10px 0;
+    font-weight: 700;
+}
+
+body .auth-tabs .tab-btn.active {
+    background: var(--card-bg);
+    color: var(--text-dark);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+}
+
+/* Estados vazios: centralizados e com respiro */
+body .empty-state {
+    text-align: center;
+    padding: 18px 8px;
+}
+
+/* Estados vazios maiores, com ícone em círculo (como no app) */
+body .challenge-empty,
+body .notif-empty {
+    text-align: center;
+}
+
+body .challenge-empty::before,
+body .notif-empty::before {
+    content: "";
+    display: block;
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    background:
+        center / 26px 26px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='none' stroke='%235a8cf0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9H4.5a2.5 2.5 0 0 1 0-5H6'/%3E%3Cpath d='M18 9h1.5a2.5 2.5 0 0 0 0-5H18'/%3E%3Cpath d='M4 22h16'/%3E%3Cpath d='M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22'/%3E%3Cpath d='M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22'/%3E%3Cpath d='M18 2H6v7a6 6 0 0 0 12 0V2Z'/%3E%3C/svg%3E"),
+        color-mix(in srgb, var(--primary-blue) 16%, var(--card-bg));
+}
+
+body .notif-empty::before {
+    background:
+        center / 26px 26px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='none' stroke='%235a8cf0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9'/%3E%3Cpath d='M10.3 21a1.94 1.94 0 0 0 3.4 0'/%3E%3C/svg%3E"),
+        color-mix(in srgb, var(--primary-blue) 16%, var(--card-bg));
+}
+
+body .challenge-empty-title {
+    font-weight: 700;
+}
+
+/* Estado vazio com ícone — gerado por emptyBlock() no main.js */
+.empty-block {
+    text-align: center;
+    padding: 32px 16px;
+}
+.empty-block .empty-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-hover);
+    background: color-mix(in srgb, var(--primary-blue) 16%, var(--card-bg));
+}
+.empty-block .empty-icon svg { width: 26px; height: 26px; }
+.empty-block .empty-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 4px;
+}
+.empty-block .empty-text {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    max-width: 320px;
+    margin: 0 auto;
+}
+.empty-block.compact { padding: 16px 8px; }
+.empty-block.compact .empty-icon { width: 44px; height: 44px; margin-bottom: 8px; }
+.empty-block.compact .empty-icon svg { width: 20px; height: 20px; }
+.empty-block.compact .empty-title { font-size: 14px; }
+.empty-block.compact .empty-text { font-size: 12px; }
+
+/* =========================================
+   11. CONFIGURAÇÕES E ACESSIBILIDADE
+   Os atributos abaixo (data-text, data-contrast, data-motion, data-cb)
+   são colocados no <html> pelo main.js a partir da página Configurações.
+   ========================================= */
+
+/* Tamanho do texto: amplia a interface inteira (zoom), já que o site usa px */
+html { --ui-zoom: 1; }
+html[data-text="large"]  { --ui-zoom: 1.1; }
+html[data-text="xlarge"] { --ui-zoom: 1.2; }
+body {
+    zoom: var(--ui-zoom);
+    min-height: calc(100vh / var(--ui-zoom));
+}
+
+/* Alto contraste: textos e bordas mais fortes */
+html[data-contrast="high"] {
+    --text-dark: #ffffff;
+    --text-muted: #dcd9ef;
+    --border-color: rgba(255,255,255,0.42);
+}
+html[data-theme="light"][data-contrast="high"] {
+    --text-dark: #0d0a1a;
+    --text-muted: #34304a;
+    --border-color: #5d5972;
+}
+
+/* Reduzir animações */
+html[data-motion="reduce"] *,
+html[data-motion="reduce"] *::before,
+html[data-motion="reduce"] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+}
+
+/* Daltonismo: troca verde/vermelho por pares que se distinguem melhor */
+html[data-cb="protanopia"],
+html[data-cb="deuteranopia"] {
+    --ok: #56b4e9;
+    --ok-soft: rgba(86,180,233,0.16);
+    --danger: #e69f00;
+    --quest-weekly: #cc79a7;
+}
+html[data-cb="tritanopia"] {
+    --ok: #22c55e;
+    --ok-soft: rgba(34,197,94,0.14);
+    --danger: #ff4d6d;
+    --quest-weekly: #ff9f1c;
+}
+
+/* =========================================
+   12. NÍVEL E SEQUÊNCIA (Dashboard e Perfil)
+   ========================================= */
+:root { --flame: #ff8a1f; }
+
+.level-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
+    padding: 20px 24px 22px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+.level-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: var(--rank-color, var(--primary-blue));
+    opacity: .9;
+}
+.level-card:empty { display: none; }
+
+.level-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.level-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.level-name {
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    color: var(--text-dark);
+}
+.level-xp { font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
+.level-xp b {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-right: 2px;
+}
+.level-bar {
+    height: 12px;
+    background: var(--bg-color);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+}
+.level-bar-fill {
+    height: 100%;
+    border-radius: var(--radius-pill);
+    transition: width .5s ease;
+}
+.level-foot { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+.level-foot b { color: var(--xp-gold); font-weight: 800; }
+
+/* Chama de sequência semanal */
+.streak-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-pill);
+    padding: 7px 14px 7px 11px;
+    color: var(--text-muted);
+    font: inherit;
+    cursor: pointer;
+    transition: border-color .15s, transform .15s;
+}
+.streak-chip svg { width: 18px; height: 18px; }
+.streak-chip b {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-muted);
+}
+.streak-chip span { font-size: 12px; font-weight: 700; }
+.streak-chip.on { color: var(--flame); border-color: color-mix(in srgb, var(--flame) 45%, var(--border-color)); background: color-mix(in srgb, var(--flame) 12%, var(--bg-color)); }
+.streak-chip.on b { color: var(--text-dark); }
+.streak-chip.warn { border-style: dashed; }
+.streak-chip:hover { border-color: var(--flame); transform: translateY(-1px); }
+
+/* Modal "Sua sequência" */
+.streak-modal { text-align: center; max-width: 400px; }
+.streak-modal h3 { margin-bottom: 8px; }
+.sm-hero {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+.sm-hero svg { width: 44px; height: 44px; }
+.sm-hero b {
+    font-family: var(--font-display);
+    font-size: 64px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-dark);
+}
+.sm-hero.on { color: var(--flame); }
+.sm-msg { font-size: 14px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px; }
+.sm-days { display: flex; justify-content: center; gap: 8px; margin-bottom: 18px; }
+.sm-day { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.sm-day i {
+    display: block;
+    width: 28px;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+}
+.sm-day span { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+.sm-day.done i { background: var(--quest-daily); border-color: var(--quest-daily); }
+.sm-day.today span { color: var(--text-dark); }
+.sm-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.sm-stats > div {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 10px;
+}
+.sm-stats span { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); margin-bottom: 4px; }
+.sm-stats b { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--text-dark); }
+.sm-freeze { display: inline-flex; align-items: center; gap: 6px; }
+.sm-freeze svg { width: 16px; height: 16px; color: #7cc4ff; }
+.sm-help { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+@media (max-width: 768px) {
+    .level-card { padding: 16px 16px 18px; }
+    .level-name { font-size: 26px; }
+    .streak-chip span { display: none; }
 }

@@ -54,10 +54,6 @@
             <div class="ps-label">Seguindo</div>
         </div>
         <div class="profile-stat-card">
-            <div class="ps-value" id="statKudos">0</div>
-            <div class="ps-label">Kudos recebidos</div>
-        </div>
-        <div class="profile-stat-card">
             <div class="ps-value" id="statPosts">0</div>
             <div class="ps-label">Publicações</div>
         </div>
@@ -85,45 +81,55 @@
 
     <div data-tab-panel-new="estatisticas" style="display:none;">
         <div class="stats-grid-2col">
-            <div class="card">
-                <h3 class="stats-card-title" id="statsYearTitle">Resumo</h3>
-                <div class="resumo-grid">
-                    <div class="resumo-item">
-                        <span class="resumo-label">Distância Total</span>
-                        <span class="resumo-value" id="perfilDistancia">0,00 km</span>
+            <div class="stats-col">
+                <div class="card">
+                    <h3 class="stats-card-title" id="statsYearTitle">Resumo</h3>
+                    <div class="resumo-grid">
+                        <div class="resumo-item">
+                            <span class="resumo-label">Distância Total</span>
+                            <span class="resumo-value" id="perfilDistancia">0,00 km</span>
+                        </div>
+                        <div class="resumo-item">
+                            <span class="resumo-label">Tempo Ativo</span>
+                            <span class="resumo-value" id="perfilTempo">0h 0m</span>
+                        </div>
+                        <div class="resumo-item">
+                            <span class="resumo-label">Elevação Acum.</span>
+                            <span class="resumo-value" id="perfilElevacao">0 m</span>
+                        </div>
+                        <div class="resumo-item">
+                            <span class="resumo-label">Atividades</span>
+                            <span class="resumo-value" id="perfilTotalAno">0</span>
+                        </div>
+                        <div class="resumo-item">
+                            <span class="resumo-label">Dias Ativos</span>
+                            <span class="resumo-value" id="perfilDiasAtivos">0 dias</span>
+                        </div>
                     </div>
-                    <div class="resumo-item">
-                        <span class="resumo-label">Tempo Ativo</span>
-                        <span class="resumo-value" id="perfilTempo">0h 0m</span>
-                    </div>
-                    <div class="resumo-item">
-                        <span class="resumo-label">Elevação Acum.</span>
-                        <span class="resumo-value" id="perfilElevacao">0 m</span>
-                    </div>
-                    <div class="resumo-item">
-                        <span class="resumo-label">Atividades</span>
-                        <span class="resumo-value" id="perfilTotalAno">0</span>
-                    </div>
-                    <div class="resumo-item">
-                        <span class="resumo-label">Dias Ativos</span>
-                        <span class="resumo-value" id="perfilDiasAtivos">0 dias</span>
+                </div>
+
+                <div class="card">
+                    <h3 class="stats-card-title" id="consistencyTitle">Consistência</h3>
+                    <div class="consistency-calendar" id="consistencyGrid"></div>
+                    <div class="consistency-summary">
+                        <div class="cs-item"><b id="csActiveDays">0 / 0</b><span>Dias ativos no mês</span></div>
+                        <div class="cs-item"><b id="csStreak">0 dias</b><span>Maior sequência de dias</span></div>
+                        <div class="cs-item"><b id="csPct">0%</b><span>Taxa de consistência</span></div>
                     </div>
                 </div>
             </div>
 
-            <div class="card">
-                <h3 class="stats-card-title">Recordes Pessoais</h3>
-                <div id="perfilRecordesIcon"></div>
-            </div>
-        </div>
+            <div class="stats-col">
+                <div class="card">
+                    <h3 class="stats-card-title">Recordes Pessoais</h3>
+                    <div id="perfilRecordesIcon"></div>
+                </div>
 
-        <div class="card" style="margin-top:20px;">
-            <h3 class="stats-card-title" id="consistencyTitle">Consistência</h3>
-            <div class="consistency-calendar" id="consistencyGrid"></div>
-            <div class="consistency-summary">
-                <div class="cs-item"><b id="csActiveDays">0 / 0</b><span>Dias ativos no mês</span></div>
-                <div class="cs-item"><b id="csStreak">0 dias</b><span>Maior sequência</span></div>
-                <div class="cs-item"><b id="csPct">0%</b><span>Taxa de consistência</span></div>
+                <div class="card">
+                    <h3 class="stats-card-title">Nível e Sequência</h3>
+                    <!-- preenchido pelo main.js -->
+                    <div class="resumo-grid" id="profileProgress"></div>
+                </div>
             </div>
         </div>
     </div>

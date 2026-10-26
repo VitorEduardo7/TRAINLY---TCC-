@@ -1,3 +1,11 @@
+<?php
+// Página atual (ex: "dashboard.php") — usada para destacar a aba ativa,
+// tanto no menu do topo (desktop) quanto na barra de baixo (celular).
+$trainlyPage = basename($_SERVER['SCRIPT_NAME'] ?? '');
+$navActive = function (string $file) use ($trainlyPage): string {
+    return $trainlyPage === $file ? ' class="active" aria-current="page"' : '';
+};
+?>
 <nav class="navbar">
     <div class="nav-container">
 
@@ -9,9 +17,9 @@
 
         </div>
 
-        <ul class="nav-links">
+        <ul class="nav-links" aria-label="Navegação principal">
             <li>
-                <a href="dashboard.php">
+                <a href="dashboard.php"<?= $navActive('dashboard.php') ?>>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                         <polyline points="9 22 9 12 15 12 15 22"></polyline>
@@ -21,7 +29,7 @@
             </li>
 
             <li>
-                <a href="/TRAINLY---TCC-/atividades.php">
+                <a href="/TRAINLY---TCC-/atividades.php"<?= $navActive('atividades.php') ?>>
                     <!-- Atividades -->
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -32,7 +40,7 @@
             </li>
 
             <li>
-                <a href="/TRAINLY---TCC-/explorar.php">
+                <a href="/TRAINLY---TCC-/explorar.php"<?= $navActive('explorar.php') ?>>
                     <!-- Explorar -->
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -45,7 +53,7 @@
             </li>
 
             <li>
-                <a href="/TRAINLY---TCC-/amizades.php">
+                <a href="/TRAINLY---TCC-/amizades.php"<?= $navActive('amizades.php') ?>>
                     <!-- Amigos -->
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -59,7 +67,7 @@
             </li>
 
             <li>
-                <a href="/TRAINLY---TCC-/clubes.php">
+                <a href="/TRAINLY---TCC-/clubes.php"<?= $navActive('clubes.php') ?>>
                     <!-- Clubes -->
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -114,6 +122,7 @@
 
                 <div class="profile-menu" data-profile-menu>
                     <a href="/TRAINLY---TCC-/perfil.php">Meu perfil</a>
+                    <a href="/TRAINLY---TCC-/configuracoes.php">Configurações</a>
                     <a href="#" data-logout>Sair</a>
                 </div>
             </div>
