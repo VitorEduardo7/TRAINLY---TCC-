@@ -1,0 +1,2626 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "API Trainly",
+    "version": "1.0.0",
+    "description": "API REST do **Trainly** — atividades, rotas, clubes, publicações, amigos e gamificação.\n\nRoda como uma **Edge Function no Supabase** (o mesmo banco do app e do site), então tudo que é criado aqui aparece no app e no site.\n\n**Como testar:** se você estiver logado no site, esta página já usa a sua sessão. Se não, chame `POST /auth/login`, copie o `access_token` e cole em **Authorize → bearerAuth**. A chave pública (`apikey`) é preenchida automaticamente.\n\nAs regras de acesso do banco (RLS) continuam valendo: ninguém altera o que não é seu."
+  },
+  "servers": [
+    {
+      "url": "https://SEU-PROJETO.supabase.co/functions/v1/trainly-api",
+      "description": "Supabase (Edge Function trainly-api)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Geral",
+      "description": "Informações e status da API"
+    },
+    {
+      "name": "Autenticação",
+      "description": "Login e token"
+    },
+    {
+      "name": "Perfil",
+      "description": "Seus dados, nível e patente"
+    },
+    {
+      "name": "Atividades",
+      "description": "Corridas, pedais, natação e caminhadas"
+    },
+    {
+      "name": "Rotas",
+      "description": "Percursos da página Explorar"
+    },
+    {
+      "name": "Clubes",
+      "description": "Grupos de treino"
+    },
+    {
+      "name": "Publicações",
+      "description": "Feed de amigos"
+    },
+    {
+      "name": "Amigos",
+      "description": "Seguir e deixar de seguir"
+    },
+    {
+      "name": "Usuários",
+      "description": "Buscar e ver atletas"
+    },
+    {
+      "name": "Gamificação",
+      "description": "Sequência semanal e desafios"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "Geral"
+        ],
+        "summary": "Raiz",
+        "description": "Informações da API (nome, versão e como autenticar). Não precisa de login.",
+        "responses": {
+          "200": {
+            "description": "Informações da API",
+            "content": {
+              "application/json": {
+                "example": {
+                  "nome": "API Trainly",
+                  "versao": "1.0.0",
+                  "descricao": "API REST do Trainly..."
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apikey": []
+          }
+        ],
+        "operationId": "raiz"
+      }
+    },
+    "/saude": {
+      "get": {
+        "tags": [
+          "Geral"
+        ],
+        "summary": "Status",
+        "description": "Verifica se a API está no ar.",
+        "responses": {
+          "200": {
+            "description": "API no ar",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "ok",
+                  "versao": "1.0.0",
+                  "horario": "2026-10-27T20:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apikey": []
+          }
+        ],
+        "operationId": "saude"
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Entrar",
+        "description": "Faz login com e-mail e senha e devolve o **token** (access_token). Use-o no botão **Authorize** (bearerAuth) ou deixe a página usar a sua sessão do site.",
+        "responses": {
+          "200": {
+            "description": "Login feito",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResposta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Faltou e-mail ou senha",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E-mail ou senha inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E-mail não confirmado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              },
+              "example": {
+                "email": "voce@email.com",
+                "senha": "sua-senha"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apikey": []
+          }
+        ],
+        "operationId": "login"
+      }
+    },
+    "/perfil": {
+      "get": {
+        "tags": [
+          "Perfil"
+        ],
+        "summary": "Ver meu perfil",
+        "description": "Dados do usuário logado com nível, patente e XP calculados (mesma regra do app).",
+        "responses": {
+          "200": {
+            "description": "Perfil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Perfil"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "verPerfil"
+      },
+      "put": {
+        "tags": [
+          "Perfil"
+        ],
+        "summary": "Editar meu perfil",
+        "description": "Altera nome, bio (até 280 caracteres) e/ou localização. Envie só o que quer mudar.",
+        "responses": {
+          "200": {
+            "description": "Perfil atualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Perfil"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PerfilEdicao"
+              },
+              "example": {
+                "nome": "Vitor Eduardo",
+                "bio": "Correndo atrás do nível 10",
+                "localizacao": "São Paulo, SP"
+              }
+            }
+          }
+        },
+        "operationId": "editarPerfil"
+      }
+    },
+    "/atividades": {
+      "get": {
+        "tags": [
+          "Atividades"
+        ],
+        "summary": "Listar",
+        "description": "Suas atividades, da mais recente para a mais antiga.",
+        "responses": {
+          "200": {
+            "description": "Lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "atividades": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Atividade"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tipo",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Corrida",
+                "Ciclismo",
+                "Natação",
+                "Caminhada"
+              ]
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "operationId": "listarAtividades"
+      },
+      "post": {
+        "tags": [
+          "Atividades"
+        ],
+        "summary": "Cadastrar",
+        "description": "Registra uma atividade. O XP é calculado como `max(5, km × 10 + minutos)`, igual no app.",
+        "responses": {
+          "201": {
+            "description": "Criada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "atividade": {
+                      "$ref": "#/components/schemas/Atividade"
+                    },
+                    "xp_ganho": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaAtividade"
+              },
+              "example": {
+                "tipo": "Corrida",
+                "titulo": "Treino leve",
+                "distancia_km": 5.2,
+                "duracao_seg": 1680,
+                "frequencia_cardiaca": 148,
+                "elevacao_m": 20
+              }
+            }
+          }
+        },
+        "operationId": "cadastrarAtividade"
+      }
+    },
+    "/atividades/{id}": {
+      "get": {
+        "tags": [
+          "Atividades"
+        ],
+        "summary": "Visualizar",
+        "description": "Uma atividade pelo ID.",
+        "responses": {
+          "200": {
+            "description": "Atividade",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Atividade"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID (UUID)"
+          }
+        ],
+        "operationId": "verAtividade"
+      },
+      "put": {
+        "tags": [
+          "Atividades"
+        ],
+        "summary": "Editar",
+        "description": "Altera uma atividade **sua**. Envie só os campos que mudaram; o XP é recalculado.",
+        "responses": {
+          "200": {
+            "description": "Editada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "atividade": {
+                      "$ref": "#/components/schemas/Atividade"
+                    },
+                    "xp_diferenca": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrada ou não é sua",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID (UUID)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtividadeEdicao"
+              },
+              "example": {
+                "distancia_km": 6,
+                "titulo": "Treino leve (corrigido)"
+              }
+            }
+          }
+        },
+        "operationId": "editarAtividade"
+      },
+      "delete": {
+        "tags": [
+          "Atividades"
+        ],
+        "summary": "Excluir",
+        "description": "Apaga uma atividade **sua**.",
+        "responses": {
+          "200": {
+            "description": "Apagada",
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": true,
+                  "xp_removido": 85
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrada ou não é sua",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID (UUID)"
+          }
+        ],
+        "operationId": "excluirAtividade"
+      }
+    },
+    "/rotas": {
+      "get": {
+        "tags": [
+          "Rotas"
+        ],
+        "summary": "Listar",
+        "description": "Rotas criadas por você e por quem você segue (página Explorar).",
+        "responses": {
+          "200": {
+            "description": "Lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "rotas": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Rota"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tipo",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Corrida",
+                "Ciclismo",
+                "Natação",
+                "Caminhada"
+              ]
+            }
+          }
+        ],
+        "operationId": "listarRotas"
+      },
+      "post": {
+        "tags": [
+          "Rotas"
+        ],
+        "summary": "Cadastrar",
+        "description": "Cria uma rota. O trajeto é uma lista de pontos `[latitude, longitude]` (mínimo 2).",
+        "responses": {
+          "201": {
+            "description": "Criada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rota"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaRota"
+              },
+              "example": {
+                "nome": "Volta do Ibirapuera",
+                "tipo": "Corrida",
+                "dificuldade": "Fácil",
+                "terreno": "Asfalto",
+                "distancia_km": 3.2,
+                "elevacao_m": 12,
+                "trajeto": [
+                  [
+                    -23.5874,
+                    -46.6576
+                  ],
+                  [
+                    -23.5891,
+                    -46.6602
+                  ],
+                  [
+                    -23.5858,
+                    -46.6631
+                  ]
+                ]
+              }
+            }
+          }
+        },
+        "operationId": "cadastrarRota"
+      }
+    },
+    "/rotas/{id}": {
+      "get": {
+        "tags": [
+          "Rotas"
+        ],
+        "summary": "Visualizar",
+        "description": "Uma rota pelo ID, com o trajeto completo.",
+        "responses": {
+          "200": {
+            "description": "Rota",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rota"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID (UUID)"
+          }
+        ],
+        "operationId": "verRota"
+      },
+      "put": {
+        "tags": [
+          "Rotas"
+        ],
+        "summary": "Editar",
+        "description": "Altera uma rota **sua**.",
+        "responses": {
+          "200": {
+            "description": "Editada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rota"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrada ou não é sua",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID (UUID)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RotaEdicao"
+              },
+              "example": {
+                "dificuldade": "Moderada"
+              }
+            }
+          }
+        },
+        "operationId": "editarRota"
+      },
+      "delete": {
+        "tags": [
+          "Rotas"
+        ],
+        "summary": "Excluir",
+        "description": "Apaga uma rota **sua**.",
+        "responses": {
+          "200": {
+            "description": "Apagada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrada ou não é sua",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID (UUID)"
+          }
+        ],
+        "operationId": "excluirRota"
+      }
+    },
+    "/clubes": {
+      "get": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Listar meus clubes",
+        "description": "Clubes dos quais você participa.",
+        "responses": {
+          "200": {
+            "description": "Lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "clubes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Clube"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listarClubes"
+      },
+      "post": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Cadastrar",
+        "description": "Cria um clube. Você entra como administrador e recebe o código de convite.",
+        "responses": {
+          "201": {
+            "description": "Criado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Clube"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Nome vazio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoClube"
+              },
+              "example": {
+                "nome": "Corre Zona Sul",
+                "descricao": "Treinos aos sábados"
+              }
+            }
+          }
+        },
+        "operationId": "cadastrarClube"
+      }
+    },
+    "/clubes/entrar": {
+      "post": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Entrar com código",
+        "description": "Entra em um clube usando o código de convite.",
+        "responses": {
+          "200": {
+            "description": "Agora você é membro",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Clube"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Código inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "codigo"
+                ],
+                "properties": {
+                  "codigo": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "codigo": "ABC123"
+              }
+            }
+          }
+        },
+        "operationId": "entrarNoClube"
+      }
+    },
+    "/clubes/{id}": {
+      "get": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Visualizar",
+        "description": "Um clube com a lista de membros.",
+        "responses": {
+          "200": {
+            "description": "Clube",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClubeDetalhe"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID (UUID)"
+          }
+        ],
+        "operationId": "verClube"
+      },
+      "put": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Editar",
+        "description": "Só quem criou o clube pode editar.",
+        "responses": {
+          "200": {
+            "description": "Editado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Clube"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Você não criou esse clube",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID (UUID)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoClube"
+              },
+              "example": {
+                "descricao": "Treinos aos sábados, 7h"
+              }
+            }
+          }
+        },
+        "operationId": "editarClube"
+      },
+      "delete": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Excluir",
+        "description": "Só quem criou o clube pode apagar.",
+        "responses": {
+          "200": {
+            "description": "Apagado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Você não criou esse clube",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID (UUID)"
+          }
+        ],
+        "operationId": "excluirClube"
+      }
+    },
+    "/clubes/{id}/sair": {
+      "post": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Sair do clube",
+        "description": "Deixa de participar do clube.",
+        "responses": {
+          "200": {
+            "description": "Saiu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID (UUID)"
+          }
+        ],
+        "operationId": "sairDoClube"
+      }
+    },
+    "/publicacoes": {
+      "get": {
+        "tags": [
+          "Publicações"
+        ],
+        "summary": "Feed",
+        "description": "Publicações suas e de quem você segue, das mais novas para as mais antigas.",
+        "responses": {
+          "200": {
+            "description": "Feed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "publicacoes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Publicacao"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "operationId": "feed"
+      },
+      "post": {
+        "tags": [
+          "Publicações"
+        ],
+        "summary": "Publicar",
+        "description": "Cria uma publicação de texto (fotos só pelo site ou app).",
+        "responses": {
+          "201": {
+            "description": "Publicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Publicacao"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Texto vazio ou longo demais",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "texto"
+                ],
+                "properties": {
+                  "texto": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                }
+              },
+              "example": {
+                "texto": "Primeira semana completa de treino!"
+              }
+            }
+          }
+        },
+        "operationId": "publicar"
+      }
+    },
+    "/publicacoes/{id}": {
+      "delete": {
+        "tags": [
+          "Publicações"
+        ],
+        "summary": "Excluir",
+        "description": "Apaga uma publicação **sua**.",
+        "responses": {
+          "200": {
+            "description": "Apagada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrada ou não é sua",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID (UUID)"
+          }
+        ],
+        "operationId": "excluirPublicacao"
+      }
+    },
+    "/amigos": {
+      "get": {
+        "tags": [
+          "Amigos"
+        ],
+        "summary": "Quem eu sigo",
+        "description": "Atletas que você segue.",
+        "responses": {
+          "200": {
+            "description": "Lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "seguindo": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UsuarioResumo"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listarAmigos"
+      }
+    },
+    "/amigos/{id}": {
+      "post": {
+        "tags": [
+          "Amigos"
+        ],
+        "summary": "Seguir",
+        "description": "Começa a seguir um atleta.",
+        "responses": {
+          "201": {
+            "description": "Seguindo",
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": true,
+                  "seguindo": "uuid-do-atleta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Não dá pra seguir a si mesmo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Usuário não existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Você já segue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID (UUID)"
+          }
+        ],
+        "operationId": "seguir"
+      },
+      "delete": {
+        "tags": [
+          "Amigos"
+        ],
+        "summary": "Deixar de seguir",
+        "description": "Para de seguir um atleta.",
+        "responses": {
+          "200": {
+            "description": "Pronto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID (UUID)"
+          }
+        ],
+        "operationId": "deixarDeSeguir"
+      }
+    },
+    "/usuarios": {
+      "get": {
+        "tags": [
+          "Usuários"
+        ],
+        "summary": "Buscar atletas",
+        "description": "Busca atletas pelo nome (mínimo 2 letras).",
+        "responses": {
+          "200": {
+            "description": "Resultado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "usuarios": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UsuarioResumo"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Busca curta demais",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "busca",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2
+            },
+            "example": "ana"
+          }
+        ],
+        "operationId": "buscarUsuarios"
+      }
+    },
+    "/usuarios/{id}": {
+      "get": {
+        "tags": [
+          "Usuários"
+        ],
+        "summary": "Perfil público",
+        "description": "Perfil de um atleta: nível, patente, contagens e sequência.",
+        "responses": {
+          "200": {
+            "description": "Perfil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioPublico"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID (UUID)"
+          }
+        ],
+        "operationId": "verUsuario"
+      }
+    },
+    "/sequencia": {
+      "get": {
+        "tags": [
+          "Gamificação"
+        ],
+        "summary": "Minha sequência",
+        "description": "Sequência semanal (foguinho). O estado é calculado na hora com a mesma regra do banco: `ativa`, `pendente`, `em_risco`, `quebrada` ou `nenhuma`.",
+        "responses": {
+          "200": {
+            "description": "Sequência",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sequencia"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "verSequencia"
+      }
+    },
+    "/desafios": {
+      "get": {
+        "tags": [
+          "Gamificação"
+        ],
+        "summary": "Desafios de hoje e da semana",
+        "description": "Sorteia (se ainda não sorteou) e devolve os desafios do dia e da semana, com progresso e XP.",
+        "responses": {
+          "200": {
+            "description": "Desafios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Desafios"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login ou token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "verDesafios"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "apikey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "apikey",
+        "description": "Chave pública do projeto (sb_publishable_...). Preenchida automaticamente pela página."
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Token de login (access_token de POST /auth/login)."
+      }
+    },
+    "schemas": {
+      "Erro": {
+        "type": "object",
+        "properties": {
+          "erro": {
+            "type": "string",
+            "example": "Faça login: envie o token no cabeçalho Authorization (Bearer <token>)."
+          },
+          "status": {
+            "type": "integer",
+            "example": 401
+          }
+        }
+      },
+      "Ok": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "Login": {
+        "type": "object",
+        "required": [
+          "email",
+          "senha"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "senha": {
+            "type": "string",
+            "format": "password"
+          }
+        }
+      },
+      "LoginResposta": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "example": "Bearer"
+          },
+          "expira_em": {
+            "type": "integer",
+            "description": "Data de expiração (segundos Unix)"
+          },
+          "usuario": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Nivel": {
+        "type": "object",
+        "properties": {
+          "nivel": {
+            "type": "integer",
+            "example": 6
+          },
+          "xp_total": {
+            "type": "integer",
+            "example": 1647
+          },
+          "xp_no_nivel": {
+            "type": "integer",
+            "example": 147
+          },
+          "xp_para_proximo_nivel": {
+            "type": "integer",
+            "example": 600
+          },
+          "xp_faltando": {
+            "type": "integer",
+            "example": 453
+          },
+          "patente": {
+            "type": "string",
+            "enum": [
+              "Bronze",
+              "Prata",
+              "Ouro",
+              "Platina",
+              "Diamante"
+            ]
+          },
+          "cor_patente": {
+            "type": "string",
+            "example": "#8a94a6"
+          },
+          "proxima_patente": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "nome": {
+                "type": "string"
+              },
+              "nivel": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "Perfil": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "nome": {
+                "type": "string"
+              },
+              "bio": {
+                "type": "string",
+                "nullable": true
+              },
+              "localizacao": {
+                "type": "string",
+                "nullable": true
+              },
+              "avatar_url": {
+                "type": "string",
+                "nullable": true
+              },
+              "capa_url": {
+                "type": "string",
+                "nullable": true
+              },
+              "meta_do_mes": {
+                "type": "object",
+                "properties": {
+                  "tipo": {
+                    "type": "string",
+                    "enum": [
+                      "km",
+                      "activities",
+                      "hours"
+                    ]
+                  },
+                  "valor": {
+                    "type": "number"
+                  }
+                }
+              },
+              "membro_desde": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          {
+            "$ref": "#/components/schemas/Nivel"
+          }
+        ]
+      },
+      "PerfilEdicao": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 280,
+            "nullable": true
+          },
+          "localizacao": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "Atividade": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "usuario_id": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "Corrida",
+              "Ciclismo",
+              "Natação",
+              "Caminhada"
+            ]
+          },
+          "titulo": {
+            "type": "string",
+            "nullable": true
+          },
+          "data": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "distancia_km": {
+            "type": "number",
+            "example": 5.2
+          },
+          "duracao_seg": {
+            "type": "integer",
+            "example": 1680
+          },
+          "ritmo": {
+            "type": "string",
+            "nullable": true,
+            "example": "5'23\"/km"
+          },
+          "frequencia_cardiaca": {
+            "type": "integer",
+            "nullable": true
+          },
+          "elevacao_m": {
+            "type": "integer",
+            "nullable": true
+          },
+          "xp": {
+            "type": "integer",
+            "example": 80
+          },
+          "foto_url": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "NovaAtividade": {
+        "type": "object",
+        "required": [
+          "tipo",
+          "distancia_km",
+          "duracao_seg"
+        ],
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "Corrida",
+              "Ciclismo",
+              "Natação",
+              "Caminhada"
+            ]
+          },
+          "titulo": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "distancia_km": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 1000
+          },
+          "duracao_seg": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "data": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Opcional; padrão = agora"
+          },
+          "frequencia_cardiaca": {
+            "type": "integer",
+            "nullable": true
+          },
+          "elevacao_m": {
+            "type": "integer",
+            "nullable": true
+          }
+        }
+      },
+      "AtividadeEdicao": {
+        "type": "object",
+        "description": "Mesmos campos do cadastro, todos opcionais.",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "Corrida",
+              "Ciclismo",
+              "Natação",
+              "Caminhada"
+            ]
+          },
+          "titulo": {
+            "type": "string",
+            "nullable": true
+          },
+          "distancia_km": {
+            "type": "number"
+          },
+          "duracao_seg": {
+            "type": "integer"
+          },
+          "data": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "frequencia_cardiaca": {
+            "type": "integer",
+            "nullable": true
+          },
+          "elevacao_m": {
+            "type": "integer",
+            "nullable": true
+          }
+        }
+      },
+      "Rota": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "dificuldade": {
+            "type": "string",
+            "enum": [
+              "Fácil",
+              "Moderada",
+              "Difícil"
+            ]
+          },
+          "terreno": {
+            "type": "string",
+            "nullable": true
+          },
+          "distancia_km": {
+            "type": "number"
+          },
+          "elevacao_m": {
+            "type": "number"
+          },
+          "inicio": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "lat": {
+                "type": "number"
+              },
+              "lng": {
+                "type": "number"
+              }
+            }
+          },
+          "trajeto": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "criador": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "nome": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "e_minha": {
+            "type": "boolean"
+          },
+          "criada_em": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "NovaRota": {
+        "type": "object",
+        "required": [
+          "nome",
+          "distancia_km",
+          "trajeto"
+        ],
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "Corrida",
+              "Ciclismo",
+              "Natação",
+              "Caminhada"
+            ],
+            "default": "Corrida"
+          },
+          "dificuldade": {
+            "type": "string",
+            "enum": [
+              "Fácil",
+              "Moderada",
+              "Difícil"
+            ],
+            "default": "Moderada"
+          },
+          "terreno": {
+            "type": "string",
+            "nullable": true
+          },
+          "distancia_km": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "elevacao_m": {
+            "type": "integer",
+            "default": 0
+          },
+          "trajeto": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "description": "Pontos [latitude, longitude]"
+          }
+        }
+      },
+      "RotaEdicao": {
+        "type": "object",
+        "description": "Mesmos campos do cadastro, todos opcionais.",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "dificuldade": {
+            "type": "string",
+            "enum": [
+              "Fácil",
+              "Moderada",
+              "Difícil"
+            ]
+          },
+          "terreno": {
+            "type": "string",
+            "nullable": true
+          },
+          "distancia_km": {
+            "type": "number"
+          },
+          "elevacao_m": {
+            "type": "integer"
+          },
+          "trajeto": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      },
+      "Clube": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true
+          },
+          "codigo_convite": {
+            "type": "string",
+            "description": "Só aparece para membros"
+          },
+          "membros": {
+            "type": "integer"
+          },
+          "sou_membro": {
+            "type": "boolean"
+          },
+          "sou_admin": {
+            "type": "boolean"
+          },
+          "sou_criador": {
+            "type": "boolean"
+          },
+          "criado_em": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ClubeDetalhe": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Clube"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "lista_de_membros": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "nome": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "papel": {
+                      "type": "string",
+                      "example": "admin"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "NovoClube": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "Publicacao": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "autor": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "nome": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "texto": {
+            "type": "string",
+            "nullable": true
+          },
+          "foto_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "criada_em": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "curtidas": {
+            "type": "integer"
+          },
+          "curti": {
+            "type": "boolean"
+          },
+          "e_minha": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UsuarioResumo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "localizacao": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatar_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "nivel": {
+            "type": "integer"
+          },
+          "patente": {
+            "type": "string"
+          }
+        }
+      },
+      "UsuarioPublico": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "nome": {
+                "type": "string"
+              },
+              "bio": {
+                "type": "string",
+                "nullable": true
+              },
+              "localizacao": {
+                "type": "string",
+                "nullable": true
+              },
+              "avatar_url": {
+                "type": "string",
+                "nullable": true
+              },
+              "capa_url": {
+                "type": "string",
+                "nullable": true
+              },
+              "membro_desde": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "contagens": {
+                "type": "object",
+                "properties": {
+                  "atividades": {
+                    "type": "integer"
+                  },
+                  "seguidores": {
+                    "type": "integer"
+                  },
+                  "seguindo": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "sequencia": {
+                "type": "object",
+                "properties": {
+                  "semanas_seguidas": {
+                    "type": "integer"
+                  },
+                  "estado": {
+                    "type": "string"
+                  },
+                  "recorde": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$ref": "#/components/schemas/Nivel"
+          }
+        ]
+      },
+      "Sequencia": {
+        "type": "object",
+        "properties": {
+          "semanas_seguidas": {
+            "type": "integer",
+            "example": 3
+          },
+          "recorde": {
+            "type": "integer",
+            "example": 5
+          },
+          "congelamentos": {
+            "type": "integer",
+            "example": 1
+          },
+          "ultima_semana_ativa": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "ativa",
+              "pendente",
+              "em_risco",
+              "quebrada",
+              "nenhuma"
+            ]
+          },
+          "descricao": {
+            "type": "string"
+          }
+        }
+      },
+      "Desafio": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "periodo": {
+            "type": "string",
+            "enum": [
+              "dia",
+              "semana"
+            ]
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "tipo_de_meta": {
+            "type": "string",
+            "enum": [
+              "distance_km",
+              "activity_count",
+              "duration_min"
+            ]
+          },
+          "meta": {
+            "type": "number"
+          },
+          "progresso": {
+            "type": "number"
+          },
+          "concluido": {
+            "type": "boolean"
+          },
+          "xp": {
+            "type": "integer"
+          }
+        }
+      },
+      "Desafios": {
+        "type": "object",
+        "properties": {
+          "concluidos": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "hoje": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Desafio"
+            }
+          },
+          "esta_semana": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Desafio"
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "apikey": [],
+      "bearerAuth": []
+    }
+  ]
+}

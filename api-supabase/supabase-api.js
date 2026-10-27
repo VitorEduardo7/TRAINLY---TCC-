@@ -1,40 +1,56 @@
 /* =========================================================
    TRAINLY - supabase-api.js
-   Camada de dados do SITE falando direto com o Supabase, o MESMO banco
-   do app. Um clube, atividade, publicação ou seguidor criado no site
-   aparece no app (e vice-versa), porque os dois leem e gravam nas
-   mesmas tabelas.
+   Camada de dados do SITE. Fala direto com o Supabase, o MESMO banco do
+   app: um clube, atividade, publicação ou seguidor criado no site aparece
+   no app (e vice-versa), porque os dois usam as mesmas tabelas.
 
-   Como funciona: o main.js e o posts.js continuam chamando
-   apiRequest("/clubs"), apiRequest("/me")... igual faziam com a API PHP.
-   Quando o js/supabase-config.js está com DATA_SOURCE = "supabase", o
-   apiRequest repassa a chamada para TrainlySupabase.request(), que
-   responde com o MESMO formato que a api/index.php devolvia. Por isso o
-   resto do site não precisou mudar.
+   Como funciona: o main.js e o posts.js chamam apiRequest("/me"),
+   apiRequest("/clubs")... e o apiRequest repassa para
+   TrainlySupabase.request(), que está no fim deste arquivo.
 
-   Para voltar à API PHP + MySQL antiga, basta trocar DATA_SOURCE para
-   "mysql" no js/supabase-config.js.
+   SUMÁRIO (procure com Ctrl+F pelo número, ex.: "9.6")
+     Ferramentas
+       1. Conexão com o Supabase
+       2. Erros (mensagens em português)
+       3. Sessão (quem está logado)
+       4. Ajudantes: datas, números e consultas em lote
+       5. Fotos (Supabase Storage)
+       6. Leitura do pedido
+     Montagem das respostas
+       7. Montadores (perfil, atividades, clubes, rankings, publicações...)
+       8. Conferências (dono do item, senha atual, curtidas)
+     Rotas (mesma ordem da página API)
+       9.1 Geral          9.5 Rotas (Explorar)   9.9  Usuários
+       9.2 Autenticação   9.6 Clubes             9.10 Notificações
+       9.3 Perfil e conta 9.7 Publicações        9.11 Gamificação
+       9.4 Atividades     9.8 Amigos
+     Entrada
+       10. request(): recebe o pedido e acha a rota certa
 
    Carregar DEPOIS de: supabase-js (CDN) e js/supabase-config.js.
    Carregar ANTES de: js/main.js e js/posts.js.
+   (tudo isso já é feito por includes/data-scripts.php)
    ========================================================= */
 (function () {
   "use strict";
 
+  /* =========================================================
+     1. CONEXÃO COM O SUPABASE
+     Mesmo projeto do app. A sessão fica salva no navegador e é renovada sozinha.
+     ========================================================= */
   const cfg = window.TRAINLY_CONFIG || {};
-  const enabled = (cfg.DATA_SOURCE || "supabase") === "supabase";
   const libLoaded = !!(window.supabase && window.supabase.createClient);
 
-  const sb = enabled && libLoaded && cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY
+  const sb = libLoaded && cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY
     ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, {
         auth: { persistSession: true, autoRefreshToken: true, storageKey: "trainly-supabase-auth" }
       })
     : null;
 
   /* ---------------------------------------------------------
-     1. ERROS
+     2. ERROS
      --------------------------------------------------------- */
-  // Mesmo "contrato" do fetch da API PHP: o main.js só olha a mensagem e,
+  // Erro com código HTTP (400, 401, 403...): o main.js só olha a mensagem e,
   // no caso de 401, manda pro login.
   class ApiError extends Error {
     constructor(message, status) {
@@ -67,7 +83,7 @@
   }
 
   /* ---------------------------------------------------------
-     2. SESSÃO
+     3. SESSÃO (quem está logado)
      --------------------------------------------------------- */
   async function currentUserId() {
     const { data } = await sb.auth.getSession();
@@ -87,11 +103,11 @@
   }
 
   /* ---------------------------------------------------------
-     3. HELPERS DE DATA, NÚMERO E LISTAS
+     4. AJUDANTES: DATAS, NÚMEROS E CONSULTAS EM LOTE
      --------------------------------------------------------- */
   const pad = (n) => String(n).padStart(2, "0");
 
-  // O PHP devolvia datas no horário LOCAL, sem fuso ("2026-10-20T19:30:00").
+  // O site trabalha com datas no horário LOCAL, sem fuso ("2026-10-20T19:30:00").
   // O main.js usa isso em vários lugares (ex.: s.slice(0, 10) pra pegar o
   // dia), então convertemos o timestamptz do Supabase pro mesmo formato.
   function toLocalIso(ts) {
@@ -119,7 +135,7 @@
     return d;
   }
 
-  // Segunda-feira 00:00 da semana atual (igual ao get_week_start() do PHP).
+  // Segunda-feira 00:00 da semana atual (começo da semana usado nas metas e no gráfico).
   function startOfWeek() {
     const d = startOfToday();
     const dow = d.getDay(); // 0 = domingo
@@ -217,7 +233,7 @@
   }
 
   /* ---------------------------------------------------------
-     4. FOTOS (Supabase Storage)
+     5. FOTOS (Supabase Storage)
      --------------------------------------------------------- */
   const IMAGE_TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 
@@ -258,8 +274,30 @@
   }
 
   /* ---------------------------------------------------------
-     5. "BUILDERS": montam os objetos no formato que o main.js espera
-        (mesmos nomes de campos do helpers.php)
+     6. LEITURA DO PEDIDO (JSON ou formulário com arquivo)
+     --------------------------------------------------------- */
+  function readBody(options) {
+    const body = options.body;
+    if (!body) return {};
+    if (typeof FormData !== "undefined" && body instanceof FormData) {
+      const out = {};
+      body.forEach((value, key) => { out[key] = value; });
+      return out;
+    }
+    if (typeof body === "string") {
+      try { return JSON.parse(body); } catch (e) { return {}; }
+    }
+    return body;
+  }
+
+  function fileFrom(body, key) {
+    const f = body[key];
+    return f && typeof f === "object" && "size" in f && f.size > 0 ? f : null;
+  }
+
+  /* ---------------------------------------------------------
+     7. MONTADORES: transformam as linhas do banco no formato que o
+        main.js e o posts.js esperam
      --------------------------------------------------------- */
   function mapActivity(a, likesByActivity, viewerId, extra) {
     const likes = likesByActivity.get(a.id) || [];
@@ -674,27 +712,8 @@
   }
 
   /* ---------------------------------------------------------
-     6. ROTAS (mesmos caminhos da api/index.php)
+     8. CONFERÊNCIAS (é dono do item? senha atual confere? curtir/descurtir)
      --------------------------------------------------------- */
-  function readBody(options) {
-    const body = options.body;
-    if (!body) return {};
-    if (typeof FormData !== "undefined" && body instanceof FormData) {
-      const out = {};
-      body.forEach((value, key) => { out[key] = value; });
-      return out;
-    }
-    if (typeof body === "string") {
-      try { return JSON.parse(body); } catch (e) { return {}; }
-    }
-    return body;
-  }
-
-  function fileFrom(body, key) {
-    const f = body[key];
-    return f && typeof f === "object" && "size" in f && f.size > 0 ? f : null;
-  }
-
   async function activityOwnedBy(activityId, userId) {
     const a = unwrap(await sb.from("activities").select("id, user_id, photo_url, xp_earned").eq("id", activityId).maybeSingle());
     if (!a) throw new ApiError("Atividade não encontrada", 404);
@@ -738,9 +757,62 @@
     return !!(m && m.role === "admin");
   }
 
-  // [método, regex do caminho, função(match, body, query)]
+  // Confirma a senha atual antes de trocar e-mail/senha: entra de novo com ela.
+  // (Também deixa a sessão "recente", que o Supabase exige pra trocar a senha.)
+  async function confirmCurrentPassword(password) {
+    if (!password) throw new ApiError("Digite sua senha atual para confirmar.", 400);
+    const { data } = await sb.auth.getUser();
+    const email = data && data.user && data.user.email;
+    if (!email) throw new ApiError("Não autenticado", 401);
+    const res = await sb.auth.signInWithPassword({ email, password });
+    if (res.error) {
+      const msg = String(res.error.message || "");
+      // 400 (não 401): senha errada não pode mandar a pessoa pro login
+      if (/invalid login|invalid credentials/i.test(msg)) throw new ApiError("Senha atual incorreta.", 400);
+      if (res.error.status === 429 || /rate limit|too many/i.test(msg)) {
+        throw new ApiError("Muitas tentativas. Espere alguns minutos e tente de novo.", 429);
+      }
+      throw translateError(res.error, "Não foi possível confirmar sua senha.");
+    }
+    clearMeCache();
+    return res.data.user;
+  }
+
+  async function routeOwnedBy(routeId, userId) {
+    const r = unwrap(await sb.from("routes").select("id, created_by").eq("id", routeId).maybeSingle());
+    if (!r) throw new ApiError("Rota não encontrada", 404);
+    if (r.created_by !== userId) throw new ApiError("Você só pode editar ou apagar rotas que você mesmo criou", 403);
+    return r;
+  }
+
+  async function likeToggle(table, column, id, me, method, forbiddenMsg) {
+    if (method === "POST") {
+      const res = await sb.from(table).insert({ [column]: id, user_id: me });
+      if (res.error && res.error.code !== "23505") throw translateError(res.error, forbiddenMsg);
+    } else {
+      unwrap(await sb.from(table).delete().eq(column, id).eq("user_id", me));
+    }
+    const likeCount = await countRows(table, (q) => q.eq(column, id));
+    clearMeCache();
+    return { likeCount, likedByMe: method === "POST" };
+  }
+
+  /* =========================================================
+     9. ROTAS — uma seção por assunto, na mesma ordem da página API (api-docs.php)
+     Cada linha: [método, caminho (regex), função(match, body, query, me, method)].
+     "me" é o id de quem está logado; "match[1]" é o id que vem no caminho.
+     ========================================================= */
   const ROUTES = [
-    // ---------- Autenticação ----------
+    /* =======================================================
+       9.1 GERAL
+       Saber se a camada de dados está no ar.
+       ======================================================= */
+    ["GET", /^health$/, async () => ({ ok: true })],
+
+    /* =======================================================
+       9.2 AUTENTICAÇÃO
+       Cadastro e login (Supabase Auth, o mesmo login do app).
+       ======================================================= */
     ["POST", /^auth\/register$/, async (m, body) => {
       const name = String(body.name || "").trim();
       const email = String(body.email || "").trim();
@@ -782,9 +854,120 @@
       return { token: "supabase", data: await buildUserData(res.data.user.id) };
     }],
 
+    /* =======================================================
+       9.3 PERFIL E CONTA
+       Meus dados (/me), editar perfil, meta do mês, fotos e troca de e-mail/senha.
+       ======================================================= */
     ["GET", /^me$/, async (m, body, query, me) => ({ data: await buildUserData(me) })],
 
-    // ---------- Atividades ----------
+    ["PUT", /^profile$/, async (m, body, query, me) => {
+      const name = String(body.name || "").trim();
+      const bio = body.bio !== undefined && body.bio !== null ? String(body.bio).trim() : null;
+      const location = body.location !== undefined && body.location !== null ? String(body.location).trim() : null;
+      if (!name) throw new ApiError("O nome não pode ficar vazio", 400);
+      if (bio && bio.length > 280) throw new ApiError("A bio pode ter no máximo 280 caracteres", 400);
+      unwrap(await sb.from("profiles").update({ name, bio: bio || null, location: location || null }).eq("id", me));
+      clearMeCache();
+      return { data: await buildUserData(me) };
+    }],
+
+    ["PUT", /^profile\/goal$/, async (m, body, query, me) => {
+      const goalType = String(body.goalType || "").trim();
+      const goalValue = num(body.goalValue);
+      if (!["km", "activities", "hours"].includes(goalType)) throw new ApiError("Tipo de meta inválido", 400);
+      if (goalValue <= 0) throw new ApiError("Informe um valor de meta maior que zero", 400);
+      unwrap(await sb.from("profiles").update({ monthly_goal_type: goalType, monthly_goal_value: goalValue }).eq("id", me));
+      clearMeCache();
+      return { data: await buildUserData(me) };
+    }],
+
+    ["POST", /^profile\/cover$/, async (m, body, query, me) => {
+      const file = fileFrom(body, "cover");
+      if (!file) throw new ApiError("Nenhuma imagem enviada", 400);
+      validateImage(file, 8);
+      const old = unwrap(await sb.from("profiles").select("cover_url").eq("id", me).single());
+      const url = await uploadImage("covers", me, file, "cover");
+      unwrap(await sb.from("profiles").update({ cover_url: url }).eq("id", me));
+      await removeImageByUrl("covers", old && old.cover_url);
+      clearMeCache();
+      return { data: await buildUserData(me) };
+    }],
+
+    ["POST", /^profile\/avatar$/, async (m, body, query, me) => {
+      const file = fileFrom(body, "avatar");
+      if (!file) throw new ApiError("Nenhuma imagem enviada", 400);
+      validateImage(file, 5);
+      // Mesmo bucket e mesmo formato de caminho que o app usa
+      const url = await uploadImage("avatars", me, file, "avatar");
+      unwrap(await sb.from("profiles").update({ avatar_url: url }).eq("id", me));
+      clearMeCache();
+      return { data: await buildUserData(me) };
+    }],
+
+    ["GET", /^account$/, async () => {
+      const res = await sb.auth.getUser();
+      if (res.error || !res.data || !res.data.user) throw translateError(res.error, "Não foi possível carregar sua conta.");
+      const u = res.data.user;
+      return { account: { email: u.email || "", newEmail: u.new_email || null } };
+    }],
+
+    ["PUT", /^account\/email$/, async (m, body) => {
+      const email = String(body.email || "").trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ApiError("Digite um e-mail válido.", 400);
+      const user = await confirmCurrentPassword(String(body.currentPassword || ""));
+      if (email === String(user.email || "").toLowerCase()) throw new ApiError("Esse já é o seu e-mail atual.", 400);
+
+      // O link de confirmação volta pra esta mesma página (se o endereço estiver
+      // liberado em Authentication > URL Configuration no Supabase).
+      const res = await sb.auth.updateUser({ email }, { emailRedirectTo: location.origin + location.pathname });
+      if (res.error) {
+        const msg = String(res.error.message || "");
+        const code = res.error.code || "";
+        if (code === "email_exists" || /already (been )?registered|already exists/i.test(msg)) {
+          throw new ApiError("Já existe uma conta com esse e-mail.", 409);
+        }
+        if (res.error.status === 429 || /rate limit|too many/i.test(msg)) {
+          throw new ApiError("Muitas tentativas. Espere alguns minutos e tente de novo.", 429);
+        }
+        if (/invalid/i.test(msg) && /email/i.test(msg)) throw new ApiError("E-mail inválido.", 400);
+        throw translateError(res.error, "Não foi possível trocar o e-mail.");
+      }
+      const u = (res.data && res.data.user) || {};
+      return { account: { email: u.email || user.email, newEmail: u.new_email || email } };
+    }],
+
+    ["PUT", /^account\/password$/, async (m, body) => {
+      const currentPassword = String(body.currentPassword || "");
+      const newPassword = String(body.newPassword || "");
+      if (newPassword.length < 8) throw new ApiError("A nova senha precisa ter pelo menos 8 caracteres.", 400);
+      if (newPassword === currentPassword) throw new ApiError("A nova senha precisa ser diferente da atual.", 400);
+      await confirmCurrentPassword(currentPassword);
+
+      const res = await sb.auth.updateUser({ password: newPassword });
+      if (res.error) {
+        const msg = String(res.error.message || "");
+        const code = res.error.code || "";
+        if (code === "same_password" || /different from the old/i.test(msg)) {
+          throw new ApiError("A nova senha precisa ser diferente da atual.", 400);
+        }
+        if (code === "weak_password" || /weak|at least/i.test(msg)) {
+          throw new ApiError("Senha fraca: use pelo menos 8 caracteres, com letras e números.", 400);
+        }
+        if (code === "reauthentication_needed" || /reauthenticat/i.test(msg)) {
+          throw new ApiError("Por segurança, saia e entre de novo na conta antes de trocar a senha.", 400);
+        }
+        if (res.error.status === 429 || /rate limit|too many/i.test(msg)) {
+          throw new ApiError("Muitas tentativas. Espere alguns minutos e tente de novo.", 429);
+        }
+        throw translateError(res.error, "Não foi possível trocar a senha.");
+      }
+      return { ok: true };
+    }],
+
+    /* =======================================================
+       9.4 ATIVIDADES
+       Registrar, editar, excluir e curtir treinos; resumo por período; feed de atividades.
+       ======================================================= */
     ["POST", /^activities$/, async (m, body, query, me) => {
       const fields = activityFields(body);
       const photo = fileFrom(body, "photo");
@@ -835,6 +1018,7 @@
 
     ["POST", /^activities\/([^/]+)\/like$/, async (m, body, query, me, method) => likeToggle("activity_likes", "activity_id", m[1], me, method,
       "Você não pode curtir essa atividade.")],
+
     ["DELETE", /^activities\/([^/]+)\/like$/, async (m, body, query, me, method) => likeToggle("activity_likes", "activity_id", m[1], me, method)],
 
     ["PUT", /^activities\/([^/]+)$/, async (m, body, query, me) => {
@@ -854,89 +1038,6 @@
       return { data: await buildUserData(me), xpRemoved: num(old.xp_earned) };
     }],
 
-    // ---------- Recompensa diária ----------
-    ["POST", /^reward$/, async (m, body, query, me) => {
-      const res = await sb.rpc("claim_daily_reward");
-      if (res.error) {
-        if (/already_claimed/.test(res.error.message)) throw new ApiError("Recompensa de hoje já foi resgatada", 409);
-        throw translateError(res.error);
-      }
-      clearMeCache();
-      return { data: await buildUserData(me) };
-    }],
-
-    // ---------- Pessoas ----------
-    ["GET", /^users\/search$/, async (m, body, query, me) => {
-      const q = String(query.get("q") || "").trim();
-      if (q.length < 2) return { users: [] };
-      const pattern = "%" + q.replace(/[\\%_]/g, (c) => "\\" + c) + "%";
-      const rows = unwrap(await sb.from("profiles").select("id, name, location, avatar_url")
-        .neq("id", me).ilike("name", pattern).order("name", { ascending: true }).limit(20));
-      return { users: await buildUserCards(rows, me) };
-    }],
-
-    ["GET", /^users\/suggested$/, async (m, body, query, me) => {
-      const [rows, mine] = await Promise.all([
-        sb.from("profiles").select("id, name, location, avatar_url").neq("id", me).limit(300).then((r) => unwrap(r)),
-        followingIds(me)
-      ]);
-      const following = new Set(mine);
-      const candidates = rows.filter((r) => !following.has(r.id));
-      for (let i = candidates.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
-      }
-      return { users: await buildUserCards(candidates.slice(0, 8), me) };
-    }],
-
-    ["GET", /^users\/([^/]+)\/profile$/, async (m, body, query, me) => {
-      const profile = await buildPublicProfile(m[1], me);
-      if (!profile) throw new ApiError("Usuário não encontrado", 404);
-      return { profile };
-    }],
-
-    ["GET", /^users\/([^/]+)\/posts$/, async (m, body, query, me) => {
-      // A regra de "só amigos veem" fica no banco: pra quem não é amigo, a
-      // consulta já volta vazia.
-      const rows = unwrap(await sb.from("posts").select("*").eq("user_id", m[1])
-        .order("created_at", { ascending: false }).limit(30));
-      return { posts: await buildPosts(rows, me) };
-    }],
-
-    ["GET", /^friends\/leaderboard$/, async (m, body, query, me) => {
-      const ids = await followingIds(me);
-      const [profiles, km] = await Promise.all([profilesMap(ids), weekKmBy(ids)]);
-      const list = ids.map((id) => {
-        const p = profiles.get(id) || {};
-        return { id, name: p.name || "Atleta", avatarPhotoUrl: p.avatar_url || null, weekKm: km.get(id) || 0 };
-      });
-      return { leaderboard: sortByValueThenName(list, "weekKm").slice(0, 10) };
-    }],
-
-    ["GET", /^following$/, async (m, body, query, me) => {
-      const ids = await followingIds(me);
-      const profiles = await profilesMap(ids);
-      const list = ids.map((id) => ({ id, name: (profiles.get(id) || {}).name || "Atleta" }));
-      list.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-      return { following: list };
-    }],
-
-    ["POST", /^following\/([^/]+)$/, async (m, body, query, me) => {
-      if (m[1] === me) throw new ApiError("Você não pode seguir a si mesmo", 400);
-      const res = await sb.from("following").insert({ follower_id: me, followed_id: m[1] });
-      if (res.error && res.error.code !== "23505") throw translateError(res.error, "Não é possível seguir esse atleta.");
-      clearMeCache();
-      return { ok: true };
-    }],
-
-    ["DELETE", /^following\/([^/]+)$/, async (m, body, query, me) => {
-      if (m[1] === me) throw new ApiError("Você não pode seguir a si mesmo", 400);
-      unwrap(await sb.from("following").delete().eq("follower_id", me).eq("followed_id", m[1]));
-      clearMeCache();
-      return { ok: true };
-    }],
-
-    // ---------- Feed ----------
     ["GET", /^feed$/, async (m, body, query, me) => {
       const ids = [me].concat(await followingIds(me));
       const top = await latestIn("activities", ACTIVITY_COLUMNS, "user_id", ids, "date", 30);
@@ -971,69 +1072,10 @@
       return { active };
     }],
 
-    // ---------- Publicações ----------
-    ["POST", /^posts$/, async (m, body, query, me) => {
-      const content = String(body.content || "").trim();
-      const photo = fileFrom(body, "photo");
-      if (!content && !photo) throw new ApiError("Escreva algo ou anexe uma foto para publicar", 400);
-      if (content.length > 2000) throw new ApiError("Publicação muito longa (máx. 2000 caracteres)", 400);
-      let photoUrl = null;
-      if (photo) {
-        validateImage(photo, 5);
-        photoUrl = await uploadImage("post-photos", me, photo);
-      }
-      const row = unwrap(await sb.from("posts").insert({ user_id: me, content: content || null, photo_url: photoUrl }).select("*").single());
-      return { post: (await buildPosts([row], me))[0] };
-    }],
-
-    ["GET", /^posts\/feed$/, async (m, body, query, me) => {
-      const ids = [me].concat(await followingIds(me));
-      const rows = await latestIn("posts", "*", "user_id", ids, "created_at", 30);
-      return { feed: await buildPosts(rows, me) };
-    }],
-
-    ["GET", /^posts\/mine$/, async (m, body, query, me) => {
-      const rows = unwrap(await sb.from("posts").select("*").eq("user_id", me).order("created_at", { ascending: false }).limit(30));
-      return { posts: await buildPosts(rows, me) };
-    }],
-
-    ["DELETE", /^posts\/([^/]+)$/, async (m, body, query, me) => {
-      const post = await postVisible(m[1]);
-      if (post.user_id !== me) throw new ApiError("Você só pode apagar suas próprias publicações", 403);
-      unwrap(await sb.from("posts").delete().eq("id", m[1]));
-      await removeImageByUrl("post-photos", post.photo_url);
-      return { ok: true };
-    }],
-
-    ["POST", /^posts\/([^/]+)\/like$/, async (m, body, query, me, method) => {
-      await postVisible(m[1]);
-      return likeToggle("post_likes", "post_id", m[1], me, method, "Você só pode curtir publicações de quem é seu amigo");
-    }],
-    ["DELETE", /^posts\/([^/]+)\/like$/, async (m, body, query, me, method) => {
-      await postVisible(m[1]);
-      return likeToggle("post_likes", "post_id", m[1], me, method);
-    }],
-
-    ["GET", /^posts\/([^/]+)\/comments$/, async (m, body, query, me) => {
-      await postVisible(m[1]);
-      const rows = unwrap(await sb.from("post_comments").select("id, post_id, user_id, content, created_at")
-        .eq("post_id", m[1]).order("created_at", { ascending: true }));
-      const profiles = await profilesMap(rows.map((c) => c.user_id));
-      return { comments: rows.map((c) => mapPostComment(c, profiles)) };
-    }],
-
-    ["POST", /^posts\/([^/]+)\/comments$/, async (m, body, query, me) => {
-      await postVisible(m[1]);
-      const content = String(body.content || "").trim();
-      if (!content) throw new ApiError("Escreva um comentário", 400);
-      if (content.length > 500) throw new ApiError("Comentário muito longo (máx. 500 caracteres)", 400);
-      const row = unwrap(await sb.from("post_comments").insert({ post_id: m[1], user_id: me, content })
-        .select("id, post_id, user_id, content, created_at").single(),
-        "Você só pode comentar em publicações de quem é seu amigo");
-      return { comment: mapPostComment(row, await profilesMap([me])) };
-    }],
-
-    // ---------- Rotas (página Explorar) ----------
+    /* =======================================================
+       9.5 ROTAS (página Explorar)
+       Percursos criados pelos atletas.
+       ======================================================= */
     ["GET", /^routes$/, async (m, body, query, me) => {
       const type = String(query.get("type") || "Todos").trim();
       const ids = [me].concat(await followingIds(me));
@@ -1064,52 +1106,10 @@
       return { ok: true };
     }],
 
-    // ---------- Perfil ----------
-    ["PUT", /^profile$/, async (m, body, query, me) => {
-      const name = String(body.name || "").trim();
-      const bio = body.bio !== undefined && body.bio !== null ? String(body.bio).trim() : null;
-      const location = body.location !== undefined && body.location !== null ? String(body.location).trim() : null;
-      if (!name) throw new ApiError("O nome não pode ficar vazio", 400);
-      if (bio && bio.length > 280) throw new ApiError("A bio pode ter no máximo 280 caracteres", 400);
-      unwrap(await sb.from("profiles").update({ name, bio: bio || null, location: location || null }).eq("id", me));
-      clearMeCache();
-      return { data: await buildUserData(me) };
-    }],
-
-    ["PUT", /^profile\/goal$/, async (m, body, query, me) => {
-      const goalType = String(body.goalType || "").trim();
-      const goalValue = num(body.goalValue);
-      if (!["km", "activities", "hours"].includes(goalType)) throw new ApiError("Tipo de meta inválido", 400);
-      if (goalValue <= 0) throw new ApiError("Informe um valor de meta maior que zero", 400);
-      unwrap(await sb.from("profiles").update({ monthly_goal_type: goalType, monthly_goal_value: goalValue }).eq("id", me));
-      clearMeCache();
-      return { data: await buildUserData(me) };
-    }],
-
-    ["POST", /^profile\/cover$/, async (m, body, query, me) => {
-      const file = fileFrom(body, "cover");
-      if (!file) throw new ApiError("Nenhuma imagem enviada", 400);
-      validateImage(file, 8);
-      const old = unwrap(await sb.from("profiles").select("cover_url").eq("id", me).single());
-      const url = await uploadImage("covers", me, file, "cover");
-      unwrap(await sb.from("profiles").update({ cover_url: url }).eq("id", me));
-      await removeImageByUrl("covers", old && old.cover_url);
-      clearMeCache();
-      return { data: await buildUserData(me) };
-    }],
-
-    ["POST", /^profile\/avatar$/, async (m, body, query, me) => {
-      const file = fileFrom(body, "avatar");
-      if (!file) throw new ApiError("Nenhuma imagem enviada", 400);
-      validateImage(file, 5);
-      // Mesmo bucket e mesmo formato de caminho que o app usa
-      const url = await uploadImage("avatars", me, file, "avatar");
-      unwrap(await sb.from("profiles").update({ avatar_url: url }).eq("id", me));
-      clearMeCache();
-      return { data: await buildUserData(me) };
-    }],
-
-    // ---------- Clubes ----------
+    /* =======================================================
+       9.6 CLUBES
+       Criar, entrar com código, ranking da semana e desafios do clube.
+       ======================================================= */
     ["POST", /^clubs$/, async (m, body, query, me) => {
       const name = String(body.name || "").trim();
       const description = String(body.description || "").trim() || null;
@@ -1197,7 +1197,183 @@
       return { challenges: await buildChallenges(rows, m[1]) };
     }],
 
-    // ---------- Notificações ----------
+    /* =======================================================
+       9.7 PUBLICAÇÕES
+       Posts entre amigos: publicar, curtir, comentar.
+       ======================================================= */
+    ["GET", /^users\/([^/]+)\/posts$/, async (m, body, query, me) => {
+      // A regra de "só amigos veem" fica no banco: pra quem não é amigo, a
+      // consulta já volta vazia.
+      const rows = unwrap(await sb.from("posts").select("*").eq("user_id", m[1])
+        .order("created_at", { ascending: false }).limit(30));
+      return { posts: await buildPosts(rows, me) };
+    }],
+
+    ["POST", /^posts$/, async (m, body, query, me) => {
+      const content = String(body.content || "").trim();
+      const photo = fileFrom(body, "photo");
+      if (!content && !photo) throw new ApiError("Escreva algo ou anexe uma foto para publicar", 400);
+      if (content.length > 2000) throw new ApiError("Publicação muito longa (máx. 2000 caracteres)", 400);
+      let photoUrl = null;
+      if (photo) {
+        validateImage(photo, 5);
+        photoUrl = await uploadImage("post-photos", me, photo);
+      }
+      const row = unwrap(await sb.from("posts").insert({ user_id: me, content: content || null, photo_url: photoUrl }).select("*").single());
+      return { post: (await buildPosts([row], me))[0] };
+    }],
+
+    ["GET", /^posts\/feed$/, async (m, body, query, me) => {
+      const ids = [me].concat(await followingIds(me));
+      const rows = await latestIn("posts", "*", "user_id", ids, "created_at", 30);
+      return { feed: await buildPosts(rows, me) };
+    }],
+
+    ["GET", /^posts\/mine$/, async (m, body, query, me) => {
+      const rows = unwrap(await sb.from("posts").select("*").eq("user_id", me).order("created_at", { ascending: false }).limit(30));
+      return { posts: await buildPosts(rows, me) };
+    }],
+
+    ["DELETE", /^posts\/([^/]+)$/, async (m, body, query, me) => {
+      const post = await postVisible(m[1]);
+      if (post.user_id !== me) throw new ApiError("Você só pode apagar suas próprias publicações", 403);
+      unwrap(await sb.from("posts").delete().eq("id", m[1]));
+      await removeImageByUrl("post-photos", post.photo_url);
+      return { ok: true };
+    }],
+
+    ["POST", /^posts\/([^/]+)\/like$/, async (m, body, query, me, method) => {
+      await postVisible(m[1]);
+      return likeToggle("post_likes", "post_id", m[1], me, method, "Você só pode curtir publicações de quem é seu amigo");
+    }],
+
+    ["DELETE", /^posts\/([^/]+)\/like$/, async (m, body, query, me, method) => {
+      await postVisible(m[1]);
+      return likeToggle("post_likes", "post_id", m[1], me, method);
+    }],
+
+    ["GET", /^posts\/([^/]+)\/comments$/, async (m, body, query, me) => {
+      await postVisible(m[1]);
+      const rows = unwrap(await sb.from("post_comments").select("id, post_id, user_id, content, created_at")
+        .eq("post_id", m[1]).order("created_at", { ascending: true }));
+      const profiles = await profilesMap(rows.map((c) => c.user_id));
+      return { comments: rows.map((c) => mapPostComment(c, profiles)) };
+    }],
+
+    ["POST", /^posts\/([^/]+)\/comments$/, async (m, body, query, me) => {
+      await postVisible(m[1]);
+      const content = String(body.content || "").trim();
+      if (!content) throw new ApiError("Escreva um comentário", 400);
+      if (content.length > 500) throw new ApiError("Comentário muito longo (máx. 500 caracteres)", 400);
+      const row = unwrap(await sb.from("post_comments").insert({ post_id: m[1], user_id: me, content })
+        .select("id, post_id, user_id, content, created_at").single(),
+        "Você só pode comentar em publicações de quem é seu amigo");
+      return { comment: mapPostComment(row, await profilesMap([me])) };
+    }],
+
+    /* =======================================================
+       9.8 AMIGOS
+       Seguir / deixar de seguir e ranking da semana entre amigos.
+       ======================================================= */
+    ["GET", /^friends\/leaderboard$/, async (m, body, query, me) => {
+      const ids = await followingIds(me);
+      const [profiles, km] = await Promise.all([profilesMap(ids), weekKmBy(ids)]);
+      const list = ids.map((id) => {
+        const p = profiles.get(id) || {};
+        return { id, name: p.name || "Atleta", avatarPhotoUrl: p.avatar_url || null, weekKm: km.get(id) || 0 };
+      });
+      return { leaderboard: sortByValueThenName(list, "weekKm").slice(0, 10) };
+    }],
+
+    ["GET", /^following$/, async (m, body, query, me) => {
+      const ids = await followingIds(me);
+      const profiles = await profilesMap(ids);
+      const list = ids.map((id) => ({ id, name: (profiles.get(id) || {}).name || "Atleta" }));
+      list.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+      return { following: list };
+    }],
+
+    ["POST", /^following\/([^/]+)$/, async (m, body, query, me) => {
+      if (m[1] === me) throw new ApiError("Você não pode seguir a si mesmo", 400);
+      const res = await sb.from("following").insert({ follower_id: me, followed_id: m[1] });
+      if (res.error && res.error.code !== "23505") throw translateError(res.error, "Não é possível seguir esse atleta.");
+      clearMeCache();
+      return { ok: true };
+    }],
+
+    ["DELETE", /^following\/([^/]+)$/, async (m, body, query, me) => {
+      if (m[1] === me) throw new ApiError("Você não pode seguir a si mesmo", 400);
+      unwrap(await sb.from("following").delete().eq("follower_id", me).eq("followed_id", m[1]));
+      clearMeCache();
+      return { ok: true };
+    }],
+
+    /* =======================================================
+       9.9 USUÁRIOS
+       Buscar atletas, sugestões, perfil público e listas de
+       seguidores / seguindo de qualquer pessoa.
+       ======================================================= */
+    ["GET", /^users\/search$/, async (m, body, query, me) => {
+      const q = String(query.get("q") || "").trim();
+      if (q.length < 2) return { users: [] };
+      const pattern = "%" + q.replace(/[\\%_]/g, (c) => "\\" + c) + "%";
+      const rows = unwrap(await sb.from("profiles").select("id, name, location, avatar_url")
+        .neq("id", me).ilike("name", pattern).order("name", { ascending: true }).limit(20));
+      return { users: await buildUserCards(rows, me) };
+    }],
+
+    ["GET", /^users\/suggested$/, async (m, body, query, me) => {
+      const [rows, mine] = await Promise.all([
+        sb.from("profiles").select("id, name, location, avatar_url").neq("id", me).limit(300).then((r) => unwrap(r)),
+        followingIds(me)
+      ]);
+      const following = new Set(mine);
+      const candidates = rows.filter((r) => !following.has(r.id));
+      for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+      }
+      return { users: await buildUserCards(candidates.slice(0, 8), me) };
+    }],
+
+    ["GET", /^users\/([^/]+)\/profile$/, async (m, body, query, me) => {
+      const profile = await buildPublicProfile(m[1], me);
+      if (!profile) throw new ApiError("Usuário não encontrado", 404);
+      return { profile };
+    }],
+
+    // Quem segue a pessoa (followers) ou quem ela segue (following).
+    // Cada item diz se EU sigo aquela pessoa e se ela ME segue, pra
+    // janela do perfil mostrar "Seguir", "Seguindo" ou "Seguir de volta".
+    ["GET", /^users\/([^/]+)\/(followers|following)$/, async (m, body, query, me) => {
+      const targetId = m[1];
+      const ids = m[2] === "followers" ? await followerIds(targetId) : await followingIds(targetId);
+      const [rows, mine, fans] = await Promise.all([
+        selectIn("profiles", "id, name, avatar_url, location, xp", "id", ids),
+        followingIds(me),
+        followerIds(me)
+      ]);
+      const iFollow = new Set(mine);
+      const followsMe = new Set(fans);
+      const users = rows.map((p) => ({
+        id: p.id,
+        name: p.name || "Atleta",
+        avatarPhotoUrl: p.avatar_url || null,
+        location: p.location || null,
+        xp: num(p.xp),
+        isSelf: p.id === me,
+        isFollowing: iFollow.has(p.id),
+        followsMe: followsMe.has(p.id)
+      }));
+      // "Você" primeiro, depois em ordem alfabética
+      users.sort((a, b) => (Number(b.isSelf) - Number(a.isSelf)) || a.name.localeCompare(b.name, "pt-BR"));
+      return { users };
+    }],
+
+    /* =======================================================
+       9.10 NOTIFICAÇÕES
+       Sininho: listar e marcar como lidas.
+       ======================================================= */
     ["GET", /^notifications$/, async (m, body, query, me) => {
       const [notifications, unreadCount] = await Promise.all([
         buildNotifications(me),
@@ -1211,7 +1387,20 @@
       return { ok: true };
     }],
 
-    // ---------- Gamificação: sequência semanal e desafios (passo 3 do tema) ----------
+    /* =======================================================
+       9.11 GAMIFICAÇÃO
+       Recompensa diária, sequência semanal (foguinho) e desafios.
+       ======================================================= */
+    ["POST", /^reward$/, async (m, body, query, me) => {
+      const res = await sb.rpc("claim_daily_reward");
+      if (res.error) {
+        if (/already_claimed/.test(res.error.message)) throw new ApiError("Recompensa de hoje já foi resgatada", 409);
+        throw translateError(res.error);
+      }
+      clearMeCache();
+      return { data: await buildUserData(me) };
+    }],
+
     // Lê user_streaks (gatilho evaluate_weekly_streak do streak_schema.sql).
     // O banco só atualiza a sequência quando há atividade nova, então quem
     // decide se ela "ainda está viva" é o main.js (veja streakStatus).
@@ -1226,7 +1415,8 @@
     // Desafios do dia e da semana. 1) chama o RPC get_current_quests do app, que
     // cria (sob demanda) os desafios do período atual — o formato do retorno não
     // importa, só o efeito. 2) lê as tabelas user_quests + quest_templates, que
-    // têm colunas conhecidas (gamification_schema.sql).
+    // têm colunas conhecidas (gamification_schema.sql).,
+
     ["GET", /^quests$/, async (m, body, query, me) => {
       let rpcRows = [];
       let rpc = await sb.rpc("get_current_quests");
@@ -1302,32 +1492,11 @@
       // Diários primeiro, depois semanais; dentro de cada grupo, ordem estável.
       quests.sort((a, b) => (a.period === b.period ? String(a.questId).localeCompare(String(b.questId)) : a.period === "daily" ? -1 : 1));
       return { quests };
-    }],
-
-    ["GET", /^health$/, async () => ({ ok: true })]
+    }]
   ];
 
-  async function routeOwnedBy(routeId, userId) {
-    const r = unwrap(await sb.from("routes").select("id, created_by").eq("id", routeId).maybeSingle());
-    if (!r) throw new ApiError("Rota não encontrada", 404);
-    if (r.created_by !== userId) throw new ApiError("Você só pode editar ou apagar rotas que você mesmo criou", 403);
-    return r;
-  }
-
-  async function likeToggle(table, column, id, me, method, forbiddenMsg) {
-    if (method === "POST") {
-      const res = await sb.from(table).insert({ [column]: id, user_id: me });
-      if (res.error && res.error.code !== "23505") throw translateError(res.error, forbiddenMsg);
-    } else {
-      unwrap(await sb.from(table).delete().eq(column, id).eq("user_id", me));
-    }
-    const likeCount = await countRows(table, (q) => q.eq(column, id));
-    clearMeCache();
-    return { likeCount, likedByMe: method === "POST" };
-  }
-
   /* ---------------------------------------------------------
-     7. ENTRADA: request(path, options) — mesma assinatura do apiRequest
+     10. ENTRADA: request(caminho, opções) — o main.js e o posts.js chamam isto
      --------------------------------------------------------- */
   const PUBLIC_PATHS = [/^auth\//, /^health$/];
 
@@ -1363,7 +1532,7 @@
   }
 
   window.TrainlySupabase = {
-    enabled,
+    enabled: !!sb,
     request,
     hasSession,
     signOut,

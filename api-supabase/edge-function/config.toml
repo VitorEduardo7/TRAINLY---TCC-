@@ -1,0 +1,8 @@
+# Só é usado se você publicar pela linha de comando (Supabase CLI).
+# Pelo painel do Supabase, desligue "Verify JWT" nas configurações da função.
+#
+# Por que desligar: o site usa a chave nova (sb_publishable_...), que não é
+# um JWT, e a checagem automática do Supabase só entende as chaves antigas.
+# A própria API confere a chave pública e o token de login de cada pedido.
+[functions.trainly-api]
+verify_jwt = false

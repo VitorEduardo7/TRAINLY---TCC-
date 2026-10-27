@@ -14,7 +14,7 @@
         <div class="auth-hero">
             <div class="hero-overlay"></div>
             <div class="hero-content">
-                <a href="dashboard.php" class="brand-logo dark">Train<span>ly</span></a>
+                <a href="index.php" class="brand-logo dark"><img src="img/trainly-icon.png" alt="" class="auth-logo-img">Train<span>ly</span></a>
                 <h1>Conecte-se. Treine. Suba de Nível.</h1>
                 <p>Acompanhe suas corridas, conquiste patentes e compartilhe a sua evolução com a comunidade de atletas.</p>
             </div>
@@ -24,7 +24,7 @@
             <div class="auth-card">
 
                 <div class="auth-header">
-                    <a href="dashboard.php" class="brand-logo mobile-logo">Train<span>ly</span></a>
+                    <a href="index.php" class="brand-logo mobile-logo"><img src="img/trainly-icon.png" alt="" class="logo-img">Train<span>ly</span></a>
                     <h2>Boas-vindas ao Trainly</h2>
                     <p>Entre para registrar suas atividades e ver o feed dos seus amigos.</p>
                 </div>
@@ -98,6 +98,11 @@
                 tabRegister.classList.add('active');
                 tabLogin.classList.remove('active');
             }
+        }
+
+        // Vindo do botão "Criar conta" da página de boas-vindas (login.php?cadastro)
+        if (new URLSearchParams(location.search).has('cadastro')) {
+            switchAuthTab('register');
         }
     </script>
     <!-- O envio dos formulários (login/cadastro) agora é tratado pelo main.js,

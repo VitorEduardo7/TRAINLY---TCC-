@@ -37,6 +37,10 @@
             <button class="btn-secondary" id="shareProfileBtn">Compartilhar Perfil</button>
             <button class="btn-primary" id="followProfileBtn" style="display:none;">+ Seguir</button>
             <button class="btn-primary" id="editProfileBtn">✏️ Editar Perfil</button>
+            <!-- Configurações ficam dentro do perfil, como no app -->
+            <a class="profile-settings-btn" id="profileSettingsBtn" href="configuracoes.php" title="Configurações" aria-label="Configurações">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </a>
         </div>
     </div>
 
@@ -45,14 +49,15 @@
             <div class="ps-value" id="statActivities">0</div>
             <div class="ps-label">Atividades</div>
         </div>
-        <div class="profile-stat-card">
-            <div class="ps-value" id="statFollowers">0</div>
-            <div class="ps-label">Seguidores</div>
-        </div>
-        <div class="profile-stat-card">
-            <div class="ps-value" id="statFollowing">0</div>
-            <div class="ps-label">Seguindo</div>
-        </div>
+        <!-- Clicáveis: abrem a janela com a lista de pessoas -->
+        <button type="button" class="profile-stat-card stat-link" data-connections="followers" aria-haspopup="dialog">
+            <span class="ps-value" id="statFollowers">0</span>
+            <span class="ps-label">Seguidores</span>
+        </button>
+        <button type="button" class="profile-stat-card stat-link" data-connections="following" aria-haspopup="dialog">
+            <span class="ps-value" id="statFollowing">0</span>
+            <span class="ps-label">Seguindo</span>
+        </button>
         <div class="profile-stat-card">
             <div class="ps-value" id="statPosts">0</div>
             <div class="ps-label">Publicações</div>
@@ -156,6 +161,32 @@
             <button class="btn-secondary" id="cancelEditProfileBtn" type="button">Cancelar</button>
             <button class="btn-primary" id="saveProfileBtn" type="button">Salvar</button>
         </div>
+    </div>
+</div>
+
+<!-- Janela: seguidores / seguindo (preenchida pelo main.js) -->
+<div class="overlay" id="connOverlay">
+    <div class="modal conn-modal" role="dialog" aria-modal="true" aria-labelledby="connTitle">
+        <div class="conn-head">
+            <h3 id="connTitle">Seguidores</h3>
+            <button type="button" class="conn-close" data-conn-close aria-label="Fechar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+            </button>
+        </div>
+
+        <div class="conn-tabs" role="group" aria-label="Escolher a lista">
+            <button type="button" data-conn-tab="followers" aria-pressed="true">Seguidores <span data-conn-count="followers"></span></button>
+            <button type="button" data-conn-tab="following" aria-pressed="false">Seguindo <span data-conn-count="following"></span></button>
+        </div>
+
+        <div class="conn-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+            <label for="connSearch" class="sr-only">Pesquisar por nome</label>
+            <input type="search" id="connSearch" placeholder="Pesquisar por nome" autocomplete="off">
+        </div>
+
+        <ul class="conn-list" id="connList"></ul>
+        <p class="sr-only" id="connStatus" aria-live="polite"></p>
     </div>
 </div>
 

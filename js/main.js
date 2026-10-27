@@ -2,17 +2,12 @@
    TRAINLY - main.js
    Camada de dados + interações compartilhadas entre páginas.
 
-   Os dados vêm do Supabase, o MESMO banco do app (ver js/supabase-api.js
-   e js/supabase-config.js). O apiRequest() continua com a mesma cara de
-   antes; ele só repassa a chamada para o Supabase. Com DATA_SOURCE =
-   "mysql" no supabase-config.js, volta a usar a API PHP + MySQL antiga.
+   Os dados vêm do Supabase, o MESMO banco do app (ver js/api/ e
+   js/supabase-config.js). O apiRequest() repassa cada chamada para lá.
    */
 
 (function () {
   "use strict";
-
-  const API_BASE = "http://localhost/TRAINLY---TCC-/api/index.php";
-  const TOKEN_KEY = "trainly_token";
 
   /* ---------------------------------------------------------
      1. SISTEMA DE PATENTES E NÍVEL (inalterado)
@@ -58,76 +53,38 @@
   }
 
   /* ---------------------------------------------------------
-     2. CAMADA DE DADOS (agora fala com a API/MySQL)
+     2. CAMADA DE DADOS (Supabase, o mesmo banco do app)
+     O apiRequest() repassa cada chamada para js/api/ (TrainlySupabase).
      --------------------------------------------------------- */
-  function getToken() {
-    return localStorage.getItem(TOKEN_KEY);
-  }
-  function setToken(token) {
-    localStorage.setItem(TOKEN_KEY, token);
-  }
-  function clearToken() {
-    localStorage.removeItem(TOKEN_KEY);
-  }
 
-  // true quando o site está usando o banco do app (Supabase)
-  function usingSupabase() {
-    return !!(window.TrainlySupabase && window.TrainlySupabase.enabled);
+  // Limpeza única: apaga o token da API antiga (PHP + MySQL), que não é
+  // mais usada. A sessão agora fica com o próprio Supabase.
+  try { localStorage.removeItem("trainly_token"); } catch (e) { /* sem acesso ao storage */ }
+
+  function dataLayer() {
+    if (!window.TrainlySupabase) {
+      const err = new Error("Não foi possível carregar a conexão com o servidor. Recarregue a página.");
+      err.status = 503;
+      throw err;
+    }
+    return window.TrainlySupabase;
   }
 
   // Páginas protegidas: tem alguém logado?
   async function isLoggedIn() {
-    if (usingSupabase()) return window.TrainlySupabase.hasSession();
-    return !!getToken();
+    try { return await dataLayer().hasSession(); } catch (e) { return false; }
   }
 
   async function apiRequest(path, options = {}) {
-    // Banco do app (Supabase): mesmas rotas, mesmas respostas
-    if (usingSupabase()) {
-      try {
-        return await window.TrainlySupabase.request(path, options);
-      } catch (err) {
-        if (err.status === 401) {
-          clearToken();
-          if (!location.pathname.endsWith("login.php")) location.href = "login.php";
-        }
-        throw err;
+    try {
+      return await dataLayer().request(path, options);
+    } catch (err) {
+      // Sessão expirada ou inexistente: volta pra página de boas-vindas
+      if (err.status === 401 && !isPublicPage()) {
+        location.href = "index.php";
       }
+      throw err;
     }
-
-    const token = getToken();
-    const isFormData = options.body instanceof FormData;
-
-    // Monta a URL usando ?route=xxx (não depende de mod_rewrite/.htaccess
-    // funcionando no servidor — evita os problemas de 404 do XAMPP).
-    const clean = path.replace(/^\//, "");
-    const [route, existingQuery] = clean.split("?");
-    const url = API_BASE + "?route=" + encodeURIComponent(route) + (existingQuery ? "&" + existingQuery : "");
-
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        ...(isFormData ? {} : { "Content-Type": "application/json" }),
-        ...(token ? { Authorization: "Bearer " + token } : {}),
-        ...(options.headers || {})
-      }
-    });
-    if (res.status === 401) {
-      clearToken();
-      if (!location.pathname.endsWith("login.php")) {
-        location.href = "login.php";
-      }
-      throw new Error("Não autenticado");
-    }
-    if (!res.ok) {
-      let msg = "Erro na requisição";
-      try {
-        msg = (await res.json()).error || msg;
-      } catch (e) {}
-      throw new Error(msg);
-    }
-    if (res.status === 204) return null;
-    return res.json();
   }
 
   // Substitui a antiga leitura do localStorage: busca os dados do usuário logado
@@ -136,31 +93,26 @@
     return data;
   }
 
-  // Login/cadastro: guarda o token e devolve os dados iniciais do usuário
+  // Login/cadastro: a sessão fica guardada pelo Supabase; devolve os dados do usuário
   async function login(email, password) {
-    const { token, data } = await apiRequest("/auth/login", {
+    const { data } = await apiRequest("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password })
     });
-    setToken(token);
     return data;
   }
 
   async function register(name, email, password) {
-    const { token, data } = await apiRequest("/auth/register", {
+    const { data } = await apiRequest("/auth/register", {
       method: "POST",
       body: JSON.stringify({ name, email, password })
     });
-    setToken(token);
     return data;
   }
 
   async function logout() {
-    clearToken();
-    if (usingSupabase()) {
-      try { await window.TrainlySupabase.signOut(); } catch (e) { /* sai mesmo assim */ }
-    }
-    location.href = "login.php";
+    try { await dataLayer().signOut(); } catch (e) { /* sai mesmo assim */ }
+    location.href = "index.php"; // depois de sair, volta pra página de boas-vindas
   }
 
   // ---- NOVO: amigos reais (por ID), busca e feed ----
@@ -489,6 +441,10 @@
 
     const rangeEl = document.getElementById("weekRange");
     const infoEl = document.getElementById("weekDayInfo");
+    const titleEl = document.getElementById("weekTitle");
+    const deltaEl = document.getElementById("weekDelta");
+    const subEl = document.getElementById("weekSub");
+    const statsEl = document.getElementById("metricsGrid");
     const prevBtn = document.getElementById("weekPrevBtn");
     const nextBtn = document.getElementById("weekNextBtn");
 
@@ -504,8 +460,11 @@
     function draw() {
       const acts = chartEl._acts;
       const now = new Date();
-      const start = startOfWeek(now);
-      start.setDate(start.getDate() + chartEl._offset * 7);
+      // Janela móvel de 7 dias terminando hoje (igual ao "Últimos 7 dias" do app);
+      // as setas andam de 7 em 7 dias pra trás.
+      const start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      start.setDate(start.getDate() - 6 + chartEl._offset * 7);
 
       const days = [];
       for (let i = 0; i < 7; i++) {
@@ -522,33 +481,66 @@
       }
 
       // Dia selecionado: na semana atual começa em "hoje"
-      let sel = chartEl._selected;
-      if (sel === null && chartEl._offset === 0) {
-        sel = days.findIndex((d) => d.date.toDateString() === now.toDateString());
-        if (sel < 0) sel = null;
-      }
+      // Nenhum dia aberto de início: o detalhe aparece ao clicar numa barra
+      const sel = chartEl._selected;
 
       const max = Math.max(...days.map((d) => d.km), 1);
       const todayStr = now.toDateString();
 
       chartEl.innerHTML = days.map((d, idx) => {
         const isToday = d.date.toDateString() === todayStr;
-        const h = Math.max(3, Math.round((d.km / max) * 100));
+        const h = d.km > 0 ? Math.max(8, Math.round((d.km / max) * 100)) : 6;
         const label = weekdays[d.date.getDay()];
+        const barCls = "chart-bar" + (isToday ? " today" : "") + (d.km > 0 ? "" : " rest");
         return (
           '<button type="button" class="chart-col' + (idx === sel ? " selected" : "") + '" data-idx="' + idx + '"' +
-            ' title="' + label + ": " + fmtKm(d.km) + '">' +
-            '<div class="chart-bar' + (isToday ? " today" : "") + '" style="height:' + h + '%"></div>' +
-            '<div class="chart-day' + (isToday ? " today" : "") + '">' + label + "</div>" +
+            ' aria-label="' + weekdaysLong[d.date.getDay()] + ": " + fmtKm(d.km) + '">' +
+            '<div class="' + barCls + '" style="height:' + (d.km > 0 ? h + "%" : h + "px") + '"></div>' +
+            '<div class="chart-day' + (isToday ? " today" : "") + '">' + (isToday ? "Hoje" : label) + "</div>" +
           "</button>"
         );
       }).join("");
+
+      // Resumo da semana mostrada: título, km em destaque, comparação e números
+      const weekKm = days.reduce((sum, d) => sum + d.km, 0);
+      const weekSec = days.reduce((sum, d) => sum + d.sec, 0);
+      const weekCount = days.reduce((sum, d) => sum + d.count, 0);
+      const prevStart = new Date(start);
+      prevStart.setDate(prevStart.getDate() - 7);
+      const prevKm = acts
+        .filter((a) => { const t = new Date(a.date); return t >= prevStart && t < start; })
+        .reduce((sum, a) => sum + a.distanceKm, 0);
+
+      if (titleEl) {
+        titleEl.textContent = chartEl._offset === 0 ? "Últimos 7 dias" : chartEl._offset === -1 ? "7 dias anteriores" : "Há " + (-chartEl._offset) + " semanas";
+      }
+      if (deltaEl) {
+        if (prevKm > 0 || weekKm > 0) {
+          const pctDelta = prevKm > 0 ? Math.round(((weekKm - prevKm) / prevKm) * 100) : 100;
+          deltaEl.className = "week-delta " + (pctDelta > 0 ? "up" : pctDelta < 0 ? "down" : "flat");
+          deltaEl.textContent = (pctDelta > 0 ? "+" : "") + pctDelta + "% vs. 7 dias antes";
+        } else {
+          deltaEl.className = "week-delta";
+          deltaEl.textContent = "";
+        }
+      }
+      if (subEl) {
+        subEl.textContent = weekCount === 0
+          ? (chartEl._offset === 0 ? "Nenhum treino nos últimos 7 dias." : "Nenhum treino nesse período.")
+          : weekCount + (weekCount === 1 ? " treino" : " treinos") + " · " + formatHM(weekSec) + " em movimento";
+      }
+      if (statsEl) {
+        statsEl.innerHTML =
+          '<div class="week-stat"><b>' + formatHM(weekSec) + "</b><span>Tempo</span></div>" +
+          '<div class="week-stat"><b>' + (weekKm > 0 ? formatPace(weekSec / 60, weekKm) : "--") + "<small>/km</small></b><span>Ritmo médio</span></div>" +
+          '<div class="week-stat"><b>' + weekCount + "</b><span>" + (weekCount === 1 ? "Atividade" : "Atividades") + "</span></div>";
+      }
 
       // Intervalo da semana
       const end = days[6].date;
       const fmtDay = (d) => d.getDate() + " " + months[d.getMonth()];
       if (rangeEl) {
-        rangeEl.textContent = (chartEl._offset === 0 ? "Esta semana · " : "") + fmtDay(start) + " – " + fmtDay(end);
+        rangeEl.textContent = fmtDay(start) + " – " + fmtDay(end);
       }
 
       // Detalhe do dia clicado
@@ -568,14 +560,16 @@
 
       // Navegação: não passa da semana atual nem volta antes da primeira atividade
       const firstStart = acts.length
-        ? startOfWeek(new Date(Math.min(...acts.map((a) => new Date(a.date).getTime()))))
+        ? (() => { const f = new Date(Math.min(...acts.map((a) => new Date(a.date).getTime()))); f.setHours(0, 0, 0, 0); return f; })()
         : start;
       if (nextBtn) nextBtn.disabled = chartEl._offset >= 0;
       if (prevBtn) prevBtn.disabled = start.getTime() <= firstStart.getTime();
 
       if (chartEl._totalEl) {
-        const total = days.reduce((sum, d) => sum + d.km, 0);
-        chartEl._totalEl.textContent = total.toFixed(1).replace(".", ",") + " km";
+        // Só o número: a unidade "km" fica ao lado, em letra menor
+        const prevShown = typeof chartEl._shownKm === "number" ? chartEl._shownKm : 0;
+        chartEl._shownKm = Math.round(weekKm * 10) / 10;
+        countUp(chartEl._totalEl, chartEl._shownKm, 1, prevShown);
       }
     }
 
@@ -590,16 +584,19 @@
         if (!col) return;
         const idx = Number(col.dataset.idx);
         chartEl._selected = chartEl._selected === idx ? null : idx;
+        chartEl.classList.add("no-anim");
         chartEl._draw();
       });
 
       if (prevBtn) prevBtn.addEventListener("click", () => {
+        chartEl.classList.remove("no-anim");
         chartEl._offset -= 1;
         chartEl._selected = null;
         chartEl._draw();
       });
       if (nextBtn) nextBtn.addEventListener("click", () => {
         if (chartEl._offset >= 0) return;
+        chartEl.classList.remove("no-anim");
         chartEl._offset += 1;
         chartEl._selected = null;
         chartEl._draw();
@@ -671,18 +668,30 @@
     if (!el) return;
     const { type, goal, current, unit } = computeGoalProgress(data);
     const now = new Date();
-    const pct = Math.min(100, Math.round((current / goal) * 100));
+    const ratio = goal > 0 ? Math.min(1, current / goal) : 0;
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const daysLeft = daysInMonth - now.getDate();
 
-    const label = GOAL_TYPE_LABELS[type] || "Meta";
-    const currentLabel = type === "hours" ? current.toFixed(1).replace(".", ",") : current.toFixed(0);
-    const goalLabel = type === "hours" ? goal.toFixed(1).replace(".", ",") : goal.toFixed(0);
+    const fmt = (v) => (type === "hours" ? v.toFixed(1).replace(".", ",") : String(Math.round(v)));
+    const unitShort = type === "activities" ? (goal === 1 ? "atividade" : "atividades") : unit;
+    const left = Math.max(0, goal - current);
+
+    const titleEl = document.getElementById("goalTitle");
+    if (titleEl) titleEl.textContent = "Meta de " + now.toLocaleDateString("pt-BR", { month: "long" });
+
+    // 10 parciais, como na meta do mês do app
+    let segs = "";
+    for (let i = 0; i < 10; i++) {
+      const fill = Math.max(0, Math.min(1, ratio * 10 - i));
+      segs += '<i><b style="width:' + Math.round(fill * 100) + '%"></b></i>';
+    }
 
     el.innerHTML =
-      '<div class="goal-row"><span>' + label + '</span><b>' + currentLabel + " / " + goalLabel + " " + unit + '</b></div>' +
-      '<div class="goal-bar"><div class="goal-bar-fill" style="width:' + pct + '%"></div></div>' +
-      '<div class="goal-note">' + pct + "% concluído · faltam " + daysLeft + " dias</div>";
+      '<div class="goal-hero"><strong>' + fmt(current) + "</strong><span>/ " + fmt(goal) + " " + unitShort + "</span></div>" +
+      '<div class="seg-bar goal-widget-bar" role="progressbar" aria-label="Progresso da meta do mês" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(ratio * 100) + '">' + segs + "</div>" +
+      (ratio >= 1
+        ? '<div class="goal-note done"><b>Meta batida!</b> Faltam ' + daysLeft + (daysLeft === 1 ? " dia" : " dias") + " pro fim do mês.</div>"
+        : '<div class="goal-note">Faltam <b>' + fmt(left) + " " + unitShort + "</b> · " + daysLeft + (daysLeft === 1 ? " dia restante" : " dias restantes") + "</div>");
   }
 
   async function updateMonthlyGoal(goalType, goalValue) {
@@ -1112,13 +1121,22 @@
     const profileToggle = document.querySelector("[data-profile-toggle]");
     const profileMenu = document.querySelector("[data-profile-menu]");
     if (profileToggle && profileMenu) {
+      const setOpen = (open) => {
+        profileMenu.classList.toggle("open", open);
+        profileToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      };
       profileToggle.addEventListener("click", (e) => {
         e.stopPropagation();
-        profileMenu.classList.toggle("open");
+        setOpen(!profileMenu.classList.contains("open"));
       });
       document.addEventListener("click", (e) => {
-        if (!profileMenu.contains(e.target) && e.target !== profileToggle) {
-          profileMenu.classList.remove("open");
+        if (!profileMenu.contains(e.target) && !profileToggle.contains(e.target)) setOpen(false);
+      });
+      // Esc fecha o menu e devolve o foco pro botão (teclado)
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && profileMenu.classList.contains("open")) {
+          setOpen(false);
+          profileToggle.focus();
         }
       });
     }
@@ -1144,6 +1162,13 @@
     if (!avatars.length) return;
     try {
       const data = await getData();
+
+      // Cartão do usuário na barra lateral: nome + nível/patente + anel na cor da patente
+      const info = levelInfo(data.xp || 0);
+      document.querySelectorAll("[data-user-name]").forEach((el) => { el.textContent = data.name || "Atleta"; });
+      document.querySelectorAll("[data-user-level]").forEach((el) => { el.textContent = "Nível " + info.level + " · " + info.rank.name; });
+      document.querySelectorAll(".nav-user").forEach((el) => el.style.setProperty("--rank-color", info.rank.color));
+
       avatars.forEach((el) => {
         const span = el.querySelector("span") || el;
         if (data.avatarPhotoUrl) {
@@ -1236,32 +1261,111 @@
     return { shown: 0, state: "broken", missed };
   }
 
-  function renderLevelCard(el, data, streak, opts) {
-    opts = opts || {};
+  // Ponto na pista: a volta é um "estádio" (duas retas + duas curvas) com
+  // largada no meio da reta de baixo, correndo no sentido anti-horário.
+  // Mesma geometria do <path> desenhado em renderLevelCard.
+  function lapPoint(ratio) {
+    const r = 65, half = 235, straight = 470, arc = Math.PI * r;
+    const total = 2 * straight + 2 * arc;
+    let d = Math.max(0, Math.min(1, ratio)) * total;
+    if (d <= half) return { x: 320 + d, y: 150 };
+    d -= half;
+    if (d <= arc) { const a = Math.PI / 2 - d / r; return { x: 555 + r * Math.cos(a), y: 85 + r * Math.sin(a) }; }
+    d -= arc;
+    if (d <= straight) return { x: 555 - d, y: 20 };
+    d -= straight;
+    if (d <= arc) { const a = -Math.PI / 2 - d / r; return { x: 85 + r * Math.cos(a), y: 85 + r * Math.sin(a) }; }
+    d -= arc;
+    return { x: 85 + d, y: 150 };
+  }
+
+  // Número que "corre" até o valor final (respeita "Reduzir animações")
+  function prefersLessMotion() {
+    return document.documentElement.getAttribute("data-motion") === "reduce" ||
+      (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+  function countUp(el, to, decimals, from) {
+    if (!el) return;
+    const fmt = (v) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: decimals || 0, maximumFractionDigits: decimals || 0 });
+    const start = typeof from === "number" ? from : 0;
+    if (prefersLessMotion() || start === to) { el.textContent = fmt(to); return; }
+    const dur = 900;
+    const t0 = performance.now();
+    const step = (now) => {
+      const p = Math.min(1, (now - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = fmt(start + (to - start) * eased);
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  function nextRankFor(level) {
+    return RANKS.find((r) => r.min > level) || null;
+  }
+
+  // Card principal do Início: o XP do nível desenhado como uma volta numa
+  // pista de atletismo (igual ao app), com o brasão da patente.
+  function renderLevelCard(el, data) {
     if (!el) return;
     const info = levelInfo(data.xp || 0);
-    const color = info.rank.color;
+    const ratio = info.xpToNext > 0 ? info.xpIntoLevel / info.xpToNext : 0;
+    const pct = Math.round(ratio * 1000) / 10;
+    const dot = lapPoint(ratio);
     const remaining = info.xpToNext - info.xpIntoLevel;
-    const stt = streakStatus(streak);
-    const chipClass = "streak-chip" + (stt.shown > 0 ? " on" : "") + (stt.state === "pending" || stt.state === "frozen" ? " warn" : "");
-    const chip = streak
-      ? '<button type="button" class="' + chipClass + '" aria-label="Ver detalhes da sequência">' +
-        GAMIF_ICONS.flame + "<b>" + stt.shown + "</b><span>" + gPlural(stt.shown, "semana", "semanas") + "</span></button>"
-      : "";
-    el.style.setProperty("--rank-color", color);
+    const next = nextRankFor(info.level);
+    el.style.setProperty("--rank-color", info.rank.color);
     el.innerHTML =
-      '<div class="level-top">' +
-      '<div class="level-id">' +
-      '<span class="rank-badge" style="--rank-color:' + color + '">' + gEsc(info.rank.name) + "</span>" +
-      '<span class="level-name">Nível ' + info.level + "</span>" +
-      "</div>" + chip + "</div>" +
-      '<div class="level-xp"><b>' + gFmt(info.xpIntoLevel, 0) + "</b> de " + gFmt(info.xpToNext, 0) + " XP nesta volta</div>" +
-      '<div class="level-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + info.xpToNext + '" aria-valuenow="' + info.xpIntoLevel + '">' +
-      '<div class="level-bar-fill" style="width:' + info.progressPct + "%; background:" + color + ';"></div></div>' +
-      '<div class="level-foot">faltam <b>' + gFmt(remaining, 0) + "</b> XP pro nível " + (info.level + 1) + "</div>";
+      '<div class="lap-top">' +
+        '<div class="lap-id">' +
+          '<svg class="lap-hex" viewBox="0 0 52 58" role="img" aria-label="Brasão ' + gEsc(info.rank.name) + ", nível " + info.level + '">' +
+            '<polygon points="26,2 49,15 49,43 26,56 3,43 3,15"></polygon>' +
+            '<text x="26" y="38" text-anchor="middle">' + info.level + "</text>" +
+          "</svg>" +
+          "<div>" +
+            '<div class="lap-rank">' + gEsc(info.rank.name) + "</div>" +
+            '<div class="lap-level">Nível ' + info.level + "</div>" +
+          "</div>" +
+        "</div>" +
+        '<div class="lap-total"><b>' + gFmt(data.xp || 0, 0) + " XP</b><span>total acumulado</span></div>" +
+      "</div>" +
+      '<div class="lap-track">' +
+        '<svg viewBox="0 0 640 170" role="img" aria-label="' + gFmt(info.xpIntoLevel, 0) + " de " + gFmt(info.xpToNext, 0) + ' XP nesta volta">' +
+          '<rect class="t-outer" x="4" y="4" width="632" height="162" rx="81"></rect>' +
+          '<rect class="t-inner" x="36" y="36" width="568" height="98" rx="49"></rect>' +
+          '<rect class="t-lane" x="20" y="20" width="600" height="130" rx="65"></rect>' +
+          (pct > 0
+            ? '<path class="t-progress" d="M320 150 H555 A65 65 0 0 0 555 20 H85 A65 65 0 0 0 85 150 Z" pathLength="100" stroke-dasharray="' + pct + ' 100"></path>'
+            : "") +
+          '<line class="t-start" x1="320" y1="136" x2="320" y2="164"></line>' +
+          '<circle class="t-halo" cx="' + dot.x.toFixed(1) + '" cy="' + dot.y.toFixed(1) + '" r="11"></circle>' +
+          '<circle class="t-dot" cx="' + dot.x.toFixed(1) + '" cy="' + dot.y.toFixed(1) + '" r="6.5"></circle>' +
+        "</svg>" +
+        '<div class="lap-center">' +
+          '<div class="lap-xp"><span class="lap-xp-num">' + gFmt(info.xpIntoLevel, 0) + "</span><small> / " + gFmt(info.xpToNext, 0) + " XP</small></div>" +
+          '<div class="lap-caption">nesta volta</div>' +
+        "</div>" +
+      "</div>" +
+      '<div class="lap-foot">' +
+        "<span>Faltam <b>" + gFmt(remaining, 0) + " XP</b> pro nível " + (info.level + 1) + "</span>" +
+        (next
+          ? '<span>Próxima patente: <b class="gold">' + gEsc(next.name) + "</b> no nível " + next.min + "</span>"
+          : '<span>Você chegou na patente máxima: <b class="gold">' + gEsc(info.rank.name) + "</b></span>") +
+      "</div>";
+    countUp(el.querySelector(".lap-xp-num"), info.xpIntoLevel, 0);
+  }
 
-    const chipEl = el.querySelector(".streak-chip");
-    if (chipEl) chipEl.addEventListener("click", () => openStreakModal(streak, data, opts));
+  // Chama da sequência semanal (cabeçalho do Início)
+  function renderStreakChip(slot, streak, data) {
+    if (!slot) return;
+    if (!streak) { slot.innerHTML = ""; return; }
+    const stt = streakStatus(streak);
+    const cls = "streak-chip" + (stt.shown > 0 ? " on" : "") + (stt.state === "pending" || stt.state === "frozen" ? " warn" : "");
+    slot.innerHTML =
+      '<button type="button" class="' + cls + '" aria-label="Sequência de ' + stt.shown + " " + gPlural(stt.shown, "semana", "semanas") + ', ver detalhes">' +
+        GAMIF_ICONS.flame + "<b>" + stt.shown + "</b><span>" + gPlural(stt.shown, "semana", "semanas") + "</span>" +
+      "</button>";
+    slot.querySelector(".streak-chip").addEventListener("click", () => openStreakModal(streak, data, { self: true }));
   }
 
   // Versão minimalista (aba Estatísticas do perfil): mesma tipografia do "Resumo".
@@ -1376,7 +1480,7 @@
   }
 
   function questSegments(q) {
-    const n = q.goalType === "activity_count" && q.goal >= 1 && q.goal <= 6 ? Math.round(q.goal) : 5;
+    const n = q.goalType === "activity_count" && q.goal >= 2 && q.goal <= 6 ? Math.round(q.goal) : 8;
     const ratio = q.goal > 0 ? Math.min(1, q.progress / q.goal) : 0;
     let html = "";
     for (let i = 0; i < n; i++) {
@@ -1403,12 +1507,12 @@
         '<div class="quest-group ' + cls + '"><div class="quest-group-title">' + title + "</div>" +
         items.map((q) =>
           '<div class="quest-row' + (q.completed ? " done" : "") + '"' + (q.description ? ' title="' + gEsc(q.description) + '"' : "") + ">" +
-          '<div class="quest-icon">' + (GAMIF_ICONS[q.goalType] || GAMIF_ICONS.activity_count) + "</div>" +
+          '<div class="quest-icon">' + (q.completed ? GAMIF_ICONS.check : (GAMIF_ICONS[q.goalType] || GAMIF_ICONS.activity_count)) + "</div>" +
           '<div class="quest-body">' +
           '<div class="quest-top"><span class="quest-title">' + gEsc(q.title) + '</span><span class="quest-xp">+' + q.xp + " XP</span></div>" +
-          '<div class="quest-segs">' + questSegments(q) + "</div>" +
+          '<div class="quest-segs seg-bar" aria-hidden="true">' + questSegments(q) + "</div>" +
           '<div class="quest-meta">' +
-          (q.completed ? '<span class="quest-done">' + GAMIF_ICONS.check + "Concluída</span>" : "<span>" + questProgressText(q) + "</span>") +
+          (q.completed ? '<span class="quest-done">Concluída</span>' : "<span>" + questProgressText(q) + "</span>") +
           "</div></div></div>"
         ).join("") +
         "</div>"
@@ -1424,9 +1528,9 @@
   async function initGamification(data) {
     const levelEl = document.getElementById("levelCard");
     const questsCard = document.getElementById("questsCard");
-    renderLevelCard(levelEl, data, null);
+    renderLevelCard(levelEl, data);
     const [streak, quests] = await Promise.all([getStreak(), getQuests()]);
-    renderLevelCard(levelEl, data, streak);
+    renderStreakChip(document.getElementById("streakSlot"), streak, data);
     renderQuests(document.getElementById("questsList"), document.getElementById("questsCount"), questsCard, quests);
   }
 
@@ -1530,6 +1634,9 @@
       if (e.target === overlay) close();
     });
 
+    // Vindo do botão "Registrar atividade" do Início (atividades.php?nova=1)
+    if (new URLSearchParams(location.search).get("nova") === "1") open();
+
     if (saveBtn) {
       saveBtn.addEventListener("click", async () => {
         const type = document.getElementById("fType").value;
@@ -1579,8 +1686,7 @@
      7. INICIALIZAÇÃO POR PÁGINA (agora assíncrona)
      --------------------------------------------------------- */
   async function initDashboard() {
-    const metricsEl = document.getElementById("metricsGrid");
-    if (!metricsEl) return; // não é a página do painel
+    if (!document.getElementById("dashboardPage")) return; // não é a página do painel
 
     const data = await getData();
     const stats = computeStats(data);
@@ -1590,16 +1696,15 @@
     const now = new Date();
     const dateEl = document.getElementById("dateStamp");
     if (dateEl) {
-      dateEl.textContent = now
-        .toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "short", year: "numeric" })
-        .toUpperCase();
+      const label = now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+      dateEl.textContent = label.charAt(0).toUpperCase() + label.slice(1);
     }
     const greetingEl = document.getElementById("greetingText");
     if (greetingEl) {
       const hour = now.getHours();
       const saud = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
       const firstName = (data.name || "Atleta").split(" ")[0];
-      greetingEl.textContent = saud + ", " + firstName.toUpperCase();
+      greetingEl.textContent = saud + ", " + firstName;
     }
     const composerAvatar = document.getElementById("composerAvatar");
     if (composerAvatar) {
@@ -1647,6 +1752,9 @@
       });
     }
 
+    // Conta nova (sem atividades): mostra o cartão "Registre sua primeira atividade"
+    const walkthrough = document.getElementById("walkthroughCard");
+    if (walkthrough) walkthrough.style.display = stats.totalActivities === 0 ? "" : "none";
     const emptyNote = document.getElementById("noActivityNote");
     if (emptyNote && stats.totalActivities === 0) {
       emptyNote.style.display = "block";
@@ -1654,7 +1762,6 @@
 
     // Métricas da semana, volume semanal e recordes
     // (o feed de amigos agora é carregado por js/posts.js, só com publicações)
-    renderMetricsGrid(metricsEl, data);
 
     const active = await getActiveToday();
     renderActiveToday(document.getElementById("activeTodayList"), active);
@@ -1668,6 +1775,214 @@
     initGamification(data);
 
     initRegisterModal(data, rankEl, () => initDashboard());
+  }
+
+  // ---------------------------------------------------------
+  // Seguidores / Seguindo (perfil.php): janela com a lista de pessoas,
+  // busca por nome, link pro perfil e botão de seguir.
+  // Funciona no meu perfil e no perfil dos outros.
+  // ---------------------------------------------------------
+  function initConnections(opts) {
+    const overlay = document.getElementById("connOverlay");
+    if (!overlay || overlay.dataset.wired === "1") return null;
+    overlay.dataset.wired = "1";
+
+    const modal = overlay.querySelector(".conn-modal");
+    const titleEl = document.getElementById("connTitle");
+    const listEl = document.getElementById("connList");
+    const searchEl = document.getElementById("connSearch");
+    const statusEl = document.getElementById("connStatus");
+    const firstName = String(opts.name || "").trim().split(/\s+/)[0] || "Atleta";
+    const cache = {};       // type -> Promise<lista>
+    let current = "followers";
+    let lastTrigger = null;
+    let token = 0;          // ignora respostas antigas se a pessoa trocar de aba rápido
+
+    const TITLES = opts.isSelf
+      ? { followers: "Seus seguidores", following: "Quem você segue" }
+      : { followers: "Seguidores de " + firstName, following: "Quem " + firstName + " segue" };
+
+    // Busca sem diferenciar maiúscula nem acento ("joao" acha "João")
+    const norm = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+    function load(type) {
+      if (!cache[type]) {
+        cache[type] = apiRequest("/users/" + encodeURIComponent(opts.userId) + "/" + type)
+          .then((r) => r.users || [])
+          .catch((e) => { delete cache[type]; throw e; });
+      }
+      return cache[type];
+    }
+
+    function setCount(type, n) {
+      const el = overlay.querySelector('[data-conn-count="' + type + '"]');
+      if (el) el.textContent = n;
+    }
+    function statEl(type) {
+      return document.getElementById(type === "followers" ? "statFollowers" : "statFollowing");
+    }
+    // Contagem inicial nas abas = números dos cartões
+    ["followers", "following"].forEach((t) => { const el = statEl(t); if (el) setCount(t, el.textContent); });
+
+    function followLabel(u) {
+      if (u.isFollowing) return "Seguindo";
+      return u.followsMe ? "Seguir de volta" : "Seguir";
+    }
+
+    function avatar(u) {
+      if (u.avatarPhotoUrl) {
+        return '<span class="conn-av" style="background-image:url(\'' + gEsc(u.avatarPhotoUrl) + '\')" aria-hidden="true"></span>';
+      }
+      return '<span class="conn-av" style="background:' + avatarColor(u.id) + '" aria-hidden="true">' + gEsc(initials(u.name || "?")) + "</span>";
+    }
+
+    function itemHtml(u) {
+      const info = levelInfo(u.xp || 0);
+      const meta = ["Nível " + info.level + " · " + info.rank.name];
+      if (u.location) meta.push(u.location);
+      // "segue você" só quando acrescenta algo (na minha lista de seguidores todo mundo me segue)
+      const showFollowsMe = u.followsMe && !u.isSelf && !(opts.isSelf && current === "followers");
+      const href = u.isSelf ? "perfil.php" : "perfil.php?user=" + encodeURIComponent(u.id);
+      return '<li class="conn-item" style="--rank-color:' + info.rank.color + '">' +
+        '<a class="conn-link" href="' + href + '">' +
+          avatar(u) +
+          '<span class="conn-info">' +
+            '<span class="conn-name">' + gEsc(u.name) + (u.isSelf ? ' <span class="conn-you">você</span>' : "") + "</span>" +
+            '<span class="conn-meta"><i aria-hidden="true"></i>' + gEsc(meta.join(" · ")) + "</span>" +
+            (showFollowsMe ? '<span class="conn-tag">Segue você</span>' : "") +
+          "</span>" +
+        "</a>" +
+        (u.isSelf ? "" :
+          '<button type="button" class="conn-follow' + (u.isFollowing ? " on" : "") + '" data-follow="' + gEsc(u.id) + '"' +
+          ' aria-pressed="' + (u.isFollowing ? "true" : "false") + '" aria-label="' + gEsc(followLabel(u) + ": " + u.name) + '">' +
+          followLabel(u) + "</button>") +
+        "</li>";
+    }
+
+    function emptyHtml(type, searching) {
+      if (searching) {
+        return '<li class="conn-empty">Ninguém com esse nome nesta lista.</li>';
+      }
+      if (type === "followers") {
+        return '<li class="conn-empty">' + (opts.isSelf
+          ? "Ninguém segue você ainda. Compartilhe seu perfil com os amigos!"
+          : gEsc(firstName) + " ainda não tem seguidores.") + "</li>";
+      }
+      return '<li class="conn-empty">' + (opts.isSelf
+        ? 'Você ainda não segue ninguém. <a href="amizades.php">Encontrar atletas</a>'
+        : gEsc(firstName) + " ainda não segue ninguém.") + "</li>";
+    }
+
+    let lastUsers = [];
+    function render() {
+      const q = norm(searchEl.value.trim());
+      const shown = q ? lastUsers.filter((u) => norm(u.name).includes(q)) : lastUsers;
+      listEl.innerHTML = shown.length ? shown.map(itemHtml).join("") : emptyHtml(current, !!q);
+      statusEl.textContent = q
+        ? shown.length + " " + gPlural(shown.length, "pessoa encontrada", "pessoas encontradas")
+        : "";
+    }
+
+    async function show(type) {
+      current = type;
+      const my = ++token;
+      titleEl.textContent = TITLES[type];
+      overlay.querySelectorAll("[data-conn-tab]").forEach((b) => {
+        b.setAttribute("aria-pressed", b.dataset.connTab === type ? "true" : "false");
+      });
+      listEl.setAttribute("aria-busy", "true");
+      listEl.innerHTML = '<li class="conn-skel"></li><li class="conn-skel"></li><li class="conn-skel"></li>';
+      try {
+        const users = await load(type);
+        if (my !== token) return;
+        lastUsers = users;
+        setCount(type, users.length);
+        render();
+      } catch (e) {
+        if (my !== token) return;
+        listEl.innerHTML = '<li class="conn-empty">Não foi possível carregar a lista. ' +
+          '<button type="button" class="conn-retry">Tentar de novo</button></li>';
+      } finally {
+        if (my === token) listEl.removeAttribute("aria-busy");
+      }
+    }
+
+    function open(type, trigger) {
+      lastTrigger = trigger || null;
+      searchEl.value = "";
+      overlay.classList.add("open");
+      document.body.style.overflow = "hidden";
+      document.addEventListener("keydown", onKey);
+      show(type);
+      setTimeout(() => searchEl.focus(), 30);
+    }
+
+    function close() {
+      overlay.classList.remove("open");
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", onKey);
+      if (lastTrigger) lastTrigger.focus();
+    }
+
+    // Esc fecha; Tab fica preso dentro da janela
+    function onKey(e) {
+      if (e.key === "Escape") { e.preventDefault(); close(); return; }
+      if (e.key !== "Tab") return;
+      const items = Array.from(modal.querySelectorAll("a[href], button, input")).filter((el) => !el.disabled && el.offsetParent !== null);
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+
+    document.querySelectorAll("[data-connections]").forEach((btn) => {
+      btn.addEventListener("click", () => open(btn.dataset.connections, btn));
+    });
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+    overlay.querySelector("[data-conn-close]").addEventListener("click", close);
+    overlay.querySelectorAll("[data-conn-tab]").forEach((b) => {
+      b.addEventListener("click", () => { if (b.dataset.connTab !== current) { searchEl.value = ""; show(b.dataset.connTab); } });
+    });
+    searchEl.addEventListener("input", render);
+
+    listEl.addEventListener("click", async (e) => {
+      if (e.target.closest(".conn-retry")) { show(current); return; }
+      const btn = e.target.closest("[data-follow]");
+      if (!btn) return;
+      const id = btn.dataset.follow;
+      const user = lastUsers.find((u) => String(u.id) === id);
+      if (!user) return;
+      btn.disabled = true;
+      try {
+        if (user.isFollowing) await unfollowUser(id); else await followUser(id);
+        const nowFollowing = !user.isFollowing;
+        // Atualiza a mesma pessoa nas duas listas (se já carregadas)
+        for (const t of ["followers", "following"]) {
+          if (!cache[t]) continue;
+          (await cache[t]).forEach((u) => { if (String(u.id) === id) u.isFollowing = nowFollowing; });
+        }
+        // No MEU perfil, o número de "Seguindo" muda e a lista precisa recarregar depois
+        if (opts.isSelf) {
+          const el = statEl("following");
+          if (el) el.textContent = Math.max(0, (parseInt(el.textContent, 10) || 0) + (nowFollowing ? 1 : -1));
+          if (el) setCount("following", el.textContent);
+          if (current !== "following") delete cache.following;
+        }
+        if (typeof opts.onFollowChange === "function") opts.onFollowChange(id, nowFollowing);
+        render();
+        const again = listEl.querySelector('[data-follow="' + CSS.escape(id) + '"]');
+        if (again) again.focus();
+      } catch (err) {
+        showToast(err.message || "Não foi possível concluir a ação.");
+        btn.disabled = false;
+      }
+    });
+
+    // Para o resto da página avisar que algo mudou (ex.: botão Seguir do perfil)
+    return {
+      invalidate(type) { delete cache[type]; },
+      setCount
+    };
   }
 
   // ---------------------------------------------------------
@@ -1714,9 +2029,10 @@
     document.getElementById("statActivities").textContent = profile.activitiesCount;
     document.getElementById("statFollowers").textContent = profile.followersCount;
     document.getElementById("statFollowing").textContent = profile.followingCount;
+    const connections = initConnections({ userId: targetId, name: profile.name, isSelf: false });
 
     // Esconde tudo que só faz sentido no PRÓPRIO perfil
-    ["editCoverBtn", "editAvatarBtn", "editProfileBtn"].forEach((id) => {
+    ["editCoverBtn", "editAvatarBtn", "editProfileBtn", "profileSettingsBtn"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.style.display = "none";
     });
@@ -1734,12 +2050,20 @@
       followBtn.addEventListener("click", async () => {
         followBtn.disabled = true;
         try {
-          if (followBtn.textContent.trim() === "Seguindo") {
+          const wasFollowing = followBtn.textContent.trim() === "Seguindo";
+          if (wasFollowing) {
             await unfollowUser(targetId);
             paintFollowBtn(false);
           } else {
             await followUser(targetId);
             paintFollowBtn(true);
+          }
+          // Número de seguidores da pessoa acompanha o botão
+          const fEl = document.getElementById("statFollowers");
+          if (fEl) fEl.textContent = Math.max(0, (parseInt(fEl.textContent, 10) || 0) + (wasFollowing ? -1 : 1));
+          if (connections) {
+            connections.invalidate("followers");
+            connections.setCount("followers", fEl ? fEl.textContent : "");
           }
         } catch (e) {
           showToast(e.message || "Não foi possível concluir a ação.");
@@ -1923,6 +2247,7 @@
     const data = await getData();
     const stats = computeStats(data);
     const following = await getFollowing();
+    let followingCount = following.length; // muda quando segue/deixa de seguir pela janela
 
     function paintProfile(d) {
       nameEl.textContent = d.name;
@@ -1951,9 +2276,15 @@
 
       document.getElementById("statActivities").textContent = stats.totalActivities;
       document.getElementById("statFollowers").textContent = d.followersCount || 0;
-      document.getElementById("statFollowing").textContent = following.length;
+      document.getElementById("statFollowing").textContent = followingCount;
     }
     paintProfile(data);
+    initConnections({
+      userId: data.id,
+      name: data.name,
+      isSelf: true,
+      onFollowChange: (id, nowFollowing) => { followingCount = Math.max(0, followingCount + (nowFollowing ? 1 : -1)); }
+    });
 
     // Aba Estatísticas: nível, barra de XP e chama de sequência
     const progressEl = document.getElementById("profileProgress");
@@ -2967,10 +3298,13 @@
   /* ---------------------------------------------------------
      9. AUTENTICAÇÃO (login.php) + guarda de rota
      --------------------------------------------------------- */
-  const PUBLIC_PAGES = ["login.php"];
+  // Páginas que abrem sem login: o login e a página de boas-vindas
+  // (index.php, que também abre só pelo endereço da pasta, terminado em "/").
+  const PUBLIC_PAGES = ["login.php", "index.php"];
 
   function isPublicPage() {
-    return PUBLIC_PAGES.some((p) => location.pathname.endsWith(p));
+    const path = location.pathname;
+    return path.endsWith("/") || PUBLIC_PAGES.some((p) => path.endsWith(p));
   }
 
   function initAuthForms() {
@@ -3498,7 +3832,11 @@
      que o global.css lê — por isso valem em todas as páginas.
      --------------------------------------------------------- */
   const PREFS_KEY = "trainly_prefs";
-  const PREF_DEFAULTS = { textSize: "normal", contrast: false, reduceMotion: false, colorBlind: "none" };
+  // libras começa LIGADO: quem precisa do VLibras nem sempre sabe que existe a opção
+  const PREF_DEFAULTS = {
+    textSize: "normal", contrast: false, reduceMotion: false, colorBlind: "none",
+    libras: true, legibleFont: false, readingSpacing: false, underlineLinks: false
+  };
 
   function readPrefs() {
     try {
@@ -3517,6 +3855,63 @@
     put("data-contrast", p.contrast ? "high" : "");
     put("data-motion", p.reduceMotion ? "reduce" : "");
     put("data-cb", p.colorBlind !== "none" ? p.colorBlind : "");
+    put("data-font", p.legibleFont ? "legible" : "");
+    put("data-spacing", p.readingSpacing ? "wide" : "");
+    put("data-links", p.underlineLinks ? "underline" : "");
+    if (p.legibleFont) loadLegibleFont();
+    setVLibras(!!p.libras);
+  }
+
+  // Fonte Atkinson Hyperlegible: só é baixada quando a opção é ligada
+  function loadLegibleFont() {
+    if (document.getElementById("legibleFontCss")) return;
+    const link = document.createElement("link");
+    link.id = "legibleFontCss";
+    link.rel = "stylesheet";
+    link.href = "https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap";
+    document.head.appendChild(link);
+  }
+
+  // VLibras (governo federal): traduz o conteúdo do site para Libras com um avatar.
+  // Carrega uma vez só, quando ligado; desligar esconde o botão (some de vez no
+  // próximo carregamento da página).
+  const VLIBRAS_URL = "https://vlibras.gov.br/app";
+  function setVLibras(on) {
+    const existing = document.querySelector("div[vw]");
+    if (!on) {
+      if (existing) existing.style.display = "none";
+      return;
+    }
+    if (existing) { existing.style.display = ""; return; }
+    if (!document.body || window.__trainlyVLibras) return;
+    window.__trainlyVLibras = true;
+
+    const vw = document.createElement("div");
+    vw.setAttribute("vw", "");
+    vw.className = "enabled";
+    const btn = document.createElement("div");
+    btn.setAttribute("vw-access-button", "");
+    btn.className = "active";
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("vw-plugin-wrapper", "");
+    const top = document.createElement("div");
+    top.className = "vw-plugin-top-wrapper";
+    wrapper.appendChild(top);
+    vw.appendChild(btn);
+    vw.appendChild(wrapper);
+    document.body.appendChild(vw);
+
+    const script = document.createElement("script");
+    script.src = VLIBRAS_URL + "/vlibras-plugin.js";
+    script.async = true;
+    script.onload = () => {
+      if (!window.VLibras || !window.VLibras.Widget) return;
+      new window.VLibras.Widget(VLIBRAS_URL);
+      // O widget se liga no "load" da janela; se a página já carregou, dispara na mão
+      if (document.readyState === "complete" && typeof window.onload === "function") window.onload();
+    };
+    script.onerror = () => { window.__trainlyVLibras = false; };
+    document.body.appendChild(script);
   }
 
   let refreshSettingsUi = null; // preenchido por initSettings()
@@ -3603,12 +3998,199 @@
 
     refreshSettingsUi = refresh;
     refresh();
+    initAccountSettings();
+  }
+
+  /* ---------------------------------------------------------
+     NOVO: Conta (Configurações) — trocar e-mail e senha
+     Sempre pede a senha atual: assim ninguém troca a sua senha
+     num computador que você esqueceu logado.
+     --------------------------------------------------------- */
+  function passwordStrength(pw) {
+    const checks = {
+      length: pw.length >= 8,
+      letters: /[A-Za-zÀ-ÿ]/.test(pw),
+      numbers: /\d/.test(pw),
+      mixed: /[a-z]/.test(pw) && /[A-Z]/.test(pw) || /[^A-Za-z0-9À-ÿ]/.test(pw)
+    };
+    let score = 0;
+    if (checks.length) score++;
+    if (checks.letters && checks.numbers) score++;
+    if (checks.mixed) score++;
+    if (pw.length >= 12) score++;
+    const labels = ["Muito fraca", "Fraca", "Razoável", "Boa", "Forte"];
+    return { checks, score, label: pw ? labels[score] : "" };
+  }
+
+  function initAccountSettings() {
+    const card = document.getElementById("accountCard");
+    if (!card) return;
+
+    const emailNow = document.getElementById("accEmail");
+    const pendingEl = document.getElementById("accPending");
+
+    function showPending(newEmail) {
+      if (!pendingEl) return;
+      if (newEmail) {
+        pendingEl.innerHTML = "";
+        const b = document.createElement("b");
+        b.textContent = newEmail;
+        pendingEl.append("Troca pendente para ", b, ". Abra o link que enviamos para concluir (confira também o e-mail atual e a caixa de spam).");
+        pendingEl.hidden = false;
+      } else {
+        pendingEl.hidden = true;
+      }
+    }
+
+    apiRequest("/account").then(({ account }) => {
+      if (emailNow) emailNow.textContent = account.email || "—";
+      showPending(account.newEmail);
+    }).catch(() => {
+      if (emailNow) emailNow.textContent = "Não foi possível carregar.";
+    });
+
+    // Abre/fecha os formulários (um de cada vez)
+    card.querySelectorAll("[data-acc-toggle]").forEach((btn) => {
+      const panel = document.getElementById(btn.getAttribute("aria-controls"));
+      btn.addEventListener("click", () => {
+        const open = btn.getAttribute("aria-expanded") !== "true";
+        card.querySelectorAll("[data-acc-toggle]").forEach((other) => {
+          other.setAttribute("aria-expanded", "false");
+          const p = document.getElementById(other.getAttribute("aria-controls"));
+          if (p) p.hidden = true;
+        });
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+        if (panel) {
+          panel.hidden = !open;
+          if (open) { const first = panel.querySelector("input"); if (first) first.focus(); }
+        }
+      });
+    });
+
+    // Mostrar/ocultar senha
+    card.querySelectorAll("[data-show-pass]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const input = document.getElementById(btn.dataset.showPass);
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        btn.setAttribute("aria-pressed", show ? "true" : "false");
+        btn.setAttribute("aria-label", show ? "Ocultar senha" : "Mostrar senha");
+      });
+    });
+
+    const setMsg = (el, text, kind) => {
+      if (!el) return;
+      el.textContent = text || "";
+      el.className = "acc-msg" + (kind ? " " + kind : "");
+    };
+
+    // ---- Trocar e-mail ----
+    const emailForm = document.getElementById("emailForm");
+    if (emailForm) {
+      const msg = document.getElementById("emailMsg");
+      emailForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("newEmail").value.trim();
+        const currentPassword = document.getElementById("emailCurrentPass").value;
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setMsg(msg, "Digite um e-mail válido.", "error");
+        if (!currentPassword) return setMsg(msg, "Digite sua senha atual para confirmar.", "error");
+        const submit = emailForm.querySelector("button[type=submit]");
+        submit.disabled = true;
+        setMsg(msg, "Enviando...", "");
+        try {
+          const { account } = await apiRequest("/account/email", {
+            method: "PUT",
+            body: JSON.stringify({ email, currentPassword })
+          });
+          emailForm.reset();
+          setMsg(msg, "Pronto! Enviamos um link de confirmação. A troca só vale depois que você abrir o link.", "ok");
+          showPending(account.newEmail || email);
+        } catch (err) {
+          setMsg(msg, err.message || "Não foi possível trocar o e-mail.", "error");
+        } finally {
+          submit.disabled = false;
+        }
+      });
+    }
+
+    // ---- Trocar senha ----
+    const passForm = document.getElementById("passwordForm");
+    if (passForm) {
+      const msg = document.getElementById("passMsg");
+      const newPass = document.getElementById("newPass");
+      const confirmPass = document.getElementById("confirmPass");
+      const meter = document.getElementById("passMeter");
+      const meterLabel = document.getElementById("passMeterLabel");
+      const submit = passForm.querySelector("button[type=submit]");
+
+      function update() {
+        const { checks, score, label } = passwordStrength(newPass.value);
+        if (meter) meter.dataset.score = newPass.value ? String(score) : "";
+        if (meterLabel) meterLabel.textContent = label;
+        passForm.querySelectorAll("[data-check]").forEach((li) => {
+          const key = li.dataset.check;
+          const ok = key === "match"
+            ? newPass.value.length > 0 && newPass.value === confirmPass.value
+            : key === "lettersNumbers" ? checks.letters && checks.numbers : checks[key];
+          li.classList.toggle("ok", !!ok);
+        });
+        const valid = checks.length && checks.letters && checks.numbers && newPass.value === confirmPass.value;
+        submit.disabled = !valid;
+      }
+      newPass.addEventListener("input", update);
+      confirmPass.addEventListener("input", update);
+      update();
+
+      passForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const currentPassword = document.getElementById("passCurrent").value;
+        if (!currentPassword) return setMsg(msg, "Digite sua senha atual.", "error");
+        submit.disabled = true;
+        setMsg(msg, "Salvando...", "");
+        try {
+          await apiRequest("/account/password", {
+            method: "PUT",
+            body: JSON.stringify({ currentPassword, newPassword: newPass.value })
+          });
+          passForm.reset();
+          update();
+          setMsg(msg, "Senha alterada! Use a nova senha no próximo login (no site e no app).", "ok");
+        } catch (err) {
+          setMsg(msg, err.message || "Não foi possível trocar a senha.", "error");
+          update();
+        }
+      });
+    }
+
+    const logoutBtn = document.getElementById("accLogout");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", async () => {
+        const ok = await confirmDialog({ title: "Sair da conta", message: "Tem certeza que quer sair da sua conta neste aparelho?", confirmLabel: "Sair" });
+        if (ok) logout();
+      });
+    }
   }
 
   // Aplica tema e acessibilidade já na carga do script (antes do DOMContentLoaded),
   // pra a página não "piscar" no visual padrão.
   applyTheme(resolveTheme(getThemePref()));
   applyA11yPrefs(readPrefs());
+
+  // Alvo do link "Pular para o conteúdo" (primeiro bloco principal da página)
+  (function markMainContent() {
+    if (document.getElementById("conteudo")) return;
+    const main = document.querySelector(".main-container") || document.querySelector("main");
+    if (!main) return;
+    main.id = main.id || "conteudo";
+    if (main.id !== "conteudo") {
+      const anchor = document.createElement("span");
+      anchor.id = "conteudo";
+      anchor.tabIndex = -1;
+      main.prepend(anchor);
+    } else {
+      main.tabIndex = -1;
+    }
+  })();
 
   /* ---------------------------------------------------------
      BOOT
@@ -3622,10 +4204,10 @@
       return;
     }
 
-    // Páginas protegidas: sem sessão, manda pro login (antes de carregar
-    // qualquer coisa, inclusive as notificações da navbar).
+    // Páginas protegidas: sem sessão, manda pra página de boas-vindas (antes
+    // de carregar qualquer coisa, inclusive as notificações da navbar).
     if (!(await isLoggedIn())) {
-      window.location.href = "login.php";
+      window.location.href = "index.php";
       return;
     }
 

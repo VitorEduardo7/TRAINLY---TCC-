@@ -1,25 +1,33 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&display=swap');
 
 /* =========================================
    1. VARIÁVEIS E RESET GERAL
    ========================================= */
 :root {
-    --primary-blue: #2c6bd9;
-    --primary-hover: #5a8cf0;
-    --bg-color: #171326;
-    --card-bg: #201b36;
+    /* Paleta "Noturno" — a mesma do app */
+    --primary-blue: #2f7dfd;
+    --primary-hover: #5a96ff;
+    --bg-color: #140f2a;
+    --card-bg: #211a3e;
+    --surface: #2b2352;          /* campos, trilhas, chips */
+    --sidebar-bg: #100b22;
+    --tabbar-bg: #1d1638;
     --text-dark: #f3f1fa;
     --text-muted: #a39fbd;
-    --border-color: rgba(170,150,255,0.12);
-    --avatar-bg: #2b5d34;
+    --border-color: rgba(170,150,255,0.10);
+    --avatar-bg: #3b5bdb;
     --danger: #f0554e;
-    --focus-ring: #5a8cf0;
-    --toast-bg: #2a2445;
+    --focus-ring: #5a96ff;
+    --toast-bg: #2b2352;
+    --bar: #5b4fa0;              /* barras do gráfico (dias com treino) */
+    --shadow-card: none;
 
     /* Tokens do tema do app */
-    --radius-card: 16px;
+    --radius-card: 24px;
+    --radius-lg: 28px;
     --radius-pill: 999px;
-    --xp-gold: #f4b942;
+    --xp-gold: #ffc93c;
+    --flame: #ff8a1f;
     --font-display: 'Barlow Condensed', 'Inter', sans-serif;
 
     /* Cores de "deu certo" (verde) — trocadas nos modos de daltonismo */
@@ -27,21 +35,29 @@
     --ok-soft: rgba(34,197,94,0.14);
 }
 
-/* Modo claro — ativado via <html data-theme="light"> pelo theme-toggle.js */
+/* Modo claro — ativado via <html data-theme="light"> */
 html[data-theme="light"] {
-    --primary-blue: #2c6bd9;
-    --primary-hover: #1f55b3;
-    --bg-color: #f3f2f9;
+    --primary-blue: #2563d9;
+    --primary-hover: #1d4fb8;
+    --bg-color: #f3f1fb;
     --card-bg: #ffffff;
+    --surface: #ece8f8;
+    --sidebar-bg: #ffffff;
+    --tabbar-bg: #ffffff;
     --text-dark: #1f1b2e;
-    --text-muted: #6a667d;
+    --text-muted: #625e78;
     --border-color: #e4e1f0;
-    --avatar-bg: #2b5d34;
-    --danger: #e0473e;
-    --focus-ring: #2c6bd9;
+    --avatar-bg: #3b5bdb;
+    --danger: #d93a32;
+    --focus-ring: #2563d9;
     --toast-bg: #1f1b2e;
+    --bar: #b9b0e3;
+    --shadow-card: 0 1px 2px rgba(31,27,46,0.04), 0 10px 30px rgba(31,27,46,0.06);
 
-    --xp-gold: #c98a0a;
+    --xp-gold: #a86a00;
+    --flame: #c2410c;
+    --ok: #15803d;
+    --ok-soft: rgba(21,128,61,0.12);
 }
 
 /* Acessibilidade: foco visível em qualquer elemento navegável por teclado */
@@ -54,9 +70,10 @@ input:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    * {
-        animation-duration: 0.001ms !important;
-        transition-duration: 0.001ms !important;
+    *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
     }
 }
 
@@ -64,10 +81,27 @@ input:focus-visible {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Inter', sans-serif;
 }
 
+/* Texto só para leitores de tela (rótulos de campos sem rótulo visível) */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* A fonte vem do body e é herdada (antes o * forçava Inter em cada
+   elemento e um <span> dentro de um título condensado "perdia" a fonte). */
+button, input, select, textarea { font-family: inherit; }
+
 body {
+    font-family: 'Inter', sans-serif;
     background-color: var(--bg-color);
     color: var(--text-dark);
     -webkit-font-smoothing: antialiased;
@@ -90,201 +124,264 @@ body > *:not(.navbar):not(.footer) {
 
 /* Container Principal Reutilizável */
 .main-container {
-    max-width: 1440px;
+    max-width: 1240px;
     margin: 0 auto;
-    padding: 36px 24px;
+    padding: 32px 40px 48px;
 }
 
 /* =========================================
-   2. BARRA DE NAVEGAÇÃO (NAVBAR)
+   2. NAVEGAÇÃO — barra lateral (computador)
+   No celular vira barra no topo + abas flutuantes (seção 4).
    ========================================= */
+:root { --sidebar-w: 248px; }
+
+/* Só páginas com a barra (o login não tem) ganham o recuo */
+body:has(> .navbar) { padding-left: var(--sidebar-w); }
+
 .navbar {
-    background-color: var(--card-bg);
-    border-bottom: 1px solid var(--border-color);
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    bottom: 0;
+    width: var(--sidebar-w);
     z-index: 100;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
 }
 
 .nav-container {
-    max-width: 1440px;
-    margin: 0 auto;
-    padding: 0 24px;
-    height: 60px;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 24px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    padding: 22px 14px 16px;
 }
 
 .nav-left {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 2px 0 8px;
 }
 
 .brand-logo {
-    font-size: 24px;
-    font-weight: 800;
-    color: var(--text-dark);
-    letter-spacing: -0.5px;
-    text-decoration: none;
     display: flex;
     align-items: center;
-    height: 60px;
+    height: 40px;
+    text-decoration: none;
 }
-
 .brand-logo img.logo-img {
-    height: 34px;
-    max-height: 34px;
+    height: 36px;
+    max-height: 36px;
     width: auto;
-    max-width: 120px;
+    max-width: 132px;
     object-fit: contain;
     display: block;
 }
 
-.brand-logo span {
-    color: var(--primary-blue);
+.nav-tools { display: flex; align-items: center; gap: 2px; }
+
+.icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
 }
+.icon-btn:hover { background: var(--surface); color: var(--text-dark); }
+.icon-btn svg { width: 20px; height: 20px; }
 
 .nav-links {
     list-style: none;
     display: flex;
-    gap: 24px;
-    justify-self: center;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .nav-links a {
-    text-decoration: none;
-    color: var(--text-muted);
-    font-size: 14px;
-    font-weight: 500;
-    transition: color 0.2s ease;
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 12px;
+    height: 46px;
+    padding: 0 14px 0 18px;
+    border-radius: 14px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 600;
+    transition: background 0.18s ease, color 0.18s ease;
 }
+.nav-links a svg { width: 20px; height: 20px; flex-shrink: 0; transition: transform 0.18s ease; }
+.nav-links a:hover { background: var(--surface); color: var(--text-dark); }
+.nav-links a:hover svg { transform: translateX(2px); }
 
-.nav-links a svg {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-}
-
-.nav-links a:hover,
 .nav-links a.active {
-    color: var(--primary-blue);
+    background: color-mix(in srgb, var(--primary-blue) 16%, transparent);
+    color: var(--text-dark);
+    font-weight: 700;
 }
+/* Faixa inclinada marcando o item ativo (assinatura do app), dentro da pílula */
+.nav-links a.active::before {
+    content: "";
+    position: absolute;
+    left: 7px;
+    top: 13px;
+    width: 4px;
+    height: 20px;
+    border-radius: 2px;
+    transform: skewX(-16deg);
+    background: var(--primary-blue);
+    animation: stripeIn 0.35s ease-out backwards;
+}
+
+.hamburger-btn { display: none; }
 
 .nav-right {
+    margin-top: auto;
     display: flex;
-    align-items: center;
-    gap: 16px;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.icon-btn {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.2s ease;
-}
-
-.icon-btn:hover {
-    color: var(--primary-blue);
-}
-
-.hamburger-btn {
-    display: none;
-    background: none;
-    border: none;
-    color: var(--text-dark);
-    cursor: pointer;
-    padding: 6px;
-    align-items: center;
-    justify-content: center;
-}
-
-.hamburger-btn span {
-    display: block;
-    width: 22px;
-    height: 2px;
-    background: currentColor;
-    margin: 4px 0;
-    border-radius: 2px;
-    transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-.user-avatar-small {
-    width: 32px;
-    height: 32px;
-    background-color: var(--avatar-bg);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    text-decoration: none;
-    flex-shrink: 0;
-    border: none;
-    padding: 0;
-    font-family: inherit;
-}
-
+/* Cartão do usuário (abre o menu do perfil) */
 .profile-menu-wrapper {
     position: relative;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
 }
+
+.nav-user {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 8px 8px 6px;
+    border: none;
+    border-radius: 16px;
+    background: transparent;
+    color: var(--text-dark);
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.18s ease;
+}
+.nav-user:hover,
+.nav-user[aria-expanded="true"] { background: var(--surface); }
+/* Em Perfil e Configurações o cartão fica marcado, como um item ativo */
+.nav-user.active { background: color-mix(in srgb, var(--primary-blue) 14%, transparent); }
+
+.user-avatar-small {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background-color: var(--avatar-bg);
+    background-size: cover;
+    background-position: center;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    /* anel fino na cor da patente (preenchido pelo main.js) */
+    box-shadow: 0 0 0 2px var(--sidebar-bg), 0 0 0 4px var(--rank-color, var(--primary-blue));
+}
+.nav-user-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.nav-user-name {
+    font-weight: 700;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.nav-user-level {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* bolinha na cor da patente antes do "Nível X · Patente" */
+.nav-user-level:not(:empty)::before {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: 6px;
+    border-radius: 2px;
+    transform: rotate(45deg) translateY(-1px);
+    background: var(--rank-color, var(--primary-blue));
+}
+.nav-user-more { width: 18px; height: 18px; color: var(--text-muted); flex-shrink: 0; }
 
 .profile-menu {
     position: absolute;
-    top: calc(100% + 12px);
+    left: 0;
     right: 0;
-    width: 180px;
+    bottom: calc(100% + 8px);
     background: var(--card-bg);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-card);
-    box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+    border-radius: 18px;
+    box-shadow: 0 18px 44px rgba(0,0,0,0.45);
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-6px);
-    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+    transform: translateY(8px) scale(0.97);
+    transform-origin: bottom left;
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
     z-index: 200;
     padding: 6px;
 }
-
 .profile-menu.open {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0);
+    transform: none;
 }
-
-.profile-menu a {
-    display: block;
-    padding: 10px 12px;
-    border-radius: 6px;
+.pm-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 12px;
+    border-radius: 12px;
     font-size: 14px;
     font-weight: 600;
     color: var(--text-dark);
     text-decoration: none;
 }
+.pm-item svg { width: 18px; height: 18px; color: var(--text-muted); flex-shrink: 0; }
+.pm-item:hover { background: var(--surface); }
+.pm-item:hover svg { color: var(--text-dark); }
+.pm-danger, .pm-danger svg { color: var(--danger); }
+.pm-danger:hover svg { color: var(--danger); }
+.pm-sep { height: 1px; margin: 6px 8px; background: var(--border-color); }
 
-.profile-menu a:hover {
-    background: var(--bg-color);
-    color: var(--primary-blue);
+/* "Pular para o conteúdo": invisível até receber foco pelo teclado */
+.skip-link {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 1000;
+    padding: 10px 16px;
+    border-radius: 12px;
+    background: var(--primary-blue);
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    transform: translateY(-160%);
+    transition: transform 0.15s ease;
 }
+.skip-link:focus { transform: none; }
 
-.profile-menu a[data-logout] {
-    color: var(--danger);
-}
-.profile-menu a[data-logout]:hover {
-    background: rgba(240, 85, 78, 0.1);
-    color: var(--danger);
-}
+/* O painel de notificações abre para a direita, por cima do conteúdo */
+.navbar .notif-panel { left: 0; right: auto; }
 
 /* =========================================
    3. BOTÕES GERAIS
@@ -300,6 +397,11 @@ button {
 .btn-primary {
     background-color: var(--primary-blue);
     color: white;
+    border: none;
+    padding: 10px 20px;
+}
+
+.btn-secondary {
     border: none;
     padding: 10px 20px;
 }
@@ -499,211 +601,150 @@ button {
 }
 
 /* =========================================
-   4. RESPONSIVIDADE
+   4. RESPONSIVIDADE — celular e tablet
+   A barra lateral vira: barra no topo (logo, tema, sino, avatar) +
+   barra de abas flutuante embaixo, igual à do app. Mesmo HTML.
    ========================================= */
-@media (max-width: 768px) {
-    /* Celular: o menu vira uma barra de abas FIXA EMBAIXO (igual ao app).
-       É o mesmo <ul class="nav-links"> do desktop, só reposicionado — sem
-       HTML duplicado. O topo fica só com logo, tema, sino e avatar. */
-    .hamburger-btn {
-        display: none;
+@media (max-width: 900px) {
+    body:has(> .navbar) {
+        padding-left: 0;
+        padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .navbar {
+        position: sticky;
+        top: 0;
+        bottom: auto;
+        width: auto;
+        height: 60px;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-color);
     }
 
     .nav-container {
-        grid-template-columns: 1fr auto;
-        height: 56px;
-        padding: 0 16px;
-        gap: 12px;
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+        height: 60px;
+        padding: 0 12px 0 16px;
     }
 
+    .nav-left { flex: 1; padding: 0; }
+    .brand-logo img.logo-img { height: 30px; }
+
+    .nav-right { margin-top: 0; flex-direction: row; align-items: center; }
+    .profile-menu-wrapper { padding-top: 0; border-top: none; }
+    .nav-user { width: auto; padding: 4px; background: transparent; border-radius: 50%; }
+    .nav-user:hover, .nav-user[aria-expanded="true"], .nav-user.active { background: transparent; }
+    .nav-user-text, .nav-user-more { display: none; }
+    .user-avatar-small { width: 34px; height: 34px; font-size: 13px; box-shadow: 0 0 0 2px var(--bg-color), 0 0 0 4px var(--rank-color, var(--primary-blue)); }
+
+    .profile-menu {
+        left: auto;
+        right: 0;
+        bottom: auto;
+        top: calc(100% + 10px);
+        width: 220px;
+        transform: translateY(-8px) scale(0.97);
+        transform-origin: top right;
+    }
+
+    .navbar .notif-panel { left: auto; right: -52px; width: min(320px, calc(100vw - 24px)); }
+
+    /* Abas flutuantes */
     .nav-links {
         position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        top: auto;
-        width: 100%;
-        justify-self: stretch;
+        left: 12px;
+        right: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
         z-index: 150;
-        display: flex;
         flex-direction: row;
-        justify-content: space-around;
         gap: 0;
-        padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
-        background: var(--card-bg);
-        border-top: 1px solid var(--border-color);
-        border-bottom: none;
-        box-shadow: 0 -8px 24px rgba(0,0,0,0.35);
+        padding: 6px;
+        background: var(--tabbar-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 24px;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.4);
     }
-
-    .nav-links li {
-        flex: 1;
-        width: auto;
-    }
-
+    .nav-links li { flex: 1; min-width: 0; }
     .nav-links a {
         flex-direction: column;
         justify-content: center;
-        align-items: center;
         gap: 3px;
-        padding: 7px 2px;
+        height: 56px;
+        padding: 0 2px;
         font-size: 11px;
-        font-weight: 700;
-        border-radius: 12px;
+        border-radius: 16px;
     }
-
-    .nav-links a svg {
+    .nav-links a span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nav-links a svg { width: 22px; height: 22px; }
+    .nav-links a:hover { background: transparent; }
+    .nav-links a.active { background: transparent; }
+    .nav-links a.active::before {
+        left: 50%;
+        top: 0;
         width: 22px;
-        height: 22px;
+        height: 4px;
+        transform: translateX(-50%) skewX(-20deg);
     }
 
-    .nav-links a.active {
-        color: var(--primary-blue);
-        background: color-mix(in srgb, var(--primary-blue) 14%, transparent);
-    }
+    .trainly-toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
 
-    /* Espaço pro conteúdo não ficar escondido atrás da barra */
-    body {
-        padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
-    }
-
-    /* O aviso (toast) sobe pra não ficar por cima da barra */
-    .trainly-toast {
-        bottom: calc(84px + env(safe-area-inset-bottom, 0px));
-    }
-
-    .notif-panel {
-        width: 240px;
-        right: -8px;
-    }
+    .main-container { padding: 20px 16px 32px; }
 }
 
 /* =========================================
-   8. RODAPÉ (footer.php)
+   8. RODAPÉ (footer.php) — uma linha só, discreto
    ========================================= */
-
 .footer {
-    background-color: var(--card-bg);
+    flex-shrink: 0;
+    margin-top: 40px;
+    padding: 24px 40px 28px;
     border-top: 1px solid var(--border-color);
-    margin-top: 48px;
-    padding: 48px 24px 0;
 }
-
-.footer-container {
-    max-width: 1440px;
+.footer-inner {
+    max-width: 1240px;
     margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1.6fr 1fr 1fr 1fr;
-    gap: 40px;
-    padding-bottom: 40px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 32px;
 }
-
+.footer-brand { display: flex; align-items: baseline; gap: 12px; }
 .footer-logo {
-    font-size: 22px;
+    font-family: var(--font-display);
+    font-style: italic;
     font-weight: 800;
+    font-size: 22px;
+    letter-spacing: 0.02em;
     color: var(--text-dark);
-    letter-spacing: -0.5px;
-    margin-bottom: 14px;
 }
 .footer-logo strong { color: var(--primary-blue); font-weight: 800; }
-
-.footer-about p {
-    font-size: 13.5px;
-    color: var(--text-muted);
-    line-height: 1.6;
-    max-width: 320px;
-    margin-bottom: 18px;
-}
-
-.footer-social { display: flex; gap: 10px; }
-.footer-social a {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
-    color: var(--text-muted);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    font-size: 14px;
-    transition: color 0.2s ease, border-color 0.2s ease;
-}
-.footer-social a:hover { color: var(--primary-blue); border-color: var(--primary-blue); }
-
-.footer-column h3 {
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    color: var(--text-muted);
-    margin-bottom: 16px;
-}
-.footer-column a {
-    display: block;
-    font-size: 13.5px;
-    color: var(--text-dark);
-    text-decoration: none;
-    margin-bottom: 12px;
-    opacity: 0.85;
-}
-.footer-column a:hover { color: var(--primary-blue); opacity: 1; }
-
-.footer-stats {
-    max-width: 1440px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: center;
-    gap: 64px;
-    padding: 32px 0;
-    border-top: 1px solid var(--border-color);
-}
-.footer-stats .stat { text-align: center; }
-.footer-stats .stat strong {
-    display: block;
-    font-size: 24px;
-    font-weight: 800;
-    color: var(--primary-blue);
-}
-.footer-stats .stat span {
-    font-size: 12px;
-    color: var(--text-muted);
-}
-
-.footer-bottom {
-    max-width: 1440px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 0;
-    border-top: 1px solid var(--border-color);
-    font-size: 12.5px;
-    color: var(--text-muted);
-}
-
-.system-status { display: flex; align-items: center; gap: 8px; }
-.system-status span {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--ok);
-    display: inline-block;
-}
+.footer-tagline { font-size: 13px; color: var(--text-muted); }
+.footer-links { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+.footer-links a { color: var(--text-muted); text-decoration: none; font-size: 13.5px; font-weight: 600; }
+.footer-links a:hover { color: var(--text-dark); }
+.footer-copy { font-size: 12.5px; color: var(--text-muted); }
 
 @media (max-width: 900px) {
-    .footer-container { grid-template-columns: 1fr 1fr; }
-    .footer-stats { flex-wrap: wrap; gap: 32px; }
-    .footer-bottom { flex-direction: column; gap: 10px; text-align: center; }
-}
-@media (max-width: 560px) {
-    .footer-container { grid-template-columns: 1fr; }
+    .footer { padding: 24px 16px; margin-top: 24px; }
+    .footer-inner { flex-direction: column; align-items: flex-start; }
 }
 
 /* =========================================
-   9. TEMA DO APP — cantos arredondados + títulos condensados
-   (body na frente para ganhar dos CSS de cada página)
+   9. TEMA DO APP — cartões e títulos
+   Cartões separados por tom de fundo (sem borda), cantos de 24px e
+   títulos na fonte condensada. "body" na frente para ganhar dos CSS
+   de cada página.
    ========================================= */
+.card {
+    background-color: var(--card-bg);
+    border-radius: var(--radius-card);
+    padding: 24px;
+}
+
 body .card,
 body .metric-card,
 body .activities-card,
@@ -712,31 +753,90 @@ body .club-list-item,
 body .club-detail-header,
 body .club-invite-box,
 body .profile-stat-card,
-body .pa-card {
+body .pa-card,
+body .stats-card {
     border-radius: var(--radius-card);
+    border-color: transparent;
+    box-shadow: var(--shadow-card);
 }
 
 body .modal {
-    border-radius: 20px;
+    border-radius: var(--radius-card);
+    border-color: transparent;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
 }
 
+body h1,
 body .page-title-big,
 body .club-detail-title,
 body .challenge-title,
 body .stats-card-title,
-body .sidebar-block h2 {
+body .sidebar-block h2,
+body .modal h3 {
     font-family: var(--font-display);
-    font-weight: 800;
-    letter-spacing: 0.5px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
 }
 
-body .page-title-big { font-size: 38px; }
+body .page-title-big { font-size: 44px; line-height: 1; }
 
 body .stats-card-title,
-body .sidebar-block h2 { font-size: 16px; }
+body .sidebar-block h2 {
+    font-size: 24px;
+    text-transform: none;
+    letter-spacing: 0.01em;
+}
 
-body .club-detail-title { font-size: 24px; }
-body .challenge-title   { font-size: 20px; }
+body .modal h3 { font-size: 26px; text-transform: none; }
+
+body .club-detail-title { font-size: 28px; }
+body .challenge-title   { font-size: 22px; }
+
+@media (max-width: 600px) {
+    body .page-title-big { font-size: 34px; }
+}
+
+/* Janelas (modais) — base para qualquer página, inclusive o diálogo de confirmação */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 5, 20, 0.66);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    padding: 20px;
+}
+.overlay.open { display: flex; }
+.modal {
+    background: var(--card-bg);
+    border-radius: var(--radius-card);
+    padding: 26px;
+    width: 100%;
+    max-width: 440px;
+    max-height: 88vh;
+    overflow-y: auto;
+}
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.modal-actions > button { flex: 1; padding: 11px; }
+.confirm-modal h3 { margin-bottom: 10px; }
+.confirm-message { font-size: 15px; color: var(--text-muted); line-height: 1.5; }
+.btn-danger {
+    background: var(--danger);
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+}
+.btn-danger:hover { background: color-mix(in srgb, var(--danger) 85%, #000); }
+
+/* Campos no tom das superfícies, sem contorno pesado */
+body .field input,
+body .field select,
+body .field textarea {
+    background: var(--surface);
+    border-color: transparent;
+    border-radius: 14px;
+}
 
 /* =========================================
    10. TEMA DO APP — botões, filtros em pílula e estados vazios
@@ -746,10 +846,17 @@ body .challenge-title   { font-size: 20px; }
 body .btn-primary,
 body .btn-secondary,
 body .btn-outline,
-body .btn-danger,
+body .btn-danger {
+    border-radius: var(--radius-pill);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: 0.02em;
+}
+
 body .btn-connect,
 body .btn-view-profile {
-    border-radius: 12px;
+    border-radius: var(--radius-pill);
     font-weight: 700;
 }
 
@@ -759,13 +866,12 @@ body .btn-primary:hover {
 
 /* Botão secundário no tom do tema (antes era cinza fixo / preto no hover) */
 body .btn-secondary {
-    background-color: color-mix(in srgb, var(--text-dark) 8%, var(--card-bg));
+    background-color: var(--surface);
     color: var(--text-dark);
-    border: 1px solid var(--border-color);
+    border: 1px solid transparent;
 }
 body .btn-secondary:hover {
-    background-color: color-mix(in srgb, var(--primary-blue) 16%, var(--card-bg));
-    border-color: var(--primary-blue);
+    background-color: color-mix(in srgb, var(--primary-blue) 18%, var(--surface));
 }
 
 body .btn-outline:hover {
@@ -781,12 +887,12 @@ body .filter-tabs {
 
 body .filter-pill {
     border-radius: var(--radius-pill);
-    padding: 8px 16px;
+    padding: 9px 16px;
     font-size: 13px;
     font-weight: 600;
     background: var(--card-bg);
     color: var(--text-muted);
-    border: 1px solid var(--border-color);
+    border: 1px solid transparent;
 }
 
 body .filter-pill:hover {
@@ -931,13 +1037,47 @@ html[data-theme="light"][data-contrast="high"] {
     --border-color: #5d5972;
 }
 
+/* Alto contraste: cartões ganham contorno (normalmente são separados só pelo tom) */
+html[data-contrast="high"] body .card,
+html[data-contrast="high"] body .lap-card,
+html[data-contrast="high"] body .week-card,
+html[data-contrast="high"] body .post-item,
+html[data-contrast="high"] body .settings-card,
+html[data-contrast="high"] body .feed-composer {
+    border: 1px solid var(--border-color);
+}
+
+/* Fonte de alta legibilidade (Atkinson Hyperlegible, feita para baixa visão).
+   O main.js só baixa a fonte quando a opção é ligada. */
+html[data-font="legible"] {
+    --font-display: 'Atkinson Hyperlegible', 'Inter', sans-serif;
+}
+html[data-font="legible"] body { font-family: 'Atkinson Hyperlegible', 'Inter', sans-serif; }
+
+/* Espaçamento de leitura: mais ar entre linhas, letras e palavras */
+html[data-spacing="wide"] body { line-height: 1.75; letter-spacing: 0.03em; word-spacing: 0.1em; }
+html[data-spacing="wide"] p,
+html[data-spacing="wide"] li,
+html[data-spacing="wide"] span { line-height: inherit; }
+
+/* Destacar links: sublinha tudo que é link de texto */
+html[data-links="underline"] a:not(.btn-primary):not(.btn-secondary):not(.skip-link) {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+}
+
+/* VLibras: botão flutuante acima da barra de abas no celular */
+@media (max-width: 900px) {
+    div[vw].enabled { margin-top: -60px; }
+}
+
 /* Reduzir animações */
 html[data-motion="reduce"] *,
 html[data-motion="reduce"] *::before,
 html[data-motion="reduce"] *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
+    animation: none !important;
+    transition: none !important;
     scroll-behavior: auto !important;
 }
 
@@ -959,96 +1099,169 @@ html[data-cb="tritanopia"] {
 /* =========================================
    12. NÍVEL E SEQUÊNCIA (Dashboard e Perfil)
    ========================================= */
-:root { --flame: #ff8a1f; }
 
-.level-card {
+/* ---- A volta na pista (XP rumo ao próximo nível) — Dashboard ---- */
+.lap-card {
     background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-card);
-    padding: 20px 24px 22px;
-    margin-bottom: 24px;
-    position: relative;
-    overflow: hidden;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 26px 28px 24px;
+    min-width: 0;
+    /* ocupa a altura toda da linha: topo em cima, rodapé embaixo, pista no meio */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 16px;
 }
-.level-card::before {
-    content: "";
-    position: absolute;
-    inset: 0 0 auto 0;
-    height: 3px;
-    background: var(--rank-color, var(--primary-blue));
-    opacity: .9;
-}
-.level-card:empty { display: none; }
+.lap-card:empty { display: none; }
 
-.level-top {
+.lap-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 14px;
+    gap: 16px;
+    flex-wrap: wrap;
 }
-.level-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.level-name {
-    font-family: var(--font-display);
-    font-size: 30px;
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: .02em;
-    text-transform: uppercase;
-    color: var(--text-dark);
-}
-.level-xp { font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
-.level-xp b {
-    font-family: var(--font-display);
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--text-dark);
-    margin-right: 2px;
-}
-.level-bar {
-    height: 12px;
-    background: var(--bg-color);
-    border-radius: var(--radius-pill);
-    overflow: hidden;
-}
-.level-bar-fill {
-    height: 100%;
-    border-radius: var(--radius-pill);
-    transition: width .5s ease;
-}
-.level-foot { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
-.level-foot b { color: var(--xp-gold); font-weight: 800; }
+.lap-id { display: flex; align-items: center; gap: 14px; min-width: 0; }
 
-/* Chama de sequência semanal */
+/* Brasão em hexágono na cor da patente */
+.lap-hex { width: 52px; height: 58px; flex-shrink: 0; }
+.lap-hex polygon {
+    fill: color-mix(in srgb, var(--rank-color, #8a94a6) 18%, transparent);
+    stroke: var(--rank-color, #8a94a6);
+    stroke-width: 2.5;
+}
+.lap-hex text {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: 24px;
+    fill: var(--text-dark);
+}
+
+.lap-rank {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--rank-color, #8a94a6) 65%, var(--text-dark));
+}
+.lap-level {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: 40px;
+    line-height: 1;
+}
+.lap-total { text-align: right; }
+.lap-total b {
+    display: block;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: 30px;
+    line-height: 1;
+    color: var(--xp-gold);
+}
+.lap-total span { font-size: 13px; color: var(--text-muted); }
+
+.lap-track { position: relative; }
+.lap-track svg { display: block; width: 100%; height: auto; }
+.lap-track .t-outer { fill: var(--surface); }
+.lap-track .t-inner { fill: var(--card-bg); }
+.lap-track .t-lane {
+    fill: none;
+    stroke: color-mix(in srgb, var(--text-dark) 9%, transparent);
+    stroke-width: 1.5;
+    stroke-dasharray: 6 8;
+}
+.lap-track .t-progress {
+    fill: none;
+    stroke: var(--xp-gold);
+    stroke-width: 7;
+    stroke-linecap: round;
+}
+.lap-track .t-start { stroke: var(--text-dark); stroke-width: 3; }
+.lap-track .t-halo { fill: var(--primary-blue); opacity: 0.3; }
+.lap-track .t-dot { fill: var(--primary-blue); stroke: #fff; stroke-width: 2; }
+
+.lap-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    pointer-events: none;
+}
+.lap-xp {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: 46px;
+    line-height: 1;
+    color: var(--xp-gold);
+}
+.lap-xp small { font-size: 24px; font-style: normal; font-weight: 700; color: var(--text-muted); }
+.lap-caption { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+.lap-foot {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+.lap-foot b { color: var(--text-dark); }
+.lap-foot .gold { color: var(--xp-gold); }
+
+@media (max-width: 600px) {
+    .lap-card { padding: 20px 18px 18px; border-radius: var(--radius-card); }
+    .lap-hex { width: 42px; height: 47px; }
+    .lap-level { font-size: 32px; }
+    .lap-total b { font-size: 24px; }
+    .lap-xp { font-size: 30px; }
+    .lap-xp small { font-size: 17px; }
+    .lap-caption { display: none; }
+    .lap-foot { font-size: 13px; }
+}
+
+/* ---- Chama de sequência semanal ---- */
 .streak-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     flex-shrink: 0;
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
+    height: 44px;
+    padding: 0 16px 0 12px;
+    border: none;
     border-radius: var(--radius-pill);
-    padding: 7px 14px 7px 11px;
+    background: var(--surface);
     color: var(--text-muted);
-    font: inherit;
     cursor: pointer;
-    transition: border-color .15s, transform .15s;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.streak-chip svg { width: 18px; height: 18px; }
+.streak-chip svg { width: 20px; height: 20px; }
 .streak-chip b {
     font-family: var(--font-display);
-    font-size: 22px;
-    font-weight: 700;
+    font-style: italic;
+    font-weight: 800;
+    font-size: 24px;
     line-height: 1;
-    color: var(--text-muted);
+    color: var(--text-dark);
 }
-.streak-chip span { font-size: 12px; font-weight: 700; }
-.streak-chip.on { color: var(--flame); border-color: color-mix(in srgb, var(--flame) 45%, var(--border-color)); background: color-mix(in srgb, var(--flame) 12%, var(--bg-color)); }
-.streak-chip.on b { color: var(--text-dark); }
-.streak-chip.warn { border-style: dashed; }
-.streak-chip:hover { border-color: var(--flame); transform: translateY(-1px); }
+.streak-chip span { font-size: 13px; font-weight: 700; }
+.streak-chip.on {
+    color: var(--flame);
+    background: color-mix(in srgb, var(--flame) 15%, transparent);
+}
+/* "pendente"/"em risco": contorno pra chamar atenção sem alarmar */
+.streak-chip.warn { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--flame) 60%, transparent); }
+.streak-chip:hover { transform: translateY(-1px); }
 
-/* Modal "Sua sequência" */
+/* ---- Modal "Sua sequência" ---- */
 .streak-modal { text-align: center; max-width: 400px; }
 .streak-modal h3 { margin-bottom: 8px; }
 .sm-hero {
@@ -1061,7 +1274,8 @@ html[data-cb="tritanopia"] {
 .sm-hero svg { width: 44px; height: 44px; }
 .sm-hero b {
     font-family: var(--font-display);
-    font-size: 64px;
+    font-style: italic;
+    font-size: 68px;
     font-weight: 800;
     line-height: 1;
     color: var(--text-dark);
@@ -1074,28 +1288,116 @@ html[data-cb="tritanopia"] {
     display: block;
     width: 28px;
     height: 8px;
-    border-radius: var(--radius-pill);
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
+    border-radius: 2px;
+    transform: skewX(-20deg);
+    background: var(--surface);
 }
 .sm-day span { font-size: 11px; font-weight: 700; color: var(--text-muted); }
-.sm-day.done i { background: var(--quest-daily); border-color: var(--quest-daily); }
+.sm-day.done i { background: var(--ok); }
 .sm-day.today span { color: var(--text-dark); }
 .sm-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
 .sm-stats > div {
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 10px;
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 12px 10px;
 }
-.sm-stats span { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); margin-bottom: 4px; }
-.sm-stats b { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--text-dark); }
+.sm-stats span { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+.sm-stats b { font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--text-dark); }
 .sm-freeze { display: inline-flex; align-items: center; gap: 6px; }
 .sm-freeze svg { width: 16px; height: 16px; color: #7cc4ff; }
 .sm-help { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
 
-@media (max-width: 768px) {
-    .level-card { padding: 16px 16px 18px; }
-    .level-name { font-size: 26px; }
+@media (max-width: 600px) {
     .streak-chip span { display: none; }
 }
+
+/* =========================================
+   13. ANIMAÇÕES — leves (só opacidade e movimento) e desligadas
+   em "Reduzir animações" ou quando o sistema pede menos movimento
+   ========================================= */
+@keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+}
+@keyframes popIn {
+    from { opacity: 0; transform: translateY(14px) scale(0.98); }
+}
+@keyframes growX {
+    from { transform: scaleX(0); }
+}
+@keyframes growY {
+    from { transform: scaleY(0); }
+}
+@keyframes lapDraw {
+    from { stroke-dasharray: 0 100; }
+}
+@keyframes haloPulse {
+    0%, 100% { transform: scale(1); opacity: 0.32; }
+    50% { transform: scale(1.5); opacity: 0.08; }
+}
+@keyframes stripeIn {
+    from { transform: skewX(-16deg) scaleY(0); }
+}
+@keyframes flicker {
+    from { transform: rotate(-4deg) scale(1); }
+    to { transform: rotate(4deg) scale(1.08); }
+}
+
+/* Entrada da página: blocos sobem um pouquinho, um depois do outro.
+   "backwards" = depois de terminar, o elemento volta aos próprios estilos. */
+.main-container > *,
+.dash-hero > *,
+.dashboard-sidebar > *,
+.settings-wrap > * {
+    animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+.main-container > *:nth-child(2), .dash-hero > *:nth-child(2), .dashboard-sidebar > *:nth-child(2), .settings-wrap > *:nth-child(2) { animation-delay: 0.06s; }
+.main-container > *:nth-child(3), .dashboard-sidebar > *:nth-child(3), .settings-wrap > *:nth-child(3) { animation-delay: 0.12s; }
+.main-container > *:nth-child(4), .dashboard-sidebar > *:nth-child(4), .settings-wrap > *:nth-child(4) { animation-delay: 0.18s; }
+.main-container > *:nth-child(n+5), .settings-wrap > *:nth-child(n+5) { animation-delay: 0.24s; }
+
+#feedList .post-item { animation: rise 0.45s ease-out backwards; }
+#feedList .post-item:nth-child(2) { animation-delay: 0.06s; }
+#feedList .post-item:nth-child(n+3) { animation-delay: 0.12s; }
+
+/* A volta na pista se desenha e o atleta "respira" */
+.lap-track .t-progress { animation: lapDraw 1.1s cubic-bezier(0.3, 0.6, 0.2, 1) 0.25s backwards; }
+.lap-track .t-dot { animation: fadeIn 0.3s ease-out 1.2s backwards; }
+.lap-track .t-halo {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: haloPulse 2.6s ease-in-out 1.3s infinite;
+}
+
+/* Barras em parciais enchendo e gráfico subindo */
+.seg-bar b { transform-origin: left; animation: growX 0.6s ease-out 0.3s backwards; }
+.seg-bar i:nth-child(2) b { animation-delay: 0.34s; }
+.seg-bar i:nth-child(3) b { animation-delay: 0.38s; }
+.seg-bar i:nth-child(4) b { animation-delay: 0.42s; }
+.seg-bar i:nth-child(5) b { animation-delay: 0.46s; }
+.seg-bar i:nth-child(n+6) b { animation-delay: 0.5s; }
+
+.chart:not(.no-anim) .chart-bar { transform-origin: bottom; animation: growY 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+.chart:not(.no-anim) .chart-col:nth-child(2) .chart-bar { animation-delay: 0.04s; }
+.chart:not(.no-anim) .chart-col:nth-child(3) .chart-bar { animation-delay: 0.08s; }
+.chart:not(.no-anim) .chart-col:nth-child(4) .chart-bar { animation-delay: 0.12s; }
+.chart:not(.no-anim) .chart-col:nth-child(5) .chart-bar { animation-delay: 0.16s; }
+.chart:not(.no-anim) .chart-col:nth-child(6) .chart-bar { animation-delay: 0.2s; }
+.chart:not(.no-anim) .chart-col:nth-child(7) .chart-bar { animation-delay: 0.24s; }
+
+/* Modais e janelas */
+.overlay.open { animation: fadeIn 0.2s ease-out; }
+.overlay.open .modal { animation: popIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* Toque nos botões: afunda de leve */
+.btn-primary, .btn-secondary, .streak-chip, .pm-item, .nav-user, .icon-btn, .filter-pill, .seg-group button {
+    transition: transform 0.12s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+.btn-primary:active, .btn-secondary:active, .streak-chip:active, .icon-btn:active, .filter-pill:active, .seg-group button:active {
+    transform: scale(0.96);
+}
+
+/* A chama mexe quando passa o mouse */
+.streak-chip.on:hover svg { animation: flicker 0.5s ease-in-out infinite alternate; transform-origin: 50% 90%; }

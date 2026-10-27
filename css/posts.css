@@ -1,72 +1,39 @@
 /* =========================================================
    TRAINLY - posts.css
-   Publicações (feed de amigos) — dashboard.
-   Arquivo novo: não substitui feed.css/dashboard.css, só soma.
+   Publicações: feed do Início e aba "Publicações" do Perfil.
    ========================================================= */
-
-/* Aproxima tudo (título + composer + feed) do topo da página —
-   sobrescreve o espaçamento de dashboard.css/feed.css de propósito. */
-.metrics-grid {
-    margin-bottom: 16px !important;
-}
-.dashboard-columns {
-    margin-top: 0 !important;
-}
-.feed-title {
-    margin-top: 0 !important;
-    margin-bottom: 12px !important;
-}
-
-.feed-title-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-.feed-title-row .feed-title { margin-bottom: 0; }
 
 .field textarea {
     width: 100%;
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: 14px;
+    padding: 11px 14px;
     color: var(--text-dark);
     font-size: 14px;
-    font-family: inherit;
     resize: vertical;
 }
 .field textarea:focus { outline: none; border-color: var(--primary-blue); }
 
-/* Trava o scroll do feed de amigos dentro da própria lista — o composer,
-   o título e o resto da página ficam parados, só as publicações rolam. */
+/* O feed rola dentro da própria lista; o resto da página fica parado. */
 #feedList {
-    max-height: 70vh;
+    max-height: 78vh;
     overflow-y: auto;
     padding-right: 6px;
     scrollbar-width: thin;
-    scrollbar-color: var(--border-color) transparent;
+    scrollbar-color: var(--surface) transparent;
 }
-/* a última publicação encosta no fim da lista (sem sobra de margem) */
 #feedList .post-item:last-child { margin-bottom: 0; }
-#feedList::-webkit-scrollbar {
-    width: 8px;
-}
-#feedList::-webkit-scrollbar-track {
-    background: transparent;
-}
-#feedList::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 8px;
-}
+#feedList::-webkit-scrollbar { width: 8px; }
+#feedList::-webkit-scrollbar-track { background: transparent; }
+#feedList::-webkit-scrollbar-thumb { background: var(--surface); border-radius: 8px; }
 
+/* ---- Cartão da publicação ---- */
 .post-item {
     background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    padding: 18px 20px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 20px 22px 10px;
     margin-bottom: 16px;
 }
 
@@ -74,15 +41,14 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 .post-author { display: flex; gap: 12px; align-items: center; }
+.post-author .feed-author-name { font-size: 15px; font-weight: 700; }
 
-/* Botão de apagar publicação (só aparece nas publicações do próprio usuário).
-   Estilo próprio: não depende do .route-icon-btn, que só existe no clubes.css. */
 .post-delete-btn {
-    width: 32px;
-    height: 32px;
+    width: 38px;
+    height: 38px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -91,61 +57,74 @@
     background: transparent;
     color: var(--text-muted);
     border: none;
-    border-radius: 8px;
+    border-radius: 50%;
     cursor: pointer;
-    transition: color .15s ease, background .15s ease;
+    transition: color 0.15s ease, background 0.15s ease;
 }
-.post-delete-btn svg { width: 17px; height: 17px; }
+.post-delete-btn svg { width: 18px; height: 18px; }
 .post-delete-btn:hover {
-    color: var(--danger, #f0554e);
-    background: color-mix(in srgb, var(--danger, #f0554e) 12%, transparent);
+    color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
 
 .post-content {
-    font-size: 14px;
+    font-size: 16px;
     color: var(--text-dark);
-    line-height: 1.5;
-    margin-bottom: 12px;
+    line-height: 1.55;
+    margin-bottom: 14px;
     white-space: pre-wrap;
 }
 
 .post-photo {
     width: 100%;
-    max-height: 340px;
+    max-height: 420px;
     object-fit: cover;
-    border-radius: 8px;
-    margin-bottom: 12px;
+    border-radius: 18px;
+    margin-bottom: 6px;
     display: block;
 }
 
+/* Curtir / Comentar: botões leves, sem caixinha */
 .post-footer {
     display: flex;
     align-items: center;
-    gap: 10px;
-    border-top: 1px solid var(--border-color);
-    padding-top: 12px;
+    gap: 4px;
+    margin: 4px -8px 0;
 }
-
-.kudos-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.comment-toggle-btn {
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    padding: 5px 11px;
-    font-size: 12px;
-    font-weight: 700;
+.post-footer .kudos-btn,
+.comment-toggle-btn,
+.pa-kudos {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 42px;
+    padding: 0 12px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: transparent;
     color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
 }
-.comment-toggle-btn:hover { border-color: var(--primary-blue); color: var(--text-dark); }
+.post-footer .kudos-btn svg,
+.comment-toggle-btn svg,
+.pa-kudos svg { width: 19px; height: 19px; }
+.post-footer .kudos-btn:hover,
+.comment-toggle-btn:hover,
+.pa-kudos:hover { background: var(--surface); color: var(--text-dark); }
+.post-footer .kudos-btn.liked,
+.pa-kudos.liked { color: #ff6b81; }
+.post-footer .kudos-btn.liked svg,
+.pa-kudos.liked svg { fill: currentColor; }
+.kudos-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* ---- Comentários ---- */
 .post-comments {
-    margin-top: 14px;
-    padding-top: 14px;
+    margin: 6px 0 10px;
+    padding-top: 12px;
     border-top: 1px solid var(--border-color);
 }
-
 .comment-item {
     display: flex;
     gap: 10px;
@@ -153,66 +132,58 @@
     margin-bottom: 10px;
 }
 .comment-body {
-    background: var(--bg-color);
-    border-radius: 10px;
-    padding: 6px 12px;
-    font-size: 13px;
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 8px 12px;
+    font-size: 14px;
     color: var(--text-dark);
+    line-height: 1.45;
 }
 .comment-author { font-weight: 700; }
 
-.comment-input-row {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
-}
+.comment-input-row { display: flex; gap: 8px; margin-top: 10px; }
 .comment-input {
     flex: 1;
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    padding: 8px 14px;
+    min-width: 0;
+    height: 42px;
+    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    padding: 0 16px;
     color: var(--text-dark);
-    font-size: 13px;
-    font-family: inherit;
+    font-size: 14px;
 }
 .comment-input:focus { outline: none; border-color: var(--primary-blue); }
 .comment-send-btn {
+    height: 42px;
     background: var(--primary-blue);
     color: #fff;
     border: none;
-    border-radius: 20px;
-    padding: 8px 16px;
-    font-size: 13px;
+    border-radius: var(--radius-pill);
+    padding: 0 18px;
+    font-family: var(--font-display);
+    font-size: 17px;
     font-weight: 700;
     cursor: pointer;
 }
-.comment-send-btn:hover { opacity: 0.9; }
+.comment-send-btn:hover { background: var(--primary-hover); }
 
 /* =========================================================
-   Cards quadrados (grid) — aba "Publicações" do perfil e
-   ajuste dos cards de "Atividades" pra não reservar espaço de
-   foto quando a atividade não tem uma.
+   Cards quadrados (grid) — aba "Publicações" do perfil
    ========================================================= */
-
-/* Badge de tipo/rótulo quando NÃO há foto (substitui o .pa-badge,
-   que é posicionado absoluto por cima da foto). */
 .pa-badge-inline {
     display: inline-block;
-    font-size: 10.5px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     padding: 4px 10px;
-    border-radius: 6px;
-    background: var(--bg-color);
+    border-radius: var(--radius-pill);
+    background: var(--surface);
     color: var(--text-muted);
     margin-bottom: 8px;
 }
 
-/* Card de publicação, no mesmo formato quadrado usado pelas atividades */
-.pa-card {
-    position: relative;
-}
+.pa-card { position: relative; }
 .pa-card .post-delete-btn {
     position: absolute;
     top: 8px;
@@ -220,10 +191,7 @@
     background: rgba(0, 0, 0, 0.55);
     color: #fff;
 }
-.pa-card .post-delete-btn:hover {
-    background: var(--danger);
-    color: #fff;
-}
+.pa-card .post-delete-btn:hover { background: var(--danger); color: #fff; }
 .pa-card .pa-title {
     display: -webkit-box;
     -webkit-line-clamp: 3;

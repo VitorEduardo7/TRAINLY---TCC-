@@ -106,6 +106,31 @@ body {
     margin-bottom: 16px;
 }
 
+/* Logo em texto "TRAINLY" (mesmo estilo da página de boas-vindas).
+   O global.css novo só estiliza o logo em imagem da barra lateral. */
+.auth-container .brand-logo,
+.auth-container .brand-logo.dark {
+    display: inline-flex;
+    align-items: center;
+    height: auto;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--text-dark);
+}
+.auth-container .brand-logo.dark { color: #ffffff; font-size: 40px; }
+.auth-container .brand-logo span { color: var(--primary-blue); }
+.auth-container .brand-logo.dark span { color: #5a96ff; }
+/* Ícone do corredor: no painel da foto fica sempre a versão clara (fundo escuro);
+   o do celular (.logo-img) troca com o tema pelo main.js */
+.auth-container .brand-logo img { display: block; width: auto; height: 40px; max-height: none; max-width: none; margin-right: 10px; }
+.auth-container .brand-logo.dark img { height: 54px; }
+
 .auth-header h2 {
     font-size: 24px;
     font-weight: 800;

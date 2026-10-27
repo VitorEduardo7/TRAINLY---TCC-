@@ -157,6 +157,10 @@
     .profile-avatar-big { width: 90px; height: 90px; font-size: 32px; }
     .profile-stats-row { grid-template-columns: repeat(2, 1fr); }
     .activities-grid { grid-template-columns: 1fr; }
+    /* Botões do topo (Compartilhar, Editar, engrenagem) quebram linha no celular */
+    .profile-actions { flex-wrap: wrap; width: 100%; }
+    .profile-actions > .btn-secondary,
+    .profile-actions > .btn-primary { flex: 1 1 auto; }
 }
 
 /* Aba Estatísticas */
@@ -279,3 +283,169 @@
 .pl-streak .resumo-value { color: var(--text-dark); }
 .pl-streak:hover .resumo-value { text-decoration: underline; text-underline-offset: 3px; }
 .pl-streak + .pl-note { margin-top: 10px; }
+
+/* Botão de Configurações (engrenagem) — só no próprio perfil */
+.profile-actions { align-items: center; }
+.profile-settings-btn {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--text-dark);
+    transition: background 0.18s ease, transform 0.3s ease;
+}
+.profile-settings-btn svg { width: 21px; height: 21px; }
+.profile-settings-btn:hover { background: color-mix(in srgb, var(--primary-blue) 22%, var(--surface)); transform: rotate(45deg); }
+
+/* =========================================
+   SEGUIDORES / SEGUINDO
+   Os cartões viram botões e abrem a janela com a lista.
+   ========================================= */
+.profile-stat-card.stat-link {
+    display: block;
+    width: 100%;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.12s ease;
+}
+.profile-stat-card.stat-link .ps-value,
+.profile-stat-card.stat-link .ps-label { display: block; }
+.profile-stat-card.stat-link:hover { background: color-mix(in srgb, var(--primary-blue) 12%, var(--card-bg)); }
+.profile-stat-card.stat-link:hover .ps-label { color: var(--text-dark); }
+.profile-stat-card.stat-link:active { transform: scale(0.98); }
+.profile-stat-card.stat-link:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* Janela */
+.conn-modal {
+    max-width: 480px;
+    height: min(640px, 86vh);
+    max-height: 86vh;
+    display: flex;
+    flex-direction: column;
+    padding: 22px 22px 12px;
+    overflow: hidden;
+}
+.overlay.open .conn-modal { animation: popIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.conn-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.conn-head h3 { font-size: 26px; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conn-close {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--text-muted);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+}
+.conn-close svg { width: 18px; height: 18px; }
+.conn-close:hover { color: var(--text-dark); }
+
+/* Abas Seguidores / Seguindo */
+.conn-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border-radius: var(--radius-pill); background: var(--surface); }
+.conn-tabs button {
+    height: 40px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: none;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.conn-tabs button:hover { color: var(--text-dark); }
+.conn-tabs button[aria-pressed="true"] { background: var(--primary-blue); color: #fff; }
+.conn-tabs span { opacity: 0.75; font-weight: 600; margin-left: 2px; }
+
+/* Busca */
+.conn-search { position: relative; margin: 12px 0 6px; }
+.conn-search svg { position: absolute; left: 14px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+.conn-search input {
+    width: 100%;
+    height: 44px;
+    padding: 0 14px 0 42px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--text-dark);
+    font-size: 14.5px;
+}
+.conn-search input:focus { outline: none; border-color: var(--primary-blue); }
+.conn-search input::-webkit-search-cancel-button { cursor: pointer; }
+
+/* Lista */
+.conn-list { list-style: none; margin: 0 -8px; padding: 4px 8px 8px; flex: 1; overflow-y: auto; }
+.conn-item { display: flex; align-items: center; gap: 10px; padding: 6px; border-radius: 16px; animation: rise 0.3s ease-out backwards; }
+.conn-item:nth-child(2) { animation-delay: 0.03s; }
+.conn-item:nth-child(3) { animation-delay: 0.06s; }
+.conn-item:nth-child(n+4) { animation-delay: 0.09s; }
+.conn-item:hover { background: var(--surface); }
+.conn-link { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; padding: 4px; border-radius: 12px; color: inherit; text-decoration: none; }
+.conn-av {
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background-size: cover;
+    background-position: center;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px var(--rank-color, transparent);
+}
+.conn-info { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.conn-name { font-size: 15px; font-weight: 700; color: var(--text-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conn-link:hover .conn-name { text-decoration: underline; text-underline-offset: 3px; }
+.conn-you { display: inline-block; margin-left: 4px; padding: 1px 8px; border-radius: var(--radius-pill); background: var(--surface); color: var(--text-muted); font-size: 11px; font-weight: 700; vertical-align: 2px; }
+.conn-item:hover .conn-you { background: var(--card-bg); }
+.conn-meta { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conn-meta i { width: 8px; height: 8px; flex-shrink: 0; border-radius: 2px; transform: rotate(45deg); background: var(--rank-color); }
+.conn-tag { align-self: flex-start; margin-top: 2px; padding: 1px 8px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--primary-blue) 16%, transparent); color: var(--primary-blue); font-size: 11px; font-weight: 700; }
+html[data-theme="dark"] .conn-tag { color: #8db6ff; }
+
+.conn-follow {
+    flex-shrink: 0;
+    height: 36px;
+    padding: 0 16px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: var(--primary-blue);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.12s ease;
+}
+.conn-follow:hover { background: var(--primary-hover); }
+.conn-follow:active { transform: scale(0.96); }
+.conn-follow.on { background: var(--surface); color: var(--text-dark); }
+.conn-item:hover .conn-follow.on { background: var(--card-bg); }
+.conn-follow:disabled { opacity: 0.6; cursor: wait; }
+
+.conn-empty { padding: 36px 12px; text-align: center; font-size: 14px; line-height: 1.6; color: var(--text-muted); }
+.conn-empty a { color: var(--primary-blue); font-weight: 700; }
+.conn-retry { margin-top: 10px; padding: 8px 16px; border: none; border-radius: var(--radius-pill); background: var(--surface); color: var(--text-dark); font-weight: 700; cursor: pointer; }
+
+/* Carregando */
+.conn-skel { height: 58px; margin: 6px 0; border-radius: 16px; background: linear-gradient(90deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 60%, var(--card-bg)) 50%, var(--surface) 100%); background-size: 200% 100%; animation: connShimmer 1.2s linear infinite; }
+@keyframes connShimmer { to { background-position: -200% 0; } }
+
+html[data-contrast="high"] .conn-modal { border: 1px solid var(--border-color); }
+
+@media (max-width: 600px) {
+    #connOverlay { align-items: flex-end; padding: 0; }
+    .conn-modal { max-width: none; height: 88vh; max-height: 88vh; border-radius: 24px 24px 0 0; padding: 18px 16px 8px; }
+    .overlay.open .conn-modal { animation: connSheet 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .conn-head h3 { font-size: 22px; }
+    .conn-follow { padding: 0 12px; }
+}
+@keyframes connSheet { from { transform: translateY(40px); opacity: 0; } }

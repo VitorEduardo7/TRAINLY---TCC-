@@ -6,13 +6,6 @@
 (function () {
   "use strict";
 
-  const API_BASE = "http://localhost/TRAINLY---TCC-/api/index.php";
-  const TOKEN_KEY = "trainly_token";
-
-  function getToken() {
-    return localStorage.getItem(TOKEN_KEY);
-  }
-
   function showToast(msg) {
     if (window.Trainly && window.Trainly.showToast) {
       window.Trainly.showToast(msg);
@@ -21,48 +14,18 @@
     }
   }
 
+  // Mesmo caminho do main.js: tudo passa por js/api/ (Supabase)
   async function apiRequest(path, options = {}) {
-    // Banco do app (Supabase): ver js/supabase-api.js
-    if (window.TrainlySupabase && window.TrainlySupabase.enabled) {
-      try {
-        return await window.TrainlySupabase.request(path, options);
-      } catch (err) {
-        if (err.status === 401) {
-          localStorage.removeItem(TOKEN_KEY);
-          if (!location.pathname.endsWith("login.php")) location.href = "login.php";
-        }
-        throw err;
-      }
+    if (!window.TrainlySupabase) {
+      throw new Error("Não foi possível carregar a conexão com o servidor. Recarregue a página.");
     }
-
-    const token = getToken();
-    const isFormData = options.body instanceof FormData;
-    const clean = path.replace(/^\//, "");
-    const [route, existingQuery] = clean.split("?");
-    const url = API_BASE + "?route=" + encodeURIComponent(route) + (existingQuery ? "&" + existingQuery : "");
-
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        ...(isFormData ? {} : { "Content-Type": "application/json" }),
-        ...(token ? { Authorization: "Bearer " + token } : {}),
-        ...(options.headers || {})
-      }
-    });
-    if (res.status === 401) {
-      localStorage.removeItem(TOKEN_KEY);
-      if (!location.pathname.endsWith("login.php")) location.href = "login.php";
-      throw new Error("Não autenticado");
+    try {
+      return await window.TrainlySupabase.request(path, options);
+    } catch (err) {
+      // Sessão expirada: volta pra página de boas-vindas
+      if (err.status === 401) location.href = "index.php";
+      throw err;
     }
-    if (!res.ok) {
-      let msg = "Erro na requisição";
-      try {
-        msg = (await res.json()).error || msg;
-      } catch (e) {}
-      throw new Error(msg);
-    }
-    if (res.status === 204) return null;
-    return res.json();
   }
 
   const AVATAR_COLORS = ["#8b5cf6", "#ef4444", "#10b981", "#f59e0b", "#3b82f6", "#ec4899", "#14b8a6"];
@@ -138,6 +101,10 @@
   /* ---------------------------------------------------------
      Render
      --------------------------------------------------------- */
+  // Ícones de curtir/comentar (antes eram emojis 👍 💬)
+  const HEART_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>';
+  const COMMENT_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>';
+
   function renderComment(c) {
     return (
       '<div class="comment-item">' +
@@ -181,8 +148,8 @@
         contentHtml +
         photoHtml +
         '<div class="post-footer">' +
-          '<button class="kudos-btn' + (p.likedByMe ? " liked" : "") + '" data-action="like"' + (p.canLike ? "" : " disabled") + ">👍 <span>" + (p.likeCount || 0) + "</span></button>" +
-          '<button class="comment-toggle-btn" type="button">💬 ' + (p.comments ? p.comments.length : 0) + "</button>" +
+          '<button class="kudos-btn' + (p.likedByMe ? " liked" : "") + '" data-action="like" aria-label="Curtir"' + (p.canLike ? "" : " disabled") + ">" + HEART_SVG + "<span>" + (p.likeCount || 0) + "</span></button>" +
+          '<button class="comment-toggle-btn" type="button" aria-label="Comentários">' + COMMENT_SVG + "<span>" + (p.comments ? p.comments.length : 0) + "</span></button>" +
         "</div>" +
         '<div class="post-comments" style="display:none;">' +
           '<div class="comment-list">' + commentsHtml + "</div>" +
@@ -250,7 +217,7 @@
             list.insertAdjacentHTML("beforeend", renderComment(comment));
             input.value = "";
             if (commentToggle) {
-              commentToggle.textContent = "💬 " + item.querySelectorAll(".comment-item").length;
+              commentToggle.querySelector("span").textContent = item.querySelectorAll(".comment-item").length;
             }
           } catch (err) {
             showToast(err.message || "Não foi possível comentar agora.");
@@ -307,7 +274,7 @@
           '<div class="pa-date">' + timeAgo(p.date) + "</div>" +
           '<div class="pa-stats">' +
             "<div>" + (p.comments ? p.comments.length : 0) + " coment.</div>" +
-            '<button class="kudos-btn pa-kudos' + (p.likedByMe ? " liked" : "") + '" data-action="like"' + (p.canLike ? "" : " disabled") + ">👍 <span>" + (p.likeCount || 0) + "</span></button>" +
+            '<button class="kudos-btn pa-kudos' + (p.likedByMe ? " liked" : "") + '" data-action="like" aria-label="Curtir"' + (p.canLike ? "" : " disabled") + ">" + HEART_SVG + "<span>" + (p.likeCount || 0) + "</span></button>" +
           "</div>" +
         "</div>" +
       "</div>"

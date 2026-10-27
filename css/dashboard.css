@@ -1,459 +1,443 @@
 /* =========================================
-   DASHBOARD — arquivo único (antigo + métricas)
+   DASHBOARD (Início) — layout no estilo do app
+   Cores, cartões, botões, a volta de XP e a chama ficam no global.css.
    ========================================= */
-
-.card {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-card);
-    padding: 24px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-}
 
 .empty-state { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
 
-.feed-header { margin-bottom: 24px; }
-.feed-header h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
-.feed-header p { font-size: 14px; color: var(--text-muted); }
-.feed-item { display: flex; gap: 16px; align-items: flex-start; }
-.feed-icon { width: 40px; height: 40px; border-radius: 50%; background-color: var(--bg-color); display: flex; align-items: center; justify-content: center; color: var(--text-dark); flex-shrink: 0; }
-.feed-text h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-.feed-text p { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5; }
-.divider { border: none; border-top: 1px solid var(--border-color); margin: 24px 0; }
-
-.btn-secondary { background-color: #242428; color: white; border: none; padding: 10px 20px; }
-.btn-secondary:hover { background-color: #000000; }
-.btn-outline { background-color: transparent; color: var(--primary-blue); border: 1px solid var(--primary-blue); padding: 8px 16px; }
-.btn-outline:hover { background-color: rgba(38, 124, 238, 0.05); }
+.btn-outline {
+    background-color: transparent;
+    color: var(--primary-blue);
+    border: 1px solid var(--primary-blue);
+    padding: 8px 16px;
+}
+.btn-outline:hover { background-color: color-mix(in srgb, var(--primary-blue) 10%, transparent); }
 
 /* =========================================
-   MÉTRICAS DA SEMANA
+   CABEÇALHO
    ========================================= */
-.metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
+.main-container.dashboard-wide {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.dash-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
     gap: 16px;
-    margin-bottom: 24px;
 }
-
-.metric-card {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-card);
-    padding: 18px 20px;
-}
-
-.metric-label {
-    font-size: 11px;
-    letter-spacing: 1px;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 10px;
-}
-
-.metric-value {
-    font-family: var(--font-display);
-    font-size: 32px;
-    font-weight: 700;
-    line-height: 1.1;
-    color: var(--text-dark);
-}
-
-.metric-value span {
+.datestamp {
+    display: block;
     font-size: 14px;
     font-weight: 600;
     color: var(--text-muted);
+    margin-bottom: 6px;
 }
-
-.metric-delta {
-    display: inline-block;
-    margin-top: 10px;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 3px 9px;
-    border-radius: 6px;
-}
-
-.delta-up { color: var(--ok); background: var(--ok-soft); }
-.delta-down { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
-
-/* =========================================
-   ATIVIDADES / FEED
-   ========================================= */
-.activities-card {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-card);
-    padding: 24px;
-    margin-bottom: 24px;
-}
-.activities-card .feed-header h2 {
-    font-size: 15px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    text-transform: uppercase;
+.greeting {
+    font-size: 52px;
+    line-height: 1;
     color: var(--text-dark);
 }
+.dash-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#streakSlot:empty { display: none; }
 
-.activity-item {
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 16px 18px;
-    margin-bottom: 12px;
-    position: relative;
-    overflow: hidden;
-}
-.activity-item:last-child { margin-bottom: 0; }
-.activity-item::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: var(--primary-blue);
-}
-
-.activity-item-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-}
-
-.activity-item-info { display: flex; gap: 12px; align-items: flex-start; }
-
-.act-icon {
-    width: 38px; height: 38px;
-    border-radius: 9px;
-    background: var(--bg-color);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; flex-shrink: 0;
-}
-
-.act-type {
-    color: var(--primary-blue);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-
-.act-title { font-size: 15px; font-weight: 700; color: var(--text-dark); margin: 2px 0; }
-.act-date { color: var(--text-muted); font-size: 12px; }
-
-.act-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+.dash-cta {
+    display: inline-flex;
+    align-items: center;
     gap: 8px;
-    margin-top: 14px;
+    height: 44px;
+    padding: 0 22px;
+    font-size: 19px;
+    text-decoration: none;
 }
-.act-stat-label {
-    font-size: 10px;
-    letter-spacing: 0.5px;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 3px;
-}
-.act-stat-value { font-size: 14px; font-weight: 700; color: var(--text-dark); }
+.dash-cta svg { width: 18px; height: 18px; }
 
 /* =========================================
-   SIDEBAR (Volume semanal / Recordes / Meta / Amigos ativos)
+   DESTAQUES: volta de XP + semana
    ========================================= */
-.sidebar-block { margin-top: 20px; }
-.sidebar-block h2 {
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--text-dark);
-    margin-bottom: 18px;
+.dash-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr);
+    gap: 20px;
 }
 
-/* NOVO: cabeçalho de bloco da sidebar com botão de ação (ex: "Editar"
-   na Meta do Mês) ao lado do título. */
-.sidebar-block-header {
+.week-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 24px 26px 22px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.week-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 18px;
+    gap: 8px;
 }
-.sidebar-block-header h2 { margin-bottom: 0; }
-
-.goal-edit-btn {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-muted);
-    font-size: 11px;
+.week-head h2 {
+    font-family: var(--font-display);
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 4px 10px;
-    border-radius: 20px;
+    font-size: 24px;
+}
+.week-nav { display: flex; gap: 6px; }
+.week-nav-btn {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--text-dark);
+    font-size: 20px;
+    line-height: 1;
     cursor: pointer;
 }
-.goal-edit-btn:hover { color: var(--text-dark); border-color: var(--primary-blue); }
+.week-nav-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--primary-blue) 22%, var(--surface)); }
+.week-nav-btn:disabled { opacity: 0.35; cursor: default; }
 
+.week-range { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+.week-hero {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    margin-top: 14px;
+}
+.week-km {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: 72px;
+    line-height: 0.9;
+    color: var(--text-dark);
+}
+.week-unit {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 26px;
+    color: var(--text-muted);
+}
+.week-delta:empty { display: none; }
+.week-delta {
+    margin-left: auto;
+    align-self: center;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: var(--radius-pill);
+}
+.week-delta.up { color: var(--ok); background: var(--ok-soft); }
+.week-delta.down { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
+.week-delta.flat { color: var(--text-muted); background: var(--surface); }
+
+.week-sub { font-size: 14px; color: var(--text-muted); margin-top: 8px; }
+
+/* Gráfico da semana: clicar num dia mostra o detalhe */
 .chart {
     display: flex;
     align-items: flex-end;
-    gap: 7px;
-    height: 100px;
-    margin-bottom: 6px;
+    gap: 8px;
+    height: 96px;
+    margin-top: 18px;
 }
 .chart-col {
     flex: 1;
+    height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-end;
-    height: 100%;
     gap: 6px;
 }
-.chart-bar {
-    width: 100%;
-    max-width: 24px;
-    background: var(--border-color);
-    border-radius: 4px 4px 2px 2px;
-    min-height: 3px;
-    transition: height .3s;
-}
-.chart-bar.today { background: var(--primary-blue); }
-.chart-day { font-size: 10px; color: var(--text-muted); font-weight: 700; }
-.chart-day.today { color: var(--text-dark); }
-
-/* NOVO: colunas clicáveis (dia selecionado) + navegação entre semanas */
 button.chart-col {
     background: none;
     border: none;
     padding: 0;
-    font: inherit;
     color: inherit;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: 8px;
 }
-button.chart-col:hover .chart-bar { background: color-mix(in srgb, var(--primary-blue) 55%, var(--border-color)); }
-button.chart-col:focus-visible { outline: 2px solid var(--primary-blue); outline-offset: 2px; }
-.chart-col.selected .chart-bar { background: var(--primary-blue); }
+.chart-bar {
+    width: 100%;
+    max-width: 26px;
+    min-height: 6px;
+    border-radius: 7px;
+    background: var(--bar);
+    transition: height 0.3s ease, background 0.15s ease;
+}
+.chart-bar.rest { background: var(--surface); }
+.chart-bar.today { background: var(--primary-blue); }
+.chart-day { font-size: 12px; color: var(--text-muted); font-weight: 700; }
+.chart-day.today { color: var(--text-dark); }
+button.chart-col:hover .chart-bar { background: color-mix(in srgb, var(--primary-blue) 60%, var(--bar)); }
+button.chart-col:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.chart-col.selected .chart-bar { background: var(--primary-blue); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-blue) 30%, transparent); }
 .chart-col.selected .chart-day { color: var(--text-dark); }
 
-.week-nav { display: flex; gap: 6px; }
-.week-nav-btn {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    color: var(--text-muted);
-    font-size: 18px;
-    line-height: 1;
-    font-family: inherit;
-    cursor: pointer;
-}
-.week-nav-btn:hover:not(:disabled) { color: var(--text-dark); border-color: var(--primary-blue); }
-.week-nav-btn:disabled { opacity: .35; cursor: default; }
-
-.week-range {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-muted);
-    margin: -8px 0 14px;
-}
-
 .week-day-info {
-    min-height: 64px;
-    margin: 12px 0 4px;
+    margin-top: 14px;
     padding: 12px 14px;
-    border-radius: 10px;
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    background: var(--surface);
 }
 .week-day-info:empty { display: none; }
-.week-day-title { font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--text-muted); }
-.week-day-km { font-size: 22px; font-weight: 800; color: var(--text-dark); margin: 2px 0; }
+.week-day-title { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+.week-day-km {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: 28px;
+    line-height: 1.1;
+    color: var(--text-dark);
+}
 .week-day-meta { font-size: 12px; color: var(--text-muted); }
-.week-day-empty { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
-.chart-total {
-    border-top: 1px solid var(--border-color);
-    padding-top: 12px;
-    margin-top: 6px;
+.week-day-empty { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+/* Tempo, ritmo e atividades: números soltos, sem caixinha */
+.week-stats {
     display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    color: var(--text-dark);
+    flex-wrap: wrap;
+    gap: 12px 28px;
+    margin-top: auto;
+    padding-top: 18px;
 }
-.chart-total b { font-size: 15px; }
-
-.pr-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border-color);
-}
-.pr-row:last-child { border-bottom: none; }
-.pr-label { font-size: 13px; font-weight: 700; color: var(--text-dark); }
-.pr-date { color: var(--text-muted); font-size: 11px; }
-.pr-value { color: var(--primary-blue); font-weight: 800; font-size: 15px; }
-
-.goal-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-dark); margin-bottom: 8px; }
-.goal-row b { font-weight: 800; }
-.goal-bar { width: 100%; height: 8px; background: var(--bg-color); border-radius: 20px; overflow: hidden; margin-bottom: 8px; }
-.goal-bar-fill { height: 100%; background: var(--primary-blue); border-radius: 20px; transition: width .4s ease; }
-.goal-note { font-size: 11px; color: var(--text-muted); }
-
-/* =========================================
-   CURTIDAS
-   ========================================= */
-.kudos-btn {
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    padding: 5px 11px;
-    font-size: 12px;
+.week-stat b {
+    display: block;
+    font-family: var(--font-display);
     font-weight: 700;
-    color: var(--text-muted);
+    font-size: 26px;
+    line-height: 1.1;
+    color: var(--text-dark);
+}
+.week-stat b small { font-size: 15px; color: var(--text-muted); font-weight: 700; }
+.week-stat span { font-size: 12px; color: var(--text-muted); }
+
+/* =========================================
+   COLUNAS: feed + lateral
+   ========================================= */
+.dashboard-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 24px;
+    align-items: start;
+}
+.feed-content-wide { min-width: 0; }
+.feed-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 30px;
+    color: var(--text-dark);
+    margin: 4px 0 14px;
+}
+
+.dashboard-sidebar { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.dashboard-sidebar .card { padding: 22px; }
+
+.sidebar-block h2 { color: var(--text-dark); margin-bottom: 14px; }
+.sidebar-block-header {
     display: flex;
     align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 14px;
 }
-.kudos-btn.liked { color: #f5a623; border-color: #f5a623; }
-.kudos-btn:hover { border-color: var(--primary-blue); color: var(--text-dark); }
+.sidebar-block-header h2 { margin-bottom: 0; }
+
+.goal-edit-btn {
+    height: 34px;
+    padding: 0 14px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: var(--surface);
+    color: var(--text-dark);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.goal-edit-btn:hover { background: color-mix(in srgb, var(--primary-blue) 22%, var(--surface)); }
+
+/* Barras em parciais inclinados (assinatura do app) */
+.seg-bar { display: flex; gap: 5px; }
+.seg-bar i {
+    flex: 1;
+    display: block;
+    height: 8px;
+    border-radius: 2px;
+    transform: skewX(-20deg);
+    background: var(--surface);
+    overflow: hidden;
+}
+.seg-bar b { display: block; height: 100%; background: var(--seg-color, var(--primary-blue)); }
+
+/* Meta do mês */
+.goal-hero { display: flex; align-items: baseline; gap: 6px; margin-bottom: 14px; }
+.goal-hero strong {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: 52px;
+    line-height: 0.9;
+    color: var(--text-dark);
+}
+.goal-hero span {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--text-muted);
+}
+.goal-widget-bar { --seg-color: var(--primary-blue); }
+.goal-widget-bar i { height: 10px; }
+.goal-note { font-size: 13px; color: var(--text-muted); margin-top: 12px; }
+.goal-note b { color: var(--text-dark); }
+.goal-note.done b { color: var(--ok); }
 
 /* =========================================
-   MODAL DE REGISTRAR ATIVIDADE
-   ========================================= */
-.overlay {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.6);
-    display: none; align-items: center; justify-content: center;
-    z-index: 500; padding: 20px;
-}
-.overlay.open { display: flex; }
-.modal {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    padding: 26px;
-    width: 100%; max-width: 440px;
-    max-height: 88vh; overflow-y: auto;
-}
-.modal h3 {
-    font-size: 16px; font-weight: 800;
-    text-transform: uppercase; letter-spacing: 0.5px;
-    color: var(--text-dark);
-    margin-bottom: 18px;
-}
-.field { margin-bottom: 14px; }
-.field label {
-    display: block; font-size: 12px; color: var(--text-muted);
-    font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
-    margin-bottom: 6px;
-}
-.field input, .field select {
-    width: 100%;
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 10px 12px;
-    color: var(--text-dark);
-    font-size: 14px;
-    font-family: inherit;
-}
-.field input:focus, .field select:focus { outline: none; border-color: var(--primary-blue); }
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-.modal-actions .btn-secondary,
-.modal-actions .btn-primary { flex: 1; padding: 11px; }
-
-/* =========================================
-   DESAFIOS (estilo do app)
-   O card de nível e a chama de sequência ficam no global.css (seção 12),
-   porque aparecem no Dashboard e no Perfil.
+   DESAFIOS
    ========================================= */
 :root {
     --quest-daily: var(--ok);
     --quest-weekly: var(--primary-blue);
 }
-
-/* Desafios (sidebar) */
 .quests-count {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     color: var(--text-muted);
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
+    background: var(--surface);
     border-radius: var(--radius-pill);
-    padding: 3px 10px;
+    padding: 5px 11px;
 }
 .quests-count:empty { display: none; }
-.quest-group + .quest-group { margin-top: 18px; }
-.quest-group-title {
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 10px;
-}
-.quest-row {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border-color);
-}
-.quest-row:last-child { border-bottom: none; padding-bottom: 0; }
+.quest-group + .quest-group { margin-top: 10px; }
+.quest-group-title { font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 2px; }
+.quest-group.daily { --quest-color: var(--quest-daily); }
+.quest-group.weekly { --quest-color: var(--quest-weekly); }
+
+.quest-row { display: flex; gap: 14px; align-items: flex-start; padding: 11px 0; }
 .quest-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: color-mix(in srgb, var(--quest-color) 16%, var(--bg-color));
+    box-shadow: inset 0 0 0 2px var(--surface);
     color: var(--quest-color);
 }
-.quest-icon svg { width: 18px; height: 18px; }
-.quest-group.daily { --quest-color: var(--quest-daily); }
-.quest-group.weekly { --quest-color: var(--quest-weekly); }
+.quest-icon svg { width: 15px; height: 15px; }
+.quest-row.done .quest-icon { box-shadow: inset 0 0 0 2px var(--quest-color); }
 .quest-body { flex: 1; min-width: 0; }
 .quest-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.quest-title { font-size: 13px; font-weight: 700; color: var(--text-dark); }
+.quest-title { font-size: 15px; font-weight: 600; color: var(--text-dark); }
 .quest-xp {
     font-family: var(--font-display);
-    font-size: 16px;
-    font-weight: 700;
+    font-style: italic;
+    font-weight: 800;
+    font-size: 19px;
     color: var(--xp-gold);
     white-space: nowrap;
 }
-.quest-segs { display: flex; gap: 4px; margin: 7px 0 5px; }
-.quest-segs i {
-    flex: 1;
-    height: 6px;
-    border-radius: var(--radius-pill);
-    background: var(--bg-color);
-    overflow: hidden;
-}
-.quest-segs b {
-    display: block;
-    height: 100%;
-    background: var(--quest-color);
-    border-radius: var(--radius-pill);
-    transition: width .4s ease;
-}
-.quest-meta { font-size: 11px; color: var(--text-muted); }
-.quest-done { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: var(--quest-color); }
-.quest-done svg { width: 12px; height: 12px; }
+.quest-segs { --seg-color: var(--quest-color); margin: 8px 0 6px; }
+.quest-segs i { height: 7px; }
+.quest-meta { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.quest-done { color: var(--quest-color); }
 .quest-row.done .quest-title { color: var(--text-muted); }
-.quest-row.done .quest-xp { opacity: .6; }
 
+/* =========================================
+   PRIMEIRA ATIVIDADE (conta nova)
+   ========================================= */
+.walkthrough-card { display: flex; gap: 16px; align-items: flex-start; margin-top: 16px; }
+.walkthrough-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-blue);
+    background: color-mix(in srgb, var(--primary-blue) 16%, transparent);
+}
+.walkthrough-icon svg { width: 24px; height: 24px; }
+.walkthrough-card h3 { font-family: var(--font-display); font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+.walkthrough-card p { font-size: 14px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px; }
+.walkthrough-card .btn-primary { display: inline-flex; align-items: center; height: 42px; padding: 0 20px; text-decoration: none; }
 
-@media (max-width: 768px) {
-    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
-    .act-stats { grid-template-columns: repeat(3, 1fr); }
+/* =========================================
+   MODAIS (publicar, editar meta)
+   ========================================= */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 5, 20, 0.66);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    padding: 20px;
+}
+.overlay.open { display: flex; }
+.modal {
+    background: var(--card-bg);
+    border-radius: var(--radius-card);
+    padding: 26px;
+    width: 100%;
+    max-width: 440px;
+    max-height: 88vh;
+    overflow-y: auto;
+}
+.modal h3 { color: var(--text-dark); margin-bottom: 18px; }
+.field { margin-bottom: 14px; }
+.field label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+.field input,
+.field select {
+    width: 100%;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    padding: 11px 14px;
+    background: var(--surface);
+    color: var(--text-dark);
+    font-size: 14px;
+}
+.field input:focus,
+.field select:focus { outline: none; border-color: var(--primary-blue); }
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.modal-actions .btn-secondary,
+.modal-actions .btn-primary { flex: 1; padding: 11px; }
+
+/* =========================================
+   RESPONSIVO
+   ========================================= */
+@media (max-width: 1180px) {
+    .dash-hero { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 980px) {
+    .dashboard-columns { grid-template-columns: 1fr; }
+    /* no celular os desafios vêm antes do feed, como no app */
+    .dashboard-sidebar { order: -1; }
+}
+
+@media (max-width: 600px) {
+    .main-container.dashboard-wide { gap: 18px; }
+    .greeting { font-size: 38px; }
+    .dash-actions { width: 100%; }
+    .dash-cta { flex: 1; justify-content: center; }
+    .week-card { padding: 20px 18px; border-radius: var(--radius-card); }
+    .week-km { font-size: 58px; }
+    .feed-title { font-size: 26px; }
 }

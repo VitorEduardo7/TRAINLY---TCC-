@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trainly - Painel Inicial</title>
+<title>Trainly - Início</title>
 <link rel="stylesheet" href="css/global.css">
 <link rel="stylesheet" href="css/dashboard.css">
 <link rel="stylesheet" href="css/feed.css">
@@ -13,57 +13,84 @@
 <body>
 <?php include __DIR__ . '/includes/nav.php'; ?>
 
-<div class="main-container dashboard-wide">
+<div class="main-container dashboard-wide" id="dashboardPage">
 
-    <div class="dashboard-header">
-        <span class="datestamp" id="dateStamp"></span>
-        <h1 class="greeting" id="greetingText">Bom dia! 👋</h1>
-    </div>
+    <!-- Cabeçalho: data, saudação, chama de sequência e atalho pra registrar -->
+    <header class="dash-header">
+        <div>
+            <span class="datestamp" id="dateStamp"></span>
+            <h1 class="greeting" id="greetingText">Olá!</h1>
+        </div>
+        <div class="dash-actions">
+            <div id="streakSlot"></div>
+            <a class="btn-primary dash-cta" href="atividades.php?nova=1">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+                Registrar atividade
+            </a>
+        </div>
+    </header>
 
-    <!-- Nível, barra de XP e chama de sequência (preenchido pelo main.js) -->
-    <section class="level-card" id="levelCard" aria-label="Seu nível"></section>
+    <!-- Destaques: a volta de XP na pista + a semana -->
+    <section class="dash-hero" aria-label="Seu progresso">
+        <div class="lap-card" id="levelCard"></div>
 
-    <div class="metrics-grid" id="metricsGrid"></div>
+        <div class="week-card">
+            <div class="week-head">
+                <h2 id="weekTitle">Últimos 7 dias</h2>
+                <div class="week-nav">
+                    <button type="button" class="week-nav-btn" id="weekPrevBtn" aria-label="Semana anterior">&#8249;</button>
+                    <button type="button" class="week-nav-btn" id="weekNextBtn" aria-label="Próxima semana">&#8250;</button>
+                </div>
+            </div>
+            <div class="week-range" id="weekRange"></div>
+
+            <div class="week-hero">
+                <span class="week-km" id="weekTotal">0,0</span>
+                <span class="week-unit">km</span>
+                <span class="week-delta" id="weekDelta"></span>
+            </div>
+            <div class="week-sub" id="weekSub"></div>
+
+            <div class="chart" id="weekChart"></div>
+            <div class="week-day-info" id="weekDayInfo"></div>
+
+            <!-- Tempo, ritmo e atividades da semana mostrada -->
+            <div class="week-stats" id="metricsGrid"></div>
+        </div>
+    </section>
 
     <div class="dashboard-columns">
 
-        <!-- Coluna principal: ações + feed -->
+        <!-- Coluna principal: feed -->
         <main class="feed-content-wide">
-
-            <h2 class="feed-title">FEED DE AMIGOS</h2>
+            <h2 class="feed-title">Feed de amigos</h2>
 
             <div class="feed-composer">
-                <div class="feed-avatar" id="composerAvatar" style="background:#2a9ed4;">M</div>
+                <div class="feed-avatar" id="composerAvatar">?</div>
+                <label for="composerInput" class="sr-only">Nova publicação</label>
                 <input type="text" id="composerInput" placeholder="No que você está pensando?" readonly>
-                <button class="btn-primary" id="composerBtn">+ Publicar</button>
+                <button class="btn-primary" id="composerBtn">Publicar</button>
             </div>
 
             <div id="feedList"></div>
-            <p id="feedEmpty" class="empty-state" style="display:none; padding:32px 0; text-align:center;">
-                Seu feed está vazio. Crie uma publicação ou siga outros atletas na página de Amizades para ver as publicações deles aqui.
+            <p id="feedEmpty" class="empty-state" style="display:none;">
+                Seu feed está vazio. Crie uma publicação ou siga outros atletas na página de Amigos para ver as publicações deles aqui.
             </p>
 
-            <div class="card feed-card" id="walkthroughCard" style="display:none;">
-                <div class="feed-header">
-                    <h2>Vamos Começar</h2>
-                    <p>Listamos alguns passos para ajudar você a aproveitar o Trainly.</p>
+            <div class="card walkthrough-card" id="walkthroughCard" style="display:none;">
+                <div class="walkthrough-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                 </div>
-                <p id="noActivityNote" class="empty-state" style="display:none; margin-bottom:20px;">Você ainda não gravou nenhuma atividade — seus km e XP vão aparecer aqui assim que você concluir a primeira corrida no mapa.</p>
-                <div class="feed-item">
-                    <div class="feed-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
-                    </div>
-                    <div class="feed-text">
-                        <h3>Gravar primeira atividade</h3>
-                        <p>Abra o mapa e registre sua primeira corrida diretamente no app.</p>
-                        <button class="btn-outline" onclick="window.location.href='mapa.php'">Ir para o Mapa</button>
-                    </div>
+                <div>
+                    <h3>Registre sua primeira atividade</h3>
+                    <p id="noActivityNote">Seus km, sua volta de XP e os desafios começam a andar assim que você registrar o primeiro treino.</p>
+                    <a class="btn-primary" href="atividades.php?nova=1">Registrar atividade</a>
                 </div>
             </div>
         </main>
 
-        <!-- Coluna lateral -->
-        <aside class="dashboard-sidebar">
+        <!-- Coluna lateral: desafios, meta e quem treinou hoje -->
+        <aside class="dashboard-sidebar" aria-label="Desafios e metas">
             <div class="card sidebar-block quests-card" id="questsCard" style="display:none;">
                 <div class="sidebar-block-header">
                     <h2>Desafios</h2>
@@ -74,34 +101,15 @@
 
             <div class="card sidebar-block">
                 <div class="sidebar-block-header">
-                    <h2>Volume Semanal</h2>
-                    <div class="week-nav">
-                        <button type="button" class="week-nav-btn" id="weekPrevBtn" aria-label="Semana anterior">&#8249;</button>
-                        <button type="button" class="week-nav-btn" id="weekNextBtn" aria-label="Próxima semana">&#8250;</button>
-                    </div>
-                </div>
-                <div class="week-range" id="weekRange"></div>
-                <div class="chart" id="weekChart"></div>
-                <div class="week-day-info" id="weekDayInfo"></div>
-                <div class="chart-total"><span>Total da semana</span><b id="weekTotal">0 km</b></div>
-            </div>
-
-            <div class="card sidebar-block">
-                <h2>Amigos Ativos Hoje</h2>
-                <div id="activeTodayList"></div>
-            </div>
-
-            <div class="card sidebar-block">
-                <h2>Recordes Pessoais</h2>
-                <div id="prList"></div>
-            </div>
-
-            <div class="card sidebar-block">
-                <div class="sidebar-block-header">
-                    <h2>Meta do Mês</h2>
+                    <h2 id="goalTitle">Meta do mês</h2>
                     <button class="goal-edit-btn" id="editGoalBtn" type="button">Editar</button>
                 </div>
                 <div id="goalWidget"></div>
+            </div>
+
+            <div class="card sidebar-block">
+                <h2>Treinaram hoje</h2>
+                <div id="activeTodayList"></div>
             </div>
         </aside>
 
@@ -111,13 +119,13 @@
 <!-- Modal de criar publicação (texto + foto opcional) -->
 <div class="overlay" id="createPostOverlay">
     <div class="modal">
-        <h3>Criar Publicação</h3>
+        <h3>Criar publicação</h3>
         <div class="field">
-            <label>O que você quer compartilhar?</label>
+            <label for="postContent">O que você quer compartilhar?</label>
             <textarea id="postContent" rows="4" maxlength="1000" placeholder="Escreva algo para seus amigos..."></textarea>
         </div>
         <div class="field">
-            <label>Foto (opcional)</label>
+            <label for="postPhoto">Foto (opcional)</label>
             <input type="file" id="postPhoto" accept="image/png, image/jpeg, image/webp">
         </div>
         <div class="modal-actions">
@@ -130,9 +138,9 @@
 <!-- Modal: editar meta do mês -->
 <div class="overlay" id="editGoalOverlay">
     <div class="modal">
-        <h3>Editar Meta do Mês</h3>
+        <h3>Editar meta do mês</h3>
         <div class="field">
-            <label>Tipo de meta</label>
+            <label for="goalType">Tipo de meta</label>
             <select id="goalType">
                 <option value="km">Distância (km)</option>
                 <option value="activities">Número de atividades</option>
@@ -140,7 +148,7 @@
             </select>
         </div>
         <div class="field">
-            <label>Valor da meta</label>
+            <label for="goalValue">Valor da meta</label>
             <input type="number" id="goalValue" step="0.1" min="0.1" placeholder="Ex: 50">
         </div>
         <div class="modal-actions">
