@@ -17,80 +17,62 @@
         <div class="page-header-top">
             <div>
                 <div class="page-eyebrow">Histórico completo</div>
-                <h1 class="page-title">Minhas Atividades</h1>
+                <h1 class="page-title-big">Minhas Atividades</h1>
             </div>
-            <button class="btn-primary" id="openRegisterBtn">+ Nova Atividade</button>
+            <div class="atv-head-actions">
+                <div id="atvStreakSlot"></div>
+                <button class="btn-primary" id="openRegisterBtn">+ Nova Atividade</button>
+            </div>
         </div>
 
-        <div class="filter-tabs">
-            <button class="filter-pill active" data-filter="Todos">Todos</button>
-            <button class="filter-pill" data-filter="Corrida">Corrida</button>
-            <button class="filter-pill" data-filter="Ciclismo">Ciclismo</button>
-            <button class="filter-pill" data-filter="Natação">Natação</button>
-            <button class="filter-pill" data-filter="Caminhada">Caminhada</button>
+        <!-- Nível atual: quanto falta pro próximo e XP ganho nesta semana -->
+        <section class="atv-level" id="atvLevel" aria-label="Seu nível"></section>
+
+        <!-- Números do período escolhido (preenchidos pelo main.js) -->
+        <div class="atv-period-row">
+            <h2 class="g-section-title" id="atvPeriodTitle">Seu ano</h2>
+            <div class="period-tabs atv-period" role="group" aria-label="Escolher o período">
+                <button type="button" class="period-pill" data-period="week" aria-pressed="false">Semana</button>
+                <button type="button" class="period-pill" data-period="month" aria-pressed="false">Mês</button>
+                <button type="button" class="period-pill" data-period="6months" aria-pressed="false">6 meses</button>
+                <button type="button" class="period-pill active" data-period="year" aria-pressed="true">Ano</button>
+            </div>
+        </div>
+        <div class="g-stats atv-stats" aria-live="polite">
+            <div class="g-stat">
+                <span class="g-stat-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+                <div class="g-stat-body"><div class="g-stat-value" id="sumCount">0</div><div class="g-stat-label" id="sumCountLabel">Treinos no ano</div></div>
+            </div>
+            <div class="g-stat tone-green">
+                <span class="g-stat-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg></span>
+                <div class="g-stat-body"><div class="g-stat-value" id="sumDist">0<small>km</small></div><div class="g-stat-label" id="sumDistLabel">Distância no ano</div></div>
+            </div>
+            <div class="g-stat tone-violet">
+                <span class="g-stat-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+                <div class="g-stat-body"><div class="g-stat-value" id="sumTime">0h</div><div class="g-stat-label" id="sumTimeLabel">Tempo ativo no ano</div></div>
+            </div>
+            <div class="g-stat gold tone-gold">
+                <span class="g-stat-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg></span>
+                <div class="g-stat-body"><div class="g-stat-value" id="sumXp">0</div><div class="g-stat-label" id="sumXpLabel">XP ganho no ano</div></div>
+            </div>
         </div>
 
-        <div class="summary-grid">
-            <div class="summary-card">
-                <div class="summary-label">Total de Atividades</div>
-                <div class="summary-value" id="sumCount">0</div>
-                <div class="summary-sub">Este ano</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-label">Distância Total</div>
-                <div class="summary-value" id="sumDist">0 km</div>
-                <div class="summary-sub">Este ano</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-label">Tempo Total</div>
-                <div class="summary-value" id="sumTime">0h 0m</div>
-                <div class="summary-sub">Este ano</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-label">Elevação Total</div>
-                <div class="summary-value" id="sumElev">0 m</div>
-                <div class="summary-sub">Este ano</div>
-            </div>
+        <div class="filter-tabs atv-filters" role="group" aria-label="Filtrar por esporte">
+            <button class="filter-pill active" data-filter="Todos">Todos <span class="pill-count" data-count="Todos"></span></button>
+            <button class="filter-pill" data-filter="Corrida">Corrida <span class="pill-count" data-count="Corrida"></span></button>
+            <button class="filter-pill" data-filter="Ciclismo">Ciclismo <span class="pill-count" data-count="Ciclismo"></span></button>
+            <button class="filter-pill" data-filter="Natação">Natação <span class="pill-count" data-count="Natação"></span></button>
+            <button class="filter-pill" data-filter="Caminhada">Caminhada <span class="pill-count" data-count="Caminhada"></span></button>
         </div>
 
         <div class="atividades-columns">
             <div class="atividades-main">
                 <div id="atividadesList"></div>
-                <p class="atividades-empty" id="atividadesEmpty" style="display:none;">Nenhuma atividade encontrada. Registre a primeira em "+ Nova Atividade".</p>
+                <div class="atividades-empty" id="atividadesEmpty" style="display:none;"></div>
             </div>
 
-            <!-- Resumo + Consistência do período (mesmas duas telas da aba
-                 Estatísticas do perfil, com seletor de período próprio) -->
+            <!-- Consistência do mês + recordes pessoais -->
             <aside class="atividades-sidebar">
-                <div class="period-tabs">
-                    <button class="period-pill" data-period="week">Semana</button>
-                    <button class="period-pill" data-period="month">Mês</button>
-                    <button class="period-pill" data-period="6months">6 Meses</button>
-                    <button class="period-pill active" data-period="year">Ano</button>
-                </div>
-
-                <div class="stats-card">
-                    <div class="stats-card-title" id="atvResumoTitle">Resumo</div>
-                    <div class="stats-card-grid">
-                        <div class="stats-card-item">
-                            <div class="stats-card-label">Distância Total</div>
-                            <div class="stats-card-value" id="atvDistancia">0 km</div>
-                        </div>
-                        <div class="stats-card-item">
-                            <div class="stats-card-label">Tempo Ativo</div>
-                            <div class="stats-card-value" id="atvTempo">0h 0m</div>
-                        </div>
-                        <div class="stats-card-item">
-                            <div class="stats-card-label">Atividades</div>
-                            <div class="stats-card-value" id="atvTotal">0</div>
-                        </div>
-                        <div class="stats-card-item">
-                            <div class="stats-card-label">Dias Ativos</div>
-                            <div class="stats-card-value" id="atvDiasAtivos">0 dias</div>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="stats-card">
                     <div class="stats-card-title" id="atvConsistTitle">Consistência</div>
                     <div class="consistency-grid" id="atvConsistGrid"></div>
@@ -108,6 +90,10 @@
                             <label>Taxa de consistência</label>
                         </div>
                     </div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-card-title">Recordes pessoais</div>
+                    <ul class="atv-records" id="atvRecords"></ul>
                 </div>
             </aside>
         </div>

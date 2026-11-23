@@ -17,7 +17,11 @@
 <div class="main-container explorar-container">
 
     <span class="page-eyebrow">Descubra novos locais</span>
-    <h1 class="page-title-big">EXPLORAR</h1>
+    <div class="exp-head">
+        <h1 class="page-title-big">EXPLORAR</h1>
+        <!-- Seus números de explorador (preenchidos pelo main.js) -->
+        <ul class="exp-summary" id="exploreSummary" aria-label="Seus números de explorador"></ul>
+    </div>
 
     <div class="explorar-toolbar">
         <div class="search-bar">
@@ -35,13 +39,13 @@
 
     <div class="explorar-grid">
         <div class="routes-list">
-            <h2 class="routes-section-title">Minhas Rotas</h2>
+            <h2 class="g-section-title">Minhas rotas <span class="g-count" id="myRoutesCount"></span></h2>
             <div id="myRoutesList"></div>
             <p id="myRoutesEmpty" class="empty-state" style="display:none;">
                 Você ainda não cadastrou nenhuma rota.
             </p>
 
-            <h2 class="routes-section-title" style="margin-top:24px;">Rotas de Amigos</h2>
+            <h2 class="g-section-title routes-friends-title">Rotas de amigos <span class="g-count" id="friendsRoutesCount"></span></h2>
             <div id="friendsRoutesList"></div>
             <p id="friendsRoutesEmpty" class="empty-state" style="display:none;">
                 Ninguém que você segue cadastrou uma rota ainda.

@@ -52,47 +52,7 @@
     background: color-mix(in srgb, var(--primary-blue) 12%, var(--card-bg));
 }
 
-.summary-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-    margin-bottom: 28px;
-}
-
-.summary-card {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 20px 22px;
-}
-
-.summary-label {
-    font-size: 11px;
-    letter-spacing: 1px;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 10px;
-}
-
-.summary-value {
-    font-size: 26px;
-    font-weight: 800;
-    color: var(--text-dark);
-}
-
-.summary-sub {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 6px;
-}
-
-.atividades-empty {
-    text-align: center;
-    color: var(--text-muted);
-    padding: 40px 0;
-    font-size: 14px;
-}
+.atividades-empty { padding: 10px 0; }
 
 /* =========================================================
    Resumo + Consistência do período (mesmas duas telas da aba
@@ -253,14 +213,12 @@
 #atividadesList::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 8px; }
 
 @media (max-width: 900px) {
-    .summary-grid { grid-template-columns: repeat(2, 1fr); }
     .atividades-columns { grid-template-columns: 1fr; }
     .atividades-sidebar { position: static; }
 }
 @media (max-width: 600px) {
     .page-header-top { flex-direction: column; }
     .page-header-top .btn-primary { width: 100%; }
-    .summary-grid { grid-template-columns: 1fr; }
 }
 
 
@@ -325,3 +283,153 @@
     .activity-item-top { flex-wrap: wrap; gap: 10px; }
     .activity-actions { margin-left: 0; }
 }
+
+/* =========================================================
+   GAMIFICAÇÃO DA PÁGINA (nível, recordes, XP por treino)
+   As peças comuns (.g-stat, .xp-chip, .sport-ic, .g-badge)
+   ficam no global.css, seção 14.
+   ========================================================= */
+.atv-head-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.atv-head-actions:has(#atvStreakSlot:empty) { gap: 0; }
+
+/* Nível atual */
+.atv-level {
+    --rank-color: #d4a017;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 16px;
+    padding: 18px 22px;
+    border-radius: var(--radius-card);
+    background:
+        radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--rank-color) 16%, transparent), transparent 55%),
+        var(--card-bg);
+    box-shadow: var(--shadow-card);
+}
+.atv-level:empty { display: none; }
+.atv-level-hex svg { width: 56px; height: 62px; display: block; }
+.atv-level-hex polygon { fill: color-mix(in srgb, var(--rank-color) 20%, var(--card-bg)); stroke: var(--rank-color); stroke-width: 2.5; }
+.atv-level-hex text { font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 22px; fill: var(--text-dark); }
+.atv-level-main { flex: 1; min-width: 0; }
+.atv-level-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.atv-level-rank { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: color-mix(in srgb, var(--rank-color) 70%, var(--text-dark)); }
+.atv-level-name { font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 28px; line-height: 1; color: var(--text-dark); }
+.atv-level-xp { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--text-muted); }
+.atv-level-bar { display: flex; gap: 5px; margin: 10px 0 8px; }
+.atv-level-bar i { flex: 1; height: 10px; border-radius: 2px; transform: skewX(-20deg); background: var(--surface); }
+.atv-level-bar i.on { background: var(--xp-gold); }
+.atv-level-sub { font-size: 13px; color: var(--text-muted); }
+.atv-level-sub b { color: var(--text-dark); }
+.atv-level-week { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; padding-left: 20px; border-left: 1px solid var(--border-color); }
+.atv-level-week-label { font-size: 12px; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+
+.atv-stats { margin-bottom: 22px; }
+
+/* Filtros com contador */
+.atv-filters { margin-bottom: 18px; }
+.pill-count { margin-left: 4px; padding: 1px 7px; border-radius: var(--radius-pill); background: var(--surface); color: var(--text-muted); font-size: 11.5px; font-weight: 700; }
+.filter-pill.active .pill-count { background: color-mix(in srgb, var(--primary-blue) 25%, transparent); color: inherit; }
+.pill-count:empty { display: none; }
+
+/* Semanas */
+.act-week + .act-week { margin-top: 22px; }
+.act-week-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 10px; padding: 0 4px; }
+.act-week-head h2 { font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 20px; text-transform: uppercase; color: var(--text-dark); margin: 0; }
+.act-week-sum { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.act-week-head .xp-chip { margin-left: auto; font-size: 14px; }
+
+/* Cartão de cada treino (só nesta página; o do Início continua igual) */
+#atividadesList .activity-item {
+    --sport: var(--primary-blue);
+    display: flex;
+    gap: 16px;
+    padding: 18px 18px 16px 20px;
+    margin-bottom: 10px;
+    border: none;
+    border-radius: 20px;
+    background: var(--card-bg);
+    box-shadow: var(--shadow-card);
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+#atividadesList .activity-item::before { top: 16px; bottom: 16px; left: 0; right: auto; width: 4px; height: auto; border-radius: 0 4px 4px 0; background: var(--sport); }
+#atividadesList .activity-item:hover { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--sport) 45%, transparent); }
+#atividadesList .activity-item.flash { animation: actFlash 1.6s ease-out; }
+@keyframes actFlash { 0%, 30% { box-shadow: 0 0 0 3px var(--xp-gold); } 100% { box-shadow: 0 0 0 0 transparent; } }
+.act-body { flex: 1; min-width: 0; }
+.act-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+#atividadesList .act-title { font-size: 16px; font-weight: 800; margin: 2px 0 3px; color: var(--text-dark); }
+#atividadesList .act-date { font-size: 12.5px; }
+.act-head-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.act-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+#atividadesList .act-stats { display: flex; flex-wrap: wrap; gap: 8px 26px; margin-top: 12px; }
+.act-stat span { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.act-stat b { display: block; margin-top: 2px; font-size: 15px; font-weight: 800; color: var(--text-dark); white-space: nowrap; }
+
+#atividadesList .activity-actions { margin-left: 0; gap: 4px; }
+#atividadesList .act-action-btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: transparent;
+}
+#atividadesList .act-action-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#atividadesList .act-action-btn:hover { background: var(--surface); }
+
+/* Recordes pessoais (lateral): estilo no global.css, seção 14 */
+
+@media (max-width: 700px) {
+    .atv-level { flex-wrap: wrap; gap: 14px; padding: 16px; }
+    .atv-level-hex svg { width: 46px; height: 52px; }
+    .atv-level-main { flex-basis: calc(100% - 64px); }
+    .atv-level-xp { margin-left: 0; width: 100%; }
+    .atv-level-week { flex-direction: row; align-items: center; width: 100%; padding: 12px 0 0; border-left: none; border-top: 1px solid var(--border-color); justify-content: space-between; }
+    .atv-head-actions { width: 100%; }
+    .atv-head-actions .btn-primary { flex: 1; }
+    #atividadesList .activity-item { padding: 14px; gap: 12px; }
+    #atividadesList .activity-item .sport-ic.lg { width: 42px; height: 42px; border-radius: 13px; }
+    .act-head { flex-direction: column; gap: 8px; }
+    .act-head-right { width: 100%; justify-content: space-between; }
+    #atividadesList .act-stats { gap: 8px 18px; }
+    .act-week-head .xp-chip { margin-left: 0; }
+}
+
+/* Colunas não podem passar da largura da tela */
+.atividades-main, .atividades-sidebar, .stats-card { min-width: 0; }
+.atv-records > li { min-width: 0; }
+.atv-rec { min-width: 0; }
+
+/* =========================================================
+   ALTURA DA LISTA = ALTURA DA LATERAL (computador)
+   A lista não dita mais a altura da linha: ela ocupa exatamente o
+   espaço ao lado da lateral (até o fim de "Recordes pessoais") e
+   rola por dentro. No celular volta ao fluxo normal.
+   ========================================================= */
+@media (min-width: 901px) {
+    .atividades-columns { align-items: stretch; }
+    .atividades-main { position: relative; min-height: 420px; }
+    #atividadesList {
+        position: absolute;
+        inset: 0;
+        max-height: none;
+    }
+    .atividades-sidebar { position: static; }
+}
+
+/* Título da semana fica preso no topo enquanto a lista rola */
+.act-week-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 8px 4px;
+    margin-bottom: 6px;
+    background: var(--bg-color);
+}
+
+/* Seletor de período em cima dos cartões de números */
+.atv-period-row { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.atv-period-row .g-section-title { margin: 0; }
+.atv-period { gap: 6px; }

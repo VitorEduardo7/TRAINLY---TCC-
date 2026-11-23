@@ -1401,3 +1401,277 @@ html[data-cb="tritanopia"] {
 
 /* A chama mexe quando passa o mouse */
 .streak-chip.on:hover svg { animation: flicker 0.5s ease-in-out infinite alternate; transform-origin: 50% 90%; }
+/* =========================================
+   14. GAMIFICAÇÃO COMPARTILHADA
+   Atividades, Explorar, Amigos e Clubes usam as mesmas peças:
+   ícone do esporte, chip de XP, avatar com anel da patente,
+   pódio, frase de incentivo e cartões de número.
+   ========================================= */
+
+/* Ícone do esporte num quadradinho na cor do esporte (--sport) */
+.sport-ic {
+    --sport: var(--primary-blue);
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: color-mix(in srgb, var(--sport) 18%, transparent);
+    color: var(--sport);
+}
+.sport-ic svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sport-ic.sm { width: 34px; height: 34px; border-radius: 11px; }
+.sport-ic.sm svg { width: 18px; height: 18px; }
+.sport-ic.xs { width: 22px; height: 22px; border-radius: 7px; background: color-mix(in srgb, var(--sport) 85%, #000); color: #fff; }
+.sport-ic.xs svg { width: 13px; height: 13px; stroke-width: 2.4; }
+.sport-ic.lg { width: 52px; height: 52px; border-radius: 16px; }
+.sport-ic.lg svg { width: 26px; height: 26px; }
+html[data-theme="light"] .sport-ic { color: color-mix(in srgb, var(--sport) 80%, #000); }
+
+/* Chip "+80 XP" */
+.xp-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--xp-gold) 16%, transparent);
+    color: var(--xp-gold);
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+.xp-chip.lg { font-size: 19px; padding: 6px 14px; }
+
+/* Avatar com anel da patente (--rank-color) e o nível num selinho */
+.rank-av {
+    --rank-color: #a5672f;
+    --size: 48px;
+    position: relative;
+    display: inline-block;
+    width: var(--size);
+    height: var(--size);
+    flex-shrink: 0;
+}
+.rank-av-sm { --size: 34px; }
+.rank-av-lg { --size: 64px; }
+.rank-av-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-weight: 800;
+    font-size: calc(var(--size) * 0.32);
+    box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px var(--rank-color);
+}
+.rank-av-lvl {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: var(--rank-color);
+    color: #fff;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: 12px;
+    line-height: 1;
+    box-shadow: 0 0 0 2px var(--card-bg);
+}
+.rank-av-sm .rank-av-lvl { min-width: 16px; height: 16px; font-size: 10px; right: -5px; bottom: -5px; }
+.rank-av-lg .rank-av-lvl { min-width: 24px; height: 24px; font-size: 14px; }
+
+.rank-label {
+    --rank-color: #a5672f;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+.rank-label i { width: 8px; height: 8px; border-radius: 2px; transform: rotate(45deg); background: var(--rank-color); flex-shrink: 0; }
+
+/* Pódio: 2º, 1º, 3º */
+.g-podium {
+    list-style: none;
+    margin: 4px 0 8px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: end;
+    gap: 8px;
+}
+.g-podium:has(> li:only-child) { grid-template-columns: minmax(0, 160px); justify-content: center; }
+.g-podium:has(> li:nth-child(2):last-child) { grid-template-columns: repeat(2, minmax(0, 160px)); justify-content: center; }
+.g-podium-col { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.g-podium-person {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0 4px 10px;
+    color: inherit;
+    text-decoration: none;
+}
+.g-podium-crown { height: 20px; color: var(--xp-gold); }
+.g-podium-crown svg { width: 22px; height: 20px; fill: currentColor; }
+.g-podium-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 700; color: var(--text-dark); }
+.g-podium-person:hover .g-podium-name { text-decoration: underline; text-underline-offset: 3px; }
+.g-podium-value { font-size: 12.5px; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+.g-podium-step {
+    width: 100%;
+    display: grid;
+    place-items: center;
+    border-radius: 14px 14px 6px 6px;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: 24px;
+    color: var(--text-dark);
+    background: var(--surface);
+}
+.place-1 .g-podium-step { height: 74px; background: linear-gradient(180deg, color-mix(in srgb, var(--xp-gold) 36%, var(--surface)), var(--surface)); color: var(--xp-gold); font-size: 30px; }
+.place-2 .g-podium-step { height: 54px; background: linear-gradient(180deg, color-mix(in srgb, #9aa4b8 32%, var(--surface)), var(--surface)); }
+.place-3 .g-podium-step { height: 40px; background: linear-gradient(180deg, color-mix(in srgb, #c27a3a 32%, var(--surface)), var(--surface)); }
+.place-1 .g-podium-value { color: var(--xp-gold); }
+.g-podium-col.is-me .g-podium-name { color: var(--primary-blue); }
+
+/* Linha de ranking (posição, avatar, nome, valor) */
+.g-rank-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 10px;
+    border-radius: 14px;
+}
+.g-rank-row + .g-rank-row { margin-top: 2px; }
+.g-rank-pos { width: 26px; flex-shrink: 0; text-align: center; font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 18px; color: var(--text-muted); }
+.g-rank-name { flex: 1; min-width: 0; color: var(--text-dark); font-size: 14px; font-weight: 700; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-rank-name small { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); }
+a.g-rank-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.g-rank-value { font-size: 14px; font-weight: 800; color: var(--primary-blue); white-space: nowrap; }
+.g-rank-row.is-me { background: color-mix(in srgb, var(--primary-blue) 13%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--primary-blue) 55%, transparent); }
+.g-rank-sep { text-align: center; color: var(--text-muted); font-size: 13px; letter-spacing: 4px; padding: 2px 0; }
+
+/* Frase de incentivo ("faltam X km pra passar Fulano") */
+.rival-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 0;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--xp-gold) 11%, transparent);
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--text-dark);
+}
+.rival-line b { color: var(--xp-gold); }
+html[data-theme="light"] .rival-line b { color: color-mix(in srgb, var(--xp-gold) 80%, #000); }
+.rival-ic { width: 28px; height: 28px; flex-shrink: 0; border-radius: 9px; display: grid; place-items: center; background: color-mix(in srgb, var(--xp-gold) 20%, transparent); color: var(--xp-gold); }
+.rival-ic svg { width: 16px; height: 16px; fill: currentColor; }
+
+/* Cartões de número com ícone (resumos do topo das páginas) */
+.g-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.g-stat {
+    --tone: var(--primary-blue);
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    padding: 18px;
+    border-radius: var(--radius-card);
+    background: var(--card-bg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+.g-stat-ic { width: 44px; height: 44px; flex-shrink: 0; border-radius: 14px; display: grid; place-items: center; background: color-mix(in srgb, var(--tone) 17%, transparent); color: var(--tone); }
+.g-stat-ic svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.g-stat-body { min-width: 0; }
+.g-stat-value { font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 30px; line-height: 1; color: var(--text-dark); overflow-wrap: anywhere; }
+.g-stat-value small { font-size: 17px; font-style: normal; font-weight: 700; color: var(--text-muted); margin-left: 2px; }
+.g-stat-label { margin-top: 5px; font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+.g-stat.gold .g-stat-value { color: var(--xp-gold); }
+.tone-gold { --tone: var(--xp-gold); }
+.tone-green { --tone: var(--ok); }
+.tone-flame { --tone: var(--flame); }
+.tone-violet { --tone: #8b8ef5; }
+.tone-cyan { --tone: #06b6d4; }
+
+/* Título de seção com contador ("Minhas rotas  2") */
+.g-section-title { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 24px; text-transform: uppercase; color: var(--text-dark); }
+.g-section-title .g-count { padding: 2px 10px; border-radius: var(--radius-pill); background: var(--surface); color: var(--text-muted); font-family: var(--font-body, inherit); font-style: normal; font-size: 13px; font-weight: 700; }
+
+/* Selo pequeno (recorde, "segue você", dificuldade...) */
+.g-badge {
+    --tone: var(--primary-blue);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--tone) 16%, transparent);
+    color: var(--tone);
+    font-size: 11.5px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+.g-badge svg { width: 12px; height: 12px; fill: currentColor; }
+html[data-theme="light"] .g-badge { color: color-mix(in srgb, var(--tone) 78%, #000); }
+
+html[data-contrast="high"] .g-stat,
+html[data-contrast="high"] .g-rank-row.is-me { border: 1px solid var(--border-color); }
+
+@media (max-width: 1100px) {
+    .g-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+    .g-stats { gap: 10px; }
+    .g-stat { padding: 14px; gap: 10px; }
+    .g-stat-ic { width: 38px; height: 38px; border-radius: 12px; }
+    .g-stat-ic svg { width: 19px; height: 19px; }
+    .g-stat-value { font-size: 24px; }
+    .g-section-title { font-size: 21px; }
+}
+
+/* Lista de recordes pessoais (página Atividades e aba Estatísticas do perfil) */
+.atv-records { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.atv-rec {
+    --tone: var(--primary-blue);
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border: none;
+    border-radius: 14px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.atv-rec:hover { background: var(--surface); }
+.atv-rec-ic { width: 36px; height: 36px; flex-shrink: 0; border-radius: 11px; display: grid; place-items: center; background: color-mix(in srgb, var(--tone) 17%, transparent); color: var(--tone); }
+.atv-rec-ic svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.atv-rec-body { flex: 1; min-width: 0; }
+.atv-rec-label { display: block; font-size: 13px; font-weight: 700; color: var(--text-dark); }
+.atv-rec-act { display: block; font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.atv-rec-value { font-size: 14px; font-weight: 800; color: var(--text-dark); white-space: nowrap; }
+.atv-rec-empty { font-size: 13px; color: var(--text-muted); line-height: 1.5; }

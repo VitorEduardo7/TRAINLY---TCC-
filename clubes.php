@@ -25,10 +25,10 @@
 
     <div class="clubes-grid">
         <div class="clubes-sidebar">
-            <h2 class="clubes-section-title">Meus Clubes</h2>
+            <h2 class="g-section-title">Meus clubes</h2>
             <div id="myClubsList"></div>
 
-            <h2 class="clubes-section-title" style="margin-top:24px;">Entrar em um clube</h2>
+            <h2 class="g-section-title" style="margin-top:26px;">Entrar em um clube</h2>
             <div class="join-club-box">
                 <input type="text" id="joinCodeInput" placeholder="Código de convite">
                 <button class="btn-primary" id="joinClubBtn">Entrar</button>

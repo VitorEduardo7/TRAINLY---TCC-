@@ -130,6 +130,9 @@ body {
    o do celular (.logo-img) troca com o tema pelo main.js */
 .auth-container .brand-logo img { display: block; width: auto; height: 40px; max-height: none; max-width: none; margin-right: 10px; }
 .auth-container .brand-logo.dark img { height: 54px; }
+/* O logo de cima do formulário só aparece no celular (lá o painel da foto some).
+   No computador o logo já está no painel da foto, então fica escondido aqui. */
+.auth-container .mobile-logo { display: none; }
 
 .auth-header h2 {
     font-size: 24px;
@@ -306,8 +309,8 @@ body {
         display: none;
     }
 
-    .mobile-logo {
-        display: inline-block;
+    .auth-container .mobile-logo {
+        display: inline-flex;
     }
 
     .auth-form-wrapper {

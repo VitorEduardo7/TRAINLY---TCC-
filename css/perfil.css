@@ -449,3 +449,329 @@ html[data-contrast="high"] .conn-modal { border: 1px solid var(--border-color); 
     .conn-follow { padding: 0 12px; }
 }
 @keyframes connSheet { from { transform: translateY(40px); opacity: 0; } }
+
+/* =========================================================
+   PERFIL — VISUAL NOVO (nov/2026)
+   Capa na cor da patente, avatar com anel e nível, números com
+   ícone, abas em pílula e cartões com a cor do esporte.
+   As peças comuns (.sport-ic, .xp-chip, .rank-label, .atv-rec)
+   ficam no global.css, seção 14. --rank-color vem do main.js.
+   ========================================================= */
+
+/* ---------- Capa ---------- */
+.profile-cover {
+    --rank-color: #2f7dfd;
+    height: 250px;
+    margin: 16px 24px 0;
+    border-radius: 28px;
+    background-color: var(--card-bg);
+    background-image:
+        radial-gradient(70% 140% at 88% 0%, color-mix(in srgb, var(--rank-color) 42%, transparent), transparent 62%),
+        radial-gradient(50% 90% at 0% 100%, color-mix(in srgb, var(--primary-blue) 22%, transparent), transparent 70%),
+        repeating-linear-gradient(-58deg, transparent 0 26px, color-mix(in srgb, var(--text-dark) 4%, transparent) 26px 28px),
+        linear-gradient(135deg, color-mix(in srgb, var(--rank-color) 22%, var(--card-bg)), var(--card-bg));
+}
+/* O global.css dá width:100% e flex:1 aos filhos do body; com a margem
+   lateral a capa estourava 24px, e em página curta ela crescia. */
+#profileCover { width: auto; flex: none; }
+/* Com foto: a cor da patente sai e a base escurece de leve */
+.profile-cover.has-photo { background-size: cover; background-position: center; }
+.profile-cover.has-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, transparent 45%, rgba(10, 6, 24, 0.45));
+    pointer-events: none;
+}
+.cover-edit-btn {
+    z-index: 2;
+    top: 16px;
+    right: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 16px 0 12px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: rgba(12, 8, 28, 0.45);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.cover-edit-btn:hover { background: rgba(12, 8, 28, 0.65); border-color: transparent; }
+.cover-edit-btn svg,
+.avatar-edit-btn svg,
+.profile-actions .btn-primary svg,
+.profile-actions .btn-secondary svg {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+}
+
+/* ---------- Avatar com anel da patente ---------- */
+.profile-avatar-wrapper { z-index: 2; left: 36px; bottom: -56px; }
+.profile-avatar-big {
+    width: 128px;
+    height: 128px;
+    border: none;
+    background-color: #2a9ed4;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 48px;
+    box-shadow: 0 0 0 5px var(--bg-color), 0 0 0 9px var(--rank-color, #2f7dfd), 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+.profile-level-badge {
+    position: absolute;
+    right: -6px;
+    bottom: 2px;
+    min-width: 38px;
+    height: 38px;
+    padding: 0 8px;
+    border-radius: 19px;
+    display: grid;
+    place-items: center;
+    background: var(--rank-color, #2f7dfd);
+    color: #fff;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: 21px;
+    line-height: 1;
+    box-shadow: 0 0 0 4px var(--bg-color);
+}
+.profile-level-badge:empty { display: none; }
+.avatar-edit-btn {
+    left: -4px;
+    right: auto;
+    bottom: 2px;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: var(--surface);
+    color: var(--text-dark);
+    box-shadow: 0 0 0 4px var(--bg-color);
+}
+.avatar-edit-btn:hover { background: var(--primary-blue); color: #fff; }
+
+/* ---------- Nome, patente e botões ---------- */
+.profile-container { padding-top: 76px; }
+.profile-top { align-items: flex-end; margin-bottom: 24px; }
+.profile-identity { min-width: 0; }
+.profile-identity h1 {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: 42px;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    overflow-wrap: anywhere;
+}
+.profile-rank { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+.profile-rank:empty { display: none; }
+.profile-rank .rank-label { font-size: 14px; font-weight: 700; color: color-mix(in srgb, var(--rank-color) 70%, var(--text-dark)); }
+.profile-rank .rank-label i { width: 10px; height: 10px; }
+.profile-streak-slot:empty { display: none; }
+.profile-handle { margin: 10px 0 6px; }
+.profile-bio { color: var(--text-muted); }
+.profile-actions { align-items: center; }
+.profile-actions .btn-primary,
+.profile-actions .btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 20px; }
+.profile-settings-btn { width: 44px; height: 44px; }
+
+/* ---------- Números (atividades, seguidores...) ---------- */
+.profile-stats-row { gap: 14px; margin-bottom: 26px; }
+.profile-stat-card,
+.profile-stat-card.stat-link {
+    --tone: var(--primary-blue);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px;
+    border: none;
+    border-radius: var(--radius-card);
+    background: var(--card-bg);
+    box-shadow: var(--shadow-card);
+    text-align: left;
+}
+.profile-stats-row > :nth-child(2) { --tone: #8b8ef5; }
+.profile-stats-row > :nth-child(3) { --tone: var(--ok); }
+.profile-stats-row > :nth-child(4) { --tone: #f472b6; }
+.ps-ic {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: color-mix(in srgb, var(--tone) 17%, transparent);
+    color: var(--tone);
+}
+.ps-ic svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ps-body { display: flex; flex-direction: column; min-width: 0; }
+.ps-value,
+.profile-stat-card.stat-link .ps-value {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: 30px;
+    line-height: 1;
+    color: var(--text-dark);
+}
+.ps-label,
+.profile-stat-card.stat-link .ps-label { margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.profile-stat-card.stat-link:hover { background: color-mix(in srgb, var(--tone) 10%, var(--card-bg)); }
+
+/* ---------- Abas em pílula ---------- */
+.profile-tabs-new {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    margin-bottom: 22px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: var(--card-bg);
+    box-shadow: var(--shadow-card);
+}
+.tab-item-new {
+    height: 40px;
+    padding: 0 20px;
+    border: none;
+    border-radius: var(--radius-pill);
+    font-size: 13.5px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+.tab-item-new:hover { color: var(--text-dark); }
+.tab-item-new.active { background: var(--primary-blue); color: #fff; border-bottom-color: transparent; }
+
+/* ---------- Grades de atividades e publicações ---------- */
+#profileActivitiesGrid,
+#profilePostsList {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+#profileActivitiesGrid .pa-card,
+#profilePostsList .pa-card {
+    --sport: var(--primary-blue);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 22px;
+    background: var(--card-bg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+#profileActivitiesGrid .pa-card::before { top: 18px; bottom: 18px; left: 0; right: auto; width: 4px; height: auto; border-radius: 0 4px 4px 0; background: var(--sport); }
+#profilePostsList .pa-card::before { display: none; }
+#profileActivitiesGrid .pa-card:hover { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--sport) 45%, transparent); }
+.pa-photo { height: 170px; }
+#profileActivitiesGrid .pa-body,
+#profilePostsList .pa-body { flex: 1; display: flex; flex-direction: column; padding: 18px 18px 16px 20px; }
+.pa-head { display: flex; align-items: center; gap: 12px; }
+.pa-head-text { min-width: 0; }
+#profileActivitiesGrid .pa-title { margin: 0 0 2px; font-size: 16px; font-weight: 800; color: var(--text-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#profileActivitiesGrid .pa-date { margin: 0; font-size: 12.5px; }
+#profileActivitiesGrid .pa-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-top: 14px;
+    padding: 12px 10px;
+    border-radius: 14px;
+    background: var(--surface);
+    text-align: center;
+}
+#profileActivitiesGrid .pa-stats span { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
+#profileActivitiesGrid .pa-stats b { display: block; margin-top: 2px; font-size: 14.5px; font-weight: 800; color: var(--text-dark); white-space: nowrap; }
+.pa-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+
+/* Publicação */
+.pc-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 30px; }
+.pc-when { font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+.pc-text {
+    margin: 8px 0 14px;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--text-dark);
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+.pc-empty { color: var(--text-muted); font-style: italic; }
+.pc-foot { display: flex; align-items: center; gap: 14px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-color); }
+.pc-comments { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.pc-comments svg { width: 16px; height: 16px; }
+#profilePostsList .post-delete-btn { position: static; }
+
+/* ---------- Aba Estatísticas ---------- */
+.stats-grid-2col .card { border: none; border-radius: var(--radius-card); padding: 22px; box-shadow: var(--shadow-card); }
+.stats-card-title { font-family: var(--font-display); font-style: italic; font-size: 22px; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 14px; }
+.resumo-grid { gap: 10px; }
+.resumo-item { min-width: 0; padding: 14px; border-radius: 16px; background: var(--surface); }
+.resumo-value { font-family: var(--font-display); font-style: italic; font-size: 26px; line-height: 1.05; }
+.resumo-label { font-weight: 700; }
+#profileProgress .resumo-item { background: transparent; padding: 0; }
+#profileProgress { gap: 18px 24px; }
+div.atv-rec { cursor: default; }
+div.atv-rec:hover { background: transparent; }
+.atv-rec { min-width: 0; }
+.atv-records > li { min-width: 0; }
+.consistency-day { border: none; background: var(--surface); }
+.cs-item b { font-family: var(--font-display); font-style: italic; font-size: 24px; color: var(--primary-blue); }
+
+html[data-contrast="high"] .profile-stat-card,
+html[data-contrast="high"] #profileActivitiesGrid .pa-card,
+html[data-contrast="high"] #profilePostsList .pa-card,
+html[data-contrast="high"] .stats-grid-2col .card { border: 1px solid var(--border-color); }
+
+/* ---------- Telas menores ---------- */
+@media (max-width: 1100px) {
+    .profile-stats-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+    .stats-grid-2col { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+    .profile-cover { height: 190px; margin: 0; border-radius: 0 0 24px 24px; }
+    .profile-avatar-wrapper { left: 18px; bottom: -44px; }
+    .profile-avatar-big { width: 96px; height: 96px; font-size: 36px; box-shadow: 0 0 0 4px var(--bg-color), 0 0 0 7px var(--rank-color, #2f7dfd); }
+    .profile-level-badge { min-width: 32px; height: 32px; font-size: 18px; right: -8px; }
+    .avatar-edit-btn { width: 32px; height: 32px; }
+    .profile-container { padding-top: 60px; }
+    .profile-identity h1 { font-size: 32px; }
+    .profile-stat-card, .profile-stat-card.stat-link { padding: 14px; gap: 10px; }
+    .ps-ic { width: 38px; height: 38px; border-radius: 12px; }
+    .ps-value, .profile-stat-card.stat-link .ps-value { font-size: 24px; }
+    .profile-stats-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .ps-label { overflow-wrap: anywhere; }
+    .profile-tabs-new { display: flex; width: 100%; overflow-x: auto; scrollbar-width: none; }
+    .tab-item-new { flex: 1 0 auto; padding: 0 12px; }
+    .cover-edit-btn span { display: none; }
+    .cover-edit-btn { padding: 0 11px; }
+    /* Compartilhar + Editar + engrenagem numa linha só */
+    .profile-actions .btn-primary,
+    .profile-actions .btn-secondary { padding: 0 12px; font-size: 14px; }
+    .profile-settings-btn { flex: 0 0 44px; }
+    .resumo-value { font-size: 22px; }
+    .cs-item { min-width: 0; overflow-wrap: anywhere; }
+    .cs-item b { font-size: 20px; }
+}

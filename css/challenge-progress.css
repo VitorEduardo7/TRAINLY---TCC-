@@ -339,3 +339,109 @@
     .club-hero { padding: 18px; }
     .challenge-card { padding: 18px; }
 }
+/* =========================================================
+   GAMIFICAÇÃO DOS CLUBES (brasão, placar da semana, pódio)
+   Peças comuns (.g-stat, .g-podium, .g-rank-row, .rival-line)
+   ficam no global.css, seção 14.
+   ========================================================= */
+
+/* Brasão do clube: escudo na cor do clube (--club) */
+.club-crest {
+    --club: var(--primary-blue);
+    position: relative;
+    width: 42px;
+    height: 48px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+}
+.club-crest svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.club-crest path { fill: color-mix(in srgb, var(--club) 85%, #000); stroke: color-mix(in srgb, var(--club) 60%, #fff); stroke-width: 2; }
+.club-crest b { position: relative; margin-top: -3px; font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 20px; color: #fff; }
+.club-crest.lg { width: 68px; height: 78px; filter: drop-shadow(0 10px 18px color-mix(in srgb, var(--club) 40%, transparent)); }
+.club-crest.lg b { font-size: 32px; }
+
+/* Lista "Meus clubes" */
+.clubes-container .club-list-item {
+    --club: var(--primary-blue);
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 12px 14px;
+    border: 1.5px solid transparent;
+    border-radius: 18px;
+    background: var(--card-bg);
+    box-shadow: var(--shadow-card);
+    font: inherit;
+    color: inherit;
+    text-align: left;
+}
+.clubes-container .club-list-item:hover { border-color: color-mix(in srgb, var(--club) 50%, transparent); transform: none; }
+.clubes-container .club-list-item.selected {
+    border-color: var(--club);
+    background: color-mix(in srgb, var(--club) 10%, var(--card-bg));
+    box-shadow: none;
+}
+.club-list-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.club-list-name { font-size: 15px; font-weight: 800; color: var(--text-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.club-list-meta { font-size: 12.5px; color: var(--text-muted); }
+.club-admin-tag { color: var(--primary-blue); font-weight: 800; }
+.club-list-arrow { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: var(--text-muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.club-list-item.selected .club-list-arrow { stroke: var(--club); }
+
+/* Cabeçalho do clube na cor do clube */
+.club-hero {
+    --club: var(--primary-blue);
+    border: none;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    background:
+        radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, var(--club) 24%, transparent) 0%, transparent 60%),
+        var(--card-bg);
+    margin-bottom: 14px;
+}
+.club-hero .club-detail-title { margin: 0; font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 34px; line-height: 1; text-transform: uppercase; }
+.club-hero .club-detail-sub { margin-top: 6px; }
+.chip { background: var(--surface); }
+
+/* Placar da semana */
+.club-scoreboard { margin-bottom: 16px; }
+.club-scoreboard .g-stat { padding: 16px; }
+.club-scoreboard .g-stat-value { font-size: 26px; }
+
+/* Desafio: fundo que funciona no tema claro e no escuro */
+.challenge-card {
+    border: 1.5px solid color-mix(in srgb, var(--xp-gold) 45%, transparent);
+    border-radius: var(--radius-card);
+    background:
+        radial-gradient(90% 120% at 100% 0%, color-mix(in srgb, var(--xp-gold) 16%, transparent) 0%, transparent 60%),
+        var(--card-bg);
+}
+.challenge-card.upcoming { border-color: var(--border-color); }
+.challenge-card .g-podium { margin-top: 18px; }
+.challenge-progress-list { list-style: none; margin: 14px 0 0; padding: 0; }
+.challenge-progress-row { background: var(--surface); }
+.challenge-progress-row.is-me { background: color-mix(in srgb, var(--primary-blue) 13%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--primary-blue) 55%, transparent); }
+
+/* Ranking e histórico */
+.club-columns .card { border-radius: var(--radius-card); padding: 20px; }
+.club-ranking-title { justify-content: space-between; font-family: var(--font-display); font-style: italic; font-size: 20px; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; }
+.club-ranking-title small { font-family: var(--font-body, inherit); font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--text-muted); }
+.club-rank-empty { padding: 10px 0; text-align: center; }
+.history-winner { display: flex; align-items: center; gap: 10px; }
+.history-trophy { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--xp-gold) 18%, transparent); color: var(--xp-gold); }
+.history-trophy svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.club-detail, .clubes-grid > * { min-width: 0; }
+
+@media (max-width: 1250px) {
+    .club-columns { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+    .club-hero .club-detail-title { font-size: 28px; }
+    .club-crest.lg { width: 56px; height: 64px; }
+    .club-scoreboard .g-stat-value { font-size: 22px; }
+}
+/* Texto grande / telas estreitas: nada passa da largura */
+.club-columns > * { min-width: 0; }
+.history-item { flex-wrap: wrap; }
+.join-club-box input { min-width: 0; }
+.club-ranking-title { flex-wrap: wrap; gap: 4px 10px; }

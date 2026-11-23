@@ -24,20 +24,23 @@
 
     <div class="amigos-grid">
         <div>
-            <h2 class="amigos-section-title" id="usersListTitle">Atletas Sugeridos</h2>
+            <h2 class="g-section-title" id="usersListTitle">Atletas sugeridos</h2>
             <div class="users-grid" id="usersGrid"></div>
             <p class="empty-state" id="usersEmpty" style="display:none; padding:20px 0;">Nenhum atleta encontrado.</p>
         </div>
 
         <aside class="amigos-sidebar">
-            <div class="card sidebar-block">
-                <h2>Ativos Agora</h2>
-                <div id="activeTodayList"></div>
-            </div>
-            <div class="card sidebar-block">
-                <h2>Ranking da Semana</h2>
+            <section class="card sidebar-block lb-card" aria-labelledby="lbTitle">
+                <div class="lb-head">
+                    <h2 id="lbTitle">Ranking da semana</h2>
+                    <span class="lb-reset" id="lbReset"></span>
+                </div>
                 <div id="friendsLeaderboard"></div>
-            </div>
+            </section>
+            <section class="card sidebar-block" aria-labelledby="activeTitle">
+                <h2 id="activeTitle">Treinaram hoje</h2>
+                <div id="activeTodayList"></div>
+            </section>
         </aside>
     </div>
 </div>

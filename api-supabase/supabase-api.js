@@ -218,7 +218,7 @@
   }
 
   async function profilesMap(ids) {
-    const rows = await selectIn("profiles", "id, name, avatar_url, location", "id", ids);
+    const rows = await selectIn("profiles", "id, name, avatar_url, location, xp", "id", ids);
     return new Map(rows.map((p) => [p.id, p]));
   }
 
@@ -463,6 +463,7 @@
         name: r.name,
         location: r.location || null,
         avatarPhotoUrl: r.avatar_url || null,
+        xp: num(r.xp),
         kmMonth,
         activitiesCount: userActs.length,
         followersCount: followersRows.filter((f) => f.followed_id === r.id).length,
@@ -479,6 +480,21 @@
     const km = new Map(userIds.map((id) => [id, 0]));
     acts.forEach((a) => km.set(a.user_id, (km.get(a.user_id) || 0) + num(a.distance_km)));
     return km;
+  }
+
+  // km, número de treinos e XP da semana de cada pessoa (rankings)
+  async function weekStatsBy(userIds) {
+    const acts = await selectIn("activities", "user_id, distance_km, duration_sec, xp_earned", "user_id", userIds,
+      (q) => q.gte("date", startOfWeek().toISOString()));
+    const stats = new Map(userIds.map((id) => [id, { km: 0, count: 0, xp: 0 }]));
+    acts.forEach((a) => {
+      const s = stats.get(a.user_id);
+      if (!s) return;
+      s.km += num(a.distance_km);
+      s.count += 1;
+      s.xp += num(a.xp_earned) || xpFromActivity(num(a.distance_km), num(a.duration_sec));
+    });
+    return stats;
   }
 
   function sortByValueThenName(list, key) {
@@ -512,18 +528,22 @@
     const profiles = await profilesMap(members.map((m) => m.user_id));
     return members.map((m) => {
       const p = profiles.get(m.user_id) || {};
-      return { id: m.user_id, name: p.name || "Atleta", avatarPhotoUrl: p.avatar_url || null, role: m.role, silenced: !!m.silenced };
+      return { id: m.user_id, name: p.name || "Atleta", avatarPhotoUrl: p.avatar_url || null, xp: num(p.xp), role: m.role, silenced: !!m.silenced };
     });
   }
 
-  async function buildClubLeaderboard(clubId) {
+  async function buildClubLeaderboard(clubId, viewerId) {
     // Membro silenciado pelo admin fica fora dos rankings do clube (mesma
     // regra que o app usa nos desafios e na Guerra de Clã).
     const members = (await clubMembersWithProfiles(clubId)).filter((m) => !m.silenced);
-    const km = await weekKmBy(members.map((m) => m.id));
-    return sortByValueThenName(members.map((m) => ({
-      id: m.id, name: m.name, avatarPhotoUrl: m.avatarPhotoUrl, weekKm: km.get(m.id) || 0
-    })), "weekKm");
+    const week = await weekStatsBy(members.map((m) => m.id));
+    return sortByValueThenName(members.map((m) => {
+      const w = week.get(m.id);
+      return {
+        id: m.id, name: m.name, avatarPhotoUrl: m.avatarPhotoUrl, xp: m.xp,
+        weekKm: w.km, weekActivities: w.count, weekXp: w.xp, isMe: m.id === viewerId
+      };
+    }), "weekKm");
   }
 
   // ---- Desafios de clube ----
@@ -564,6 +584,7 @@
       id: m.id,
       name: m.name,
       avatarPhotoUrl: m.avatarPhotoUrl,
+      xp: m.xp,
       value: METRICS[metric].value(inRange.filter((a) => a.user_id === m.id))
     })), "value");
 
@@ -1057,7 +1078,7 @@
 
     ["GET", /^feed\/active-today$/, async (m, body, query, me) => {
       const ids = await followingIds(me);
-      const rows = await selectIn("activities", "user_id, type, distance_km, date", "user_id", ids,
+      const rows = await selectIn("activities", "user_id, type, distance_km, duration_sec, xp_earned, date", "user_id", ids,
         (q) => q.gte("date", startOfToday().toISOString()));
       rows.sort((a, b) => new Date(b.date) - new Date(a.date));
       const profiles = await profilesMap(rows.map((r) => r.user_id));
@@ -1067,7 +1088,11 @@
         if (seen.has(r.user_id)) return;
         seen.add(r.user_id);
         const p = profiles.get(r.user_id) || {};
-        active.push({ id: r.user_id, name: p.name || "Atleta", avatarPhotoUrl: p.avatar_url || null, type: r.type || "Corrida", distanceKm: num(r.distance_km) });
+        active.push({
+          id: r.user_id, name: p.name || "Atleta", avatarPhotoUrl: p.avatar_url || null, xp: num(p.xp),
+          type: r.type || "Corrida", distanceKm: num(r.distance_km), date: r.date,
+          xpEarned: num(r.xp_earned) || xpFromActivity(num(r.distance_km), num(r.duration_sec))
+        });
       });
       return { active };
     }],
@@ -1139,7 +1164,7 @@
     ["GET", /^clubs\/([^/]+)$/, async (m, body, query, me) => {
       const club = await clubById(m[1]);
       const detail = (await buildClubs([club], me))[0];
-      detail.leaderboard = await buildClubLeaderboard(club.id);
+      detail.leaderboard = await buildClubLeaderboard(club.id, me);
       return { club: detail };
     }],
 
@@ -1275,14 +1300,25 @@
        9.8 AMIGOS
        Seguir / deixar de seguir e ranking da semana entre amigos.
        ======================================================= */
+    // Ranking da semana entre quem eu sigo, comigo junto (isMe) pra eu ver
+    // minha posição. Mostra os 10 primeiros e, se eu ficar de fora, me
+    // acrescenta no fim com a posição real.
     ["GET", /^friends\/leaderboard$/, async (m, body, query, me) => {
-      const ids = await followingIds(me);
-      const [profiles, km] = await Promise.all([profilesMap(ids), weekKmBy(ids)]);
-      const list = ids.map((id) => {
+      const ids = uniq([me].concat(await followingIds(me)));
+      const [profiles, week] = await Promise.all([profilesMap(ids), weekStatsBy(ids)]);
+      const list = sortByValueThenName(ids.map((id) => {
         const p = profiles.get(id) || {};
-        return { id, name: p.name || "Atleta", avatarPhotoUrl: p.avatar_url || null, weekKm: km.get(id) || 0 };
-      });
-      return { leaderboard: sortByValueThenName(list, "weekKm").slice(0, 10) };
+        const w = week.get(id);
+        return {
+          id, name: p.name || "Atleta", avatarPhotoUrl: p.avatar_url || null, xp: num(p.xp),
+          weekKm: w.km, weekActivities: w.count, weekXp: w.xp, isMe: id === me
+        };
+      }), "weekKm");
+      list.forEach((item, i) => { item.position = i + 1; });
+      const top = list.slice(0, 10);
+      const mine = list.find((x) => x.isMe);
+      if (mine && !top.includes(mine)) top.push(mine);
+      return { leaderboard: top, total: list.length };
     }],
 
     ["GET", /^following$/, async (m, body, query, me) => {
@@ -1317,14 +1353,14 @@
       const q = String(query.get("q") || "").trim();
       if (q.length < 2) return { users: [] };
       const pattern = "%" + q.replace(/[\\%_]/g, (c) => "\\" + c) + "%";
-      const rows = unwrap(await sb.from("profiles").select("id, name, location, avatar_url")
+      const rows = unwrap(await sb.from("profiles").select("id, name, location, avatar_url, xp")
         .neq("id", me).ilike("name", pattern).order("name", { ascending: true }).limit(20));
       return { users: await buildUserCards(rows, me) };
     }],
 
     ["GET", /^users\/suggested$/, async (m, body, query, me) => {
       const [rows, mine] = await Promise.all([
-        sb.from("profiles").select("id, name, location, avatar_url").neq("id", me).limit(300).then((r) => unwrap(r)),
+        sb.from("profiles").select("id, name, location, avatar_url, xp").neq("id", me).limit(300).then((r) => unwrap(r)),
         followingIds(me)
       ]);
       const following = new Set(mine);

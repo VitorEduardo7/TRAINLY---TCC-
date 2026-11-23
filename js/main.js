@@ -775,6 +775,104 @@
     return '<div class="' + className + '" style="background:' + avatarColor(id) + '">' + initials(name) + "</div>";
   }
 
+  /* ---------------------------------------------------------
+     GAMIFICAÇÃO COMPARTILHADA (Atividades, Explorar, Amigos, Clubes)
+     Ícone e cor de cada esporte, avatar com anel da patente e nível,
+     chip de XP, pódio dos rankings e "quanto falta pra passar alguém".
+     O visual fica no global.css, seção 14.
+     --------------------------------------------------------- */
+  const SPORTS = {
+    Corrida: {
+      color: "#3b82f6",
+      icon: '<svg viewBox="0 0 24 24"><circle cx="14.5" cy="4.5" r="2"/><path d="M8 21l2.5-5.5 3 2.5V22"/><path d="M6.5 11l3.5-3 4 .5 2.5 3.5H20"/><path d="M10.5 15.5 9.5 12l3.5-3.5"/></svg>'
+    },
+    Ciclismo: {
+      color: "#10b981",
+      icon: '<svg viewBox="0 0 24 24"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>'
+    },
+    "Natação": {
+      color: "#06b6d4",
+      icon: '<svg viewBox="0 0 24 24"><path d="M2 7c.6.5 1.2 1 2.5 1C7 8 7 6 9.5 6s2.4 2 5 2 2.5-2 5-2c1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2s2.4 2 5 2 2.5-2 5-2c1.3 0 1.9.5 2.5 1"/><path d="M2 17c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2s2.4 2 5 2 2.5-2 5-2c1.3 0 1.9.5 2.5 1"/></svg>'
+    },
+    Caminhada: {
+      color: "#f59e0b",
+      icon: '<svg viewBox="0 0 24 24"><path d="M4 16v-2.4C4 11.5 3 10.5 3 8c0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4M4 13h4"/></svg>'
+    }
+  };
+  function sportOf(type) { return SPORTS[type] || SPORTS.Corrida; }
+
+  // Quadradinho colorido com o ícone do esporte
+  function sportIconHtml(type, extraClass) {
+    const sp = sportOf(type);
+    return '<span class="sport-ic' + (extraClass ? " " + extraClass : "") + '" style="--sport:' + sp.color + '" aria-hidden="true">' + sp.icon + "</span>";
+  }
+
+  // "+80 XP" dourado
+  function xpChipHtml(xp, extraClass) {
+    return '<span class="xp-chip' + (extraClass ? " " + extraClass : "") + '">+' + Math.round(xp || 0).toLocaleString("pt-BR") + " XP</span>";
+  }
+
+  // Avatar com anel na cor da patente e o nível num selinho
+  function rankAvatarHtml(u, size) {
+    const info = levelInfo(u.xp || 0);
+    return '<span class="rank-av rank-av-' + (size || "md") + '" style="--rank-color:' + info.rank.color + '"' +
+      ' title="Nível ' + info.level + " · " + info.rank.name + '">' +
+      avatarHtml("rank-av-img", u.id, u.name || "?", u.avatarPhotoUrl) +
+      '<b class="rank-av-lvl" aria-hidden="true">' + info.level + "</b>" +
+    "</span>";
+  }
+  function rankLabel(xp) {
+    const info = levelInfo(xp || 0);
+    return '<span class="rank-label" style="--rank-color:' + info.rank.color + '"><i aria-hidden="true"></i>Nível ' + info.level + " · " + info.rank.name + "</span>";
+  }
+
+  // Pódio dos 3 primeiros (2º, 1º, 3º). fmtValue(m) devolve o texto do valor.
+  function podiumHtml(list, fmtValue) {
+    const top = list.slice(0, 3);
+    if (!top.length) return "";
+    const order = top.length === 1 ? [0] : top.length === 2 ? [1, 0] : [1, 0, 2];
+    return '<ol class="g-podium" aria-label="Pódio">' +
+      order.map((i) => {
+        const m = top[i];
+        const href = m.isMe ? "perfil.php" : "perfil.php?user=" + encodeURIComponent(m.id);
+        return '<li class="g-podium-col place-' + (i + 1) + (m.isMe ? " is-me" : "") + '">' +
+          '<a href="' + href + '" class="g-podium-person">' +
+            '<span class="g-podium-crown" aria-hidden="true">' + (i === 0
+              ? '<svg viewBox="0 0 24 24"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z"/></svg>' : "") + "</span>" +
+            rankAvatarHtml(m, i === 0 ? "lg" : "md") +
+            '<span class="g-podium-name">' + (m.isMe ? "Você" : gEsc(m.name)) + "</span>" +
+            '<span class="g-podium-value">' + fmtValue(m) + "</span>" +
+          "</a>" +
+          '<span class="g-podium-step"><span class="sr-only">Posição </span>' + (i + 1) + "º</span>" +
+        "</li>";
+      }).join("") +
+    "</ol>";
+  }
+
+  // Frase de incentivo: quanto falta pra passar quem está na frente
+  // (ou quanta vantagem você tem). list já vem ordenada, do maior pro menor.
+  function rivalLineHtml(list, key, unit, decimals) {
+    const idx = list.findIndex((m) => m.isMe);
+    if (idx < 0 || list.length < 2) return "";
+    const me = list[idx];
+    // unit pode ser texto ("km") ou função (v) => "dia"/"dias"
+    const fmt = (v) => v.toFixed(decimals).replace(".", ",") + " " + (typeof unit === "function" ? unit(v) : unit);
+    let text;
+    if (idx === 0) {
+      const gap = me[key] - list[1][key];
+      if (me[key] <= 0) return "";
+      text = gap > 0
+        ? "Você está na liderança, <b>" + fmt(gap) + "</b> à frente de " + gEsc(list[1].name.split(" ")[0]) + "."
+        : "Você está empatado na liderança. Um treino desempata!";
+    } else {
+      const ahead = list[idx - 1];
+      const gap = Math.max(ahead[key] - me[key], Math.pow(10, -decimals));
+      text = "Faltam <b>" + fmt(gap) + "</b> para você passar " + gEsc(ahead.name.split(" ")[0]) +
+        " e ficar em <b>" + idx + "º</b>.";
+    }
+    return '<p class="rival-line"><span class="rival-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg></span><span>' + text + "</span></p>";
+  }
+
   function initials(name) {
     return name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   }
@@ -1356,7 +1454,7 @@
   }
 
   // Chama da sequência semanal (cabeçalho do Início)
-  function renderStreakChip(slot, streak, data) {
+  function renderStreakChip(slot, streak, data, opts) {
     if (!slot) return;
     if (!streak) { slot.innerHTML = ""; return; }
     const stt = streakStatus(streak);
@@ -1365,7 +1463,7 @@
       '<button type="button" class="' + cls + '" aria-label="Sequência de ' + stt.shown + " " + gPlural(stt.shown, "semana", "semanas") + ', ver detalhes">' +
         GAMIF_ICONS.flame + "<b>" + stt.shown + "</b><span>" + gPlural(stt.shown, "semana", "semanas") + "</span>" +
       "</button>";
-    slot.querySelector(".streak-chip").addEventListener("click", () => openStreakModal(streak, data, { self: true }));
+    slot.querySelector(".streak-chip").addEventListener("click", () => openStreakModal(streak, data, opts || { self: true }));
   }
 
   // Versão minimalista (aba Estatísticas do perfil): mesma tipografia do "Resumo".
@@ -1635,7 +1733,17 @@
     });
 
     // Vindo do botão "Registrar atividade" do Início (atividades.php?nova=1)
-    if (new URLSearchParams(location.search).get("nova") === "1") open();
+    // ...ou do botão "Fiz essa rota" do Explorar (tipo, km, título e elevação)
+    const qs = new URLSearchParams(location.search);
+    if (qs.get("nova") === "1") {
+      open();
+      const tipo = qs.get("tipo");
+      if (tipo && ["Corrida", "Ciclismo", "Natação", "Caminhada"].includes(tipo)) document.getElementById("fType").value = tipo;
+      if (qs.get("km")) document.getElementById("fDist").value = qs.get("km");
+      if (qs.get("titulo")) document.getElementById("fTitle").value = qs.get("titulo");
+      if (qs.get("elev")) document.getElementById("fElev").value = qs.get("elev");
+      if (qs.get("km")) setTimeout(() => document.getElementById("fDur").focus(), 60);
+    }
 
     if (saveBtn) {
       saveBtn.addEventListener("click", async () => {
@@ -1988,6 +2096,52 @@
   // ---------------------------------------------------------
   // NOVO: Perfil PÚBLICO de outra pessoa (via perfil.php?user=ID)
   // ---------------------------------------------------------
+  // ---------------------------------------------------------
+  // Perfil: patente no cabeçalho e cartões de atividade
+  // (servem pro meu perfil e pro perfil de outra pessoa)
+  // ---------------------------------------------------------
+  function paintProfileRank(xp) {
+    const info = levelInfo(xp || 0);
+    document.querySelectorAll(".profile-cover, .profile-container").forEach((el) => el.style.setProperty("--rank-color", info.rank.color));
+    const badge = document.getElementById("profileLevelBadge");
+    if (badge) {
+      badge.textContent = info.level;
+      badge.title = "Nível " + info.level + " · " + info.rank.name;
+    }
+    const rankEl = document.getElementById("profileRank");
+    if (rankEl && !rankEl.dataset.painted) {
+      rankEl.dataset.painted = "1";
+      rankEl.innerHTML = rankLabel(xp) + '<span class="profile-streak-slot" id="profileStreakSlot"></span>';
+    }
+  }
+
+  function profileActivityCardHtml(a) {
+    const d = new Date(a.date);
+    const type = a.type || "Corrida";
+    const title = a.title || (type + " registrada");
+    const stat = (label, value) => "<div><span>" + label + "</span><b>" + value + "</b></div>";
+    return (
+      '<article class="pa-card activity-item" data-activity-id="' + gEsc(a.id) + '" style="--sport:' + sportOf(type).color + '">' +
+        (a.photoUrl ? '<div class="pa-photo" style="background-image:url(\'' + a.photoUrl + '\')"></div>' : "") +
+        '<div class="pa-body">' +
+          '<div class="pa-head">' +
+            sportIconHtml(type) +
+            '<div class="pa-head-text">' +
+              '<h3 class="pa-title">' + gEsc(title) + "</h3>" +
+              '<div class="pa-date">' + type + " · " + d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }) + "</div>" +
+            "</div>" +
+          "</div>" +
+          '<div class="pa-stats">' +
+            stat("Distância", a.distanceKm.toFixed(1).replace(".", ",") + " km") +
+            stat("Tempo", formatClock(a.durationSec)) +
+            stat(type === "Ciclismo" ? "Velocidade" : "Ritmo", sportPaceHtml(a)) +
+          "</div>" +
+          '<div class="pa-foot">' + xpChipHtml(actXp(a)) + "</div>" +
+        "</div>" +
+      "</article>"
+    );
+  }
+
   async function renderPublicProfile(targetId) {
     const nameEl = document.getElementById("profileName");
     let profile;
@@ -2024,11 +2178,17 @@
     const coverEl = document.getElementById("profileCover");
     if (coverEl && profile.coverPhotoUrl) {
       coverEl.style.backgroundImage = "url('" + profile.coverPhotoUrl + "')";
+      coverEl.classList.add("has-photo");
     }
 
     document.getElementById("statActivities").textContent = profile.activitiesCount;
     document.getElementById("statFollowers").textContent = profile.followersCount;
     document.getElementById("statFollowing").textContent = profile.followingCount;
+    paintProfileRank(profile.xp || 0);
+    // No perfil dos outros a chama só aparece se a sequência estiver valendo
+    if (profile.streak && streakStatus(profile.streak).shown > 0) {
+      renderStreakChip(document.getElementById("profileStreakSlot"), profile.streak, { xp: profile.xp || 0, activities: null }, { self: false });
+    }
     const connections = initConnections({ userId: targetId, name: profile.name, isSelf: false });
 
     // Esconde tudo que só faz sentido no PRÓPRIO perfil
@@ -2092,26 +2252,7 @@
       emptyEl.style.display = "block";
     } else {
       emptyEl.style.display = "none";
-      grid.innerHTML = profile.activities.map((a) => {
-        const d = new Date(a.date);
-        const type = a.type || "Corrida";
-        const photoStyle = a.photoUrl ? "background-image:url('" + a.photoUrl + "');" : "";
-        return (
-          '<div class="pa-card activity-item" data-activity-id="' + a.id + '">' +
-            (photoStyle ? '<div class="pa-photo" style="' + photoStyle + '"><span class="pa-badge">' + type.toUpperCase() + "</span></div>" : "") +
-            '<div class="pa-body">' +
-              (!photoStyle ? '<span class="pa-badge-inline">' + type.toUpperCase() + "</span>" : "") +
-              '<div class="pa-title">' + (a.title || (type + " registrada")) + "</div>" +
-              '<div class="pa-date">' + d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }) + "</div>" +
-              '<div class="pa-stats">' +
-                "<div><b>" + a.distanceKm.toFixed(1).replace(".", ",") + " km</b>Dist.</div>" +
-                "<div><b>" + formatClock(a.durationSec) + "</b>Tempo</div>" +
-                "<div><b>" + formatPace(a.durationSec / 60, a.distanceKm) + "/km</b>Ritmo</div>" +
-              "</div>" +
-            "</div>" +
-          "</div>"
-        );
-      }).join("");
+      grid.innerHTML = [...profile.activities].sort((a, b) => new Date(b.date) - new Date(a.date)).map(profileActivityCardHtml).join("");
       wireActivitySocial(grid);
     }
   }
@@ -2139,32 +2280,22 @@
     if (totalAnoEl) totalAnoEl.textContent = yearActs.length;
     if (diasAtivosEl) diasAtivosEl.textContent = yearDistinctDays + " dias";
 
-    // Recordes pessoais com ícone (mesma lógica de sempre, layout novo)
+    // Recordes pessoais: mesma regra e mesmo visual da página Atividades
+    // (o melhor ritmo é só de corrida, sem misturar com ciclismo)
     const recordsEl = document.getElementById("perfilRecordesIcon");
     if (recordsEl) {
-      if (!acts.length) {
-        recordsEl.innerHTML = '<p class="empty-state">Sem recordes ainda.</p>';
-      } else {
-        const longest = [...acts].sort((a, b) => b.distanceKm - a.distanceKm)[0];
-        const fastest = [...acts].filter((a) => a.distanceKm > 0)
-          .sort((a, b) => (a.durationSec / a.distanceKm) - (b.durationSec / b.distanceKm))[0];
-        const longestDur = [...acts].sort((a, b) => b.durationSec - a.durationSec)[0];
-
-        const row = (icon, color, label, value, dateStr) =>
-          '<div class="record-icon-row">' +
-            '<div class="record-icon-badge" style="background:' + color + '22;color:' + color + ';">' + icon + "</div>" +
-            '<div class="record-icon-info">' +
-              '<div class="record-icon-label">' + label + "</div>" +
-              '<div class="record-icon-date">' + new Date(dateStr).toLocaleDateString("pt-BR", { month: "short", year: "numeric" }) + "</div>" +
-            "</div>" +
-            '<div class="record-icon-value">' + value + "</div>" +
-          "</div>";
-
-        recordsEl.innerHTML =
-          row("KM", "#3b82f6", "Maior distância", longest.distanceKm.toFixed(1).replace(".", ",") + " km", longest.date) +
-          row("RIT", "#f59e0b", "Melhor ritmo", formatPace(fastest.durationSec / 60, fastest.distanceKm) + "/km", fastest.date) +
-          row("REC", "#22c55e", "Maior duração", formatHM(longestDur.durationSec), longestDur.date);
-      }
+      const records = computeRecords(acts);
+      recordsEl.innerHTML = records.length
+        ? '<ul class="atv-records">' + records.map((r) => {
+            const d = new Date(r.act.date);
+            return '<li><div class="atv-rec" style="--tone:' + r.tone + '">' +
+              '<span class="atv-rec-ic" aria-hidden="true">' + RECORD_ICON + "</span>" +
+              '<span class="atv-rec-body"><span class="atv-rec-label">' + r.label + "</span>" +
+                '<span class="atv-rec-act">' + gEsc(r.act.title || r.act.type || "Treino") + " · " + d.toLocaleDateString("pt-BR", { day: "numeric", month: "short", year: "numeric" }) + "</span></span>" +
+              '<b class="atv-rec-value">' + r.value(r.act) + "</b>" +
+            "</div></li>";
+          }).join("") + "</ul>"
+        : emptyBlock("trophy", "Sem recordes ainda", "Os recordes aparecem aqui depois dos primeiros treinos.", true);
     }
 
     // Calendário de consistência (mês atual)
@@ -2272,6 +2403,7 @@
       const coverEl = document.getElementById("profileCover");
       if (coverEl && d.coverPhotoUrl) {
         coverEl.style.backgroundImage = "url('" + d.coverPhotoUrl + "')";
+        coverEl.classList.add("has-photo");
       }
 
       document.getElementById("statActivities").textContent = stats.totalActivities;
@@ -2279,6 +2411,7 @@
       document.getElementById("statFollowing").textContent = followingCount;
     }
     paintProfile(data);
+    paintProfileRank(data.xp || 0);
     initConnections({
       userId: data.id,
       name: data.name,
@@ -2289,7 +2422,10 @@
     // Aba Estatísticas: nível, barra de XP e chama de sequência
     const progressEl = document.getElementById("profileProgress");
     renderProfileProgress(progressEl, data, null, { self: true });
-    getStreak().then((st) => renderProfileProgress(progressEl, data, st, { self: true }));
+    getStreak().then((st) => {
+      renderProfileProgress(progressEl, data, st, { self: true });
+      renderStreakChip(document.getElementById("profileStreakSlot"), st, data);
+    });
 
     const acts = [...(data.activities || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -2304,26 +2440,7 @@
       emptyEl.style.display = "block";
     } else {
       emptyEl.style.display = "none";
-      grid.innerHTML = acts.map((a) => {
-        const d = new Date(a.date);
-        const type = a.type || "Corrida";
-        const photoStyle = a.photoUrl ? "background-image:url('" + a.photoUrl + "');" : "";
-        return (
-          '<div class="pa-card activity-item" data-activity-id="' + a.id + '">' +
-            (photoStyle ? '<div class="pa-photo" style="' + photoStyle + '"><span class="pa-badge">' + type.toUpperCase() + "</span></div>" : "") +
-            '<div class="pa-body">' +
-              (!photoStyle ? '<span class="pa-badge-inline">' + type.toUpperCase() + "</span>" : "") +
-              '<div class="pa-title">' + (a.title || (type + " registrada")) + "</div>" +
-              '<div class="pa-date">' + d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }) + "</div>" +
-              '<div class="pa-stats">' +
-                "<div><b>" + a.distanceKm.toFixed(1).replace(".", ",") + " km</b>Dist.</div>" +
-                "<div><b>" + formatClock(a.durationSec) + "</b>Tempo</div>" +
-                "<div><b>" + formatPace(a.durationSec / 60, a.distanceKm) + "/km</b>Ritmo</div>" +
-              "</div>" +
-            "</div>" +
-          "</div>"
-        );
-      }).join("");
+      grid.innerHTML = acts.map(profileActivityCardHtml).join("");
       wireActivitySocial(grid);
     }
 
@@ -2375,7 +2492,8 @@
       coverInput.addEventListener("change", async () => {
         const file = coverInput.files[0];
         if (!file) return;
-        editCoverBtn.textContent = "Enviando...";
+        const coverLabel = editCoverBtn.querySelector("span") || editCoverBtn;
+        coverLabel.textContent = "Enviando...";
         try {
           const fresh = await uploadCoverPhoto(file);
           paintProfile(fresh);
@@ -2383,7 +2501,7 @@
         } catch (e) {
           showToast(e.message || "Não foi possível enviar a imagem.");
         } finally {
-          editCoverBtn.textContent = "Editar capa";
+          coverLabel.textContent = "Editar capa";
         }
       });
     }
@@ -2411,7 +2529,9 @@
     const shareBtn = document.getElementById("shareProfileBtn");
     if (shareBtn) {
       shareBtn.addEventListener("click", () => {
-        navigator.clipboard?.writeText(window.location.href);
+        // Link público: quem abrir vê o MEU perfil (sem o ?user=, cada um veria o próprio)
+        const url = location.origin + location.pathname + "?user=" + encodeURIComponent(data.id);
+        navigator.clipboard?.writeText(url);
         showToast("Link do perfil copiado!");
       });
     }
@@ -2437,21 +2557,27 @@
       emptyEl.style.display = "none";
 
       grid.innerHTML = users.map((u) => (
-        '<div class="user-card" data-user-id="' + u.id + '">' +
-          avatarHtml("user-card-avatar", u.id, u.name, u.avatarPhotoUrl) +
-          '<div class="user-card-name">' + u.name + "</div>" +
-          '<div class="user-card-location">' + (u.location || "Localização não informada") + "</div>" +
+        '<article class="user-card" data-user-id="' + gEsc(u.id) + '" style="--rank-color:' + levelInfo(u.xp || 0).rank.color + '">' +
+          '<div class="user-card-top">' +
+            rankAvatarHtml(u, "lg") +
+            '<div class="user-card-who">' +
+              '<a class="user-card-name" href="perfil.php?user=' + encodeURIComponent(u.id) + '">' + gEsc(u.name) + "</a>" +
+              rankLabel(u.xp) +
+              '<div class="user-card-location">' + (u.location ? gEsc(u.location) : "Localização não informada") + "</div>" +
+            "</div>" +
+          "</div>" +
           '<div class="user-card-stats">' +
-            "<div><b>" + u.kmMonth.toFixed(0) + "</b><span>km/mês</span></div>" +
-            "<div><b>" + u.activitiesCount + "</b><span>atividades</span></div>" +
-            "<div><b>" + u.followersCount + "</b><span>seguidores</span></div>" +
+            "<div><b>" + Math.round(u.kmMonth) + "</b><span>km no mês</span></div>" +
+            "<div><b>" + u.activitiesCount + "</b><span>" + gPlural(u.activitiesCount, "treino", "treinos") + "</span></div>" +
+            "<div><b>" + u.followersCount + "</b><span>" + gPlural(u.followersCount, "seguidor", "seguidores") + "</span></div>" +
           "</div>" +
-          (u.mutualCount > 0 ? '<div class="user-card-mutual">' + u.mutualCount + " amigo" + (u.mutualCount > 1 ? "s" : "") + " em comum</div>" : "") +
+          (u.mutualCount > 0 ? '<div class="user-card-mutual"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5a5 5 0 0 1 5.5 5"/></svg>' +
+            u.mutualCount + " " + gPlural(u.mutualCount, "amigo", "amigos") + " em comum</div>" : "") +
           '<div class="user-card-actions">' +
-            '<button class="btn-view-profile" type="button">Ver Perfil</button>' +
-            '<button class="btn-connect' + (u.isFollowing ? " connected" : "") + '" type="button">' + (u.isFollowing ? "Conectado" : "+ Seguir") + "</button>" +
+            '<button class="btn-view-profile" type="button">Ver perfil</button>' +
+            '<button class="btn-connect' + (u.isFollowing ? " connected" : "") + '" type="button" aria-pressed="' + (u.isFollowing ? "true" : "false") + '">' + (u.isFollowing ? "Seguindo" : "+ Seguir") + "</button>" +
           "</div>" +
-        "</div>"
+        "</article>"
       )).join("");
 
       grid.querySelectorAll(".user-card").forEach((card) => {
@@ -2465,12 +2591,14 @@
           try {
             if (!isFollowing) {
               await followUser(userId);
-              connectBtn.textContent = "Conectado";
+              connectBtn.textContent = "Seguindo";
               connectBtn.classList.add("connected");
+              connectBtn.setAttribute("aria-pressed", "true");
             } else {
               await unfollowUser(userId);
               connectBtn.textContent = "+ Seguir";
               connectBtn.classList.remove("connected");
+              connectBtn.setAttribute("aria-pressed", "false");
             }
           } catch (e) {
             showToast(e.message || "Não foi possível concluir a ação.");
@@ -2486,7 +2614,7 @@
     }
 
     async function loadSuggested() {
-      titleEl.textContent = "Atletas Sugeridos";
+      titleEl.textContent = "Atletas sugeridos";
       grid.innerHTML = '<p class="empty-state">Carregando...</p>';
       try {
         const users = await apiRequest("/users/suggested");
@@ -2524,32 +2652,61 @@
 
     loadSuggested();
 
-    // Sidebar: Ativos Agora
-    try {
-      const active = await getActiveToday();
-      renderActiveToday(document.getElementById("activeTodayList"), active);
-    } catch (e) {
-      document.getElementById("activeTodayList").innerHTML = '<p class="empty-state">Não foi possível carregar.</p>';
+    // Lateral: ranking da semana (você entre quem você segue)
+    const lbEl = document.getElementById("friendsLeaderboard");
+    const resetEl = document.getElementById("lbReset");
+    if (resetEl) {
+      const daysLeft = 7 - ((new Date().getDay() + 6) % 7);
+      resetEl.textContent = daysLeft === 1 ? "Zera amanhã" : "Zera em " + daysLeft + " dias";
     }
-
-    // Sidebar: Ranking da Semana (entre quem você segue)
     try {
       const { leaderboard } = await apiRequest("/friends/leaderboard");
-      const lbEl = document.getElementById("friendsLeaderboard");
-      if (!leaderboard.length) {
-        lbEl.innerHTML = emptyBlock("trophy", "Ranking vazio", "Siga outros atletas para ver o ranking aqui.", true);
+      const others = leaderboard.filter((m) => !m.isMe);
+      if (!others.length) {
+        lbEl.innerHTML = emptyBlock("trophy", "Ranking vazio", "Siga outros atletas para disputar o ranking da semana com eles.", true);
       } else {
-        lbEl.innerHTML = leaderboard.map((m, i) => (
-          '<div class="lb-row">' +
-            '<div class="lb-pos">' + (i + 1) + "</div>" +
-            avatarHtml("small-avatar", m.id, m.name, m.avatarPhotoUrl) +
-            '<a class="lb-name" href="perfil.php?user=' + m.id + '">' + m.name + "</a>" +
-            '<div class="lb-km">' + m.weekKm.toFixed(1).replace(".", ",") + " km</div>" +
-          "</div>"
-        )).join("");
+        const kmTxt = (m) => m.weekKm.toFixed(1).replace(".", ",") + " km";
+        const scored = leaderboard.some((m) => m.weekKm > 0);
+        const podiumList = scored ? leaderboard.filter((m) => m.weekKm > 0).slice(0, 3) : [];
+        const rest = leaderboard.filter((m) => !podiumList.includes(m));
+        lbEl.innerHTML =
+          (podiumList.length ? podiumHtml(podiumList, kmTxt) : "") +
+          '<ol class="g-rank-list">' + rest.map((m) => {
+            const pos = m.position || leaderboard.indexOf(m) + 1;
+            const gapBefore = m.isMe && leaderboard.indexOf(m) > 0 && leaderboard[leaderboard.indexOf(m) - 1].position !== pos - 1;
+            return (gapBefore ? '<li class="g-rank-sep" aria-hidden="true">•••</li>' : "") +
+              '<li class="g-rank-row' + (m.isMe ? " is-me" : "") + '">' +
+                '<span class="g-rank-pos">' + pos + "</span>" +
+                rankAvatarHtml(m, "sm") +
+                '<a class="g-rank-name" href="' + (m.isMe ? "perfil.php" : "perfil.php?user=" + encodeURIComponent(m.id)) + '">' + (m.isMe ? "Você" : gEsc(m.name)) +
+                  "<small>" + m.weekActivities + " " + gPlural(m.weekActivities, "treino", "treinos") + "</small></a>" +
+                '<span class="g-rank-value">' + kmTxt(m) + "</span>" +
+              "</li>";
+          }).join("") + "</ol>" +
+          rivalLineHtml(leaderboard, "weekKm", "km", 1);
       }
     } catch (e) {
-      document.getElementById("friendsLeaderboard").innerHTML = '<p class="empty-state">Não foi possível carregar o ranking.</p>';
+      lbEl.innerHTML = '<p class="empty-state">Não foi possível carregar o ranking.</p>';
+    }
+
+    // Lateral: quem treinou hoje (entre quem você segue)
+    const activeEl = document.getElementById("activeTodayList");
+    try {
+      const active = await getActiveToday();
+      if (!active.length) {
+        activeEl.innerHTML = emptyBlock("activity", "Ninguém treinou ainda hoje", "Que tal ser o primeiro? Seus amigos vão ver no feed.", true);
+      } else {
+        activeEl.innerHTML = '<ul class="active-list">' + active.map((a) => (
+          '<li class="active-row">' +
+            '<span class="active-av">' + rankAvatarHtml(a, "sm") + sportIconHtml(a.type, "xs") + "</span>" +
+            '<a class="active-name" href="perfil.php?user=' + encodeURIComponent(a.id) + '">' + gEsc(a.name) +
+              "<small>" + gEsc(a.type) + " · " + (a.distanceKm || 0).toFixed(1).replace(".", ",") + " km" + (a.date ? " · " + timeAgo(a.date) : "") + "</small></a>" +
+            (a.xpEarned ? xpChipHtml(a.xpEarned) : "") +
+          "</li>"
+        )).join("") + "</ul>";
+      }
+    } catch (e) {
+      activeEl.innerHTML = '<p class="empty-state">Não foi possível carregar.</p>';
     }
   }
 
@@ -2599,85 +2756,272 @@
     });
   }
 
+  // Ritmo do jeito que cada esporte costuma medir
+  function sportPaceHtml(a) {
+    const type = a.type || "Corrida";
+    if (!a.distanceKm || !a.durationSec) return "—";
+    if (type === "Ciclismo") return (a.distanceKm / (a.durationSec / 3600)).toFixed(1).replace(".", ",") + " km/h";
+    if (type === "Natação") return formatPace(a.durationSec / 60, a.distanceKm * 10) + "/100m";
+    return formatPace(a.durationSec / 60, a.distanceKm) + "/km";
+  }
+  // XP que a atividade deu (o banco guarda; se faltar, recalcula com a mesma regra)
+  function actXp(a) {
+    return a.xpEarned || xpFromActivity(a.distanceKm || 0, a.durationSec || 0);
+  }
+  // Segunda-feira da semana de uma data (horário local)
+  function mondayOf(d) {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+    return x;
+  }
+
+  // Recordes pessoais (de todas as atividades)
+  function computeRecords(acts) {
+    const best = (list, score) => list.reduce((b, a) => (score(a) > (b ? score(b) : -Infinity) ? a : b), null);
+    // Ritmo mais rápido que 2'30"/km é humanamente impossível (o recorde mundial
+    // é ~2'50"/km): é treino digitado errado, então não vale como recorde.
+    const runs = acts.filter((a) => (a.type || "Corrida") === "Corrida" && a.distanceKm >= 1 && a.durationSec > 0 &&
+      a.durationSec / 60 / a.distanceKm >= 2.5);
+    const records = [
+      { key: "dist", label: "Maior distância", act: best(acts, (a) => a.distanceKm || 0),
+        value: (a) => a.distanceKm.toFixed(2).replace(".", ",") + " km", tone: "var(--ok)" },
+      { key: "time", label: "Treino mais longo", act: best(acts, (a) => a.durationSec || 0),
+        value: (a) => formatHM(a.durationSec), tone: "#8b8ef5" },
+      { key: "pace", label: "Melhor ritmo (corrida)", act: best(runs, (a) => -(a.durationSec / a.distanceKm)),
+        value: (a) => formatPace(a.durationSec / 60, a.distanceKm) + "/km", tone: "var(--primary-blue)" },
+      { key: "xp", label: "Mais XP num treino", act: best(acts, (a) => actXp(a)),
+        value: (a) => "+" + actXp(a).toLocaleString("pt-BR") + " XP", tone: "var(--xp-gold)" }
+    ];
+    return records.filter((r) => r.act && (r.key !== "dist" || r.act.distanceKm > 0));
+  }
+
+  const RECORD_ICON = '<svg viewBox="0 0 24 24"><path d="M7 4h10v3a5 5 0 0 1-10 0V4z"/><path d="M5 5H3v1a4 4 0 0 0 4 4M19 5h2v1a4 4 0 0 1-4 4M10 15h4l1 5H9l1-5z"/></svg>';
+
   async function initAtividades() {
-    const tabsEl = document.querySelector(".filter-tabs");
-    if (!tabsEl) return; // não é a página de atividades
+    const tabsEl = document.querySelector(".atv-filters") || document.querySelector(".filter-tabs");
+    if (!tabsEl || !document.getElementById("atividadesList")) return; // não é a página de atividades
 
     const data = await getData();
+    const allActs = (data.activities || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
     let currentType = "Todos";
+    const records = computeRecords(allActs);
+    const recordsByAct = new Map();
+    records.forEach((r) => {
+      const list = recordsByAct.get(String(r.act.id)) || [];
+      list.push(r);
+      recordsByAct.set(String(r.act.id), list);
+    });
 
-    function renderSummary(acts) {
-      const year = new Date().getFullYear();
-      const thisYear = acts.filter((a) => new Date(a.date).getFullYear() === year);
-      const totalKm = thisYear.reduce((s, a) => s + a.distanceKm, 0);
-      const totalSec = thisYear.reduce((s, a) => s + a.durationSec, 0);
-      const totalElev = thisYear.reduce((s, a) => s + (a.elevationM || 0), 0);
+    // ---- Nível + XP da semana ----
+    function renderLevel() {
+      const el = document.getElementById("atvLevel");
+      if (!el) return;
+      const info = levelInfo(data.xp || 0);
+      const weekStart = mondayOf(new Date());
+      const weekXp = allActs.filter((a) => new Date(a.date) >= weekStart).reduce((s, a) => s + actXp(a), 0);
+      const filled = Math.round((info.xpIntoLevel / info.xpToNext) * 10);
+      const next = RANKS.find((r) => r.min > info.level);
+      el.style.setProperty("--rank-color", info.rank.color);
+      el.innerHTML =
+        '<div class="atv-level-hex" aria-hidden="true"><svg viewBox="0 0 52 58"><polygon points="26,2 49,15 49,43 26,56 3,43 3,15"/><text x="26" y="37" text-anchor="middle">' + info.level + "</text></svg></div>" +
+        '<div class="atv-level-main">' +
+          '<div class="atv-level-top">' +
+            '<span class="atv-level-rank">' + info.rank.name + '</span><b class="atv-level-name">Nível ' + info.level + "</b>" +
+            '<span class="atv-level-xp">' + info.xpIntoLevel.toLocaleString("pt-BR") + " / " + info.xpToNext.toLocaleString("pt-BR") + " XP</span>" +
+          "</div>" +
+          '<div class="atv-level-bar" role="progressbar" aria-label="Progresso do nível" aria-valuemin="0" aria-valuemax="' + info.xpToNext + '" aria-valuenow="' + info.xpIntoLevel + '">' +
+            Array.from({ length: 10 }, (_, i) => "<i" + (i < filled ? ' class="on"' : "") + "></i>").join("") +
+          "</div>" +
+          '<div class="atv-level-sub">Faltam <b>' + (info.xpToNext - info.xpIntoLevel).toLocaleString("pt-BR") + " XP</b> para o nível " + (info.level + 1) +
+            (next ? " · " + next.name + " no nível " + next.min : " · patente máxima!") + "</div>" +
+        "</div>" +
+        '<div class="atv-level-week">' +
+          '<span class="atv-level-week-label">Nesta semana</span>' +
+          xpChipHtml(weekXp, "lg") +
+        "</div>";
+    }
 
-      const countEl = document.getElementById("sumCount");
-      const distEl = document.getElementById("sumDist");
-      const timeEl = document.getElementById("sumTime");
-      const elevEl = document.getElementById("sumElev");
+    // ---- Números do período (Semana / Mês / 6 meses / Ano) ----
+    // Períodos do calendário, iguais aos nomes: esta semana (seg-dom),
+    // este mês, últimos 6 meses e este ano.
+    const PERIODS = {
+      week: { title: "Sua semana", suffix: "na semana", start: () => mondayOf(new Date()) },
+      month: { title: "Seu mês", suffix: "no mês", start: () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); } },
+      "6months": { title: "Seus últimos 6 meses", suffix: "em 6 meses", start: () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() - 5, 1); } },
+      year: { title: "Seu ano", suffix: "no ano", start: () => new Date(new Date().getFullYear(), 0, 1) }
+    };
+    const periodEl = document.querySelector(".atv-period");
+    let currentPeriod = (periodEl && periodEl.querySelector(".period-pill.active") || {}).dataset?.period || "year";
 
-      if (countEl) countEl.textContent = thisYear.length;
-      if (distEl) distEl.textContent = totalKm.toFixed(0).replace(".", ",") + " km";
-      if (timeEl) timeEl.textContent = formatHM(totalSec);
-      if (elevEl) elevEl.textContent = totalElev.toFixed(0) + " m";
+    function renderSummary() {
+      const per = PERIODS[currentPeriod] || PERIODS.year;
+      const since = per.start();
+      const inPeriod = allActs.filter((a) => new Date(a.date) >= since);
+      const totalKm = inPeriod.reduce((s, a) => s + a.distanceKm, 0);
+      const totalSec = inPeriod.reduce((s, a) => s + a.durationSec, 0);
+      const totalXp = inPeriod.reduce((s, a) => s + actXp(a), 0);
+      const activeDays = new Set(inPeriod.map((a) => new Date(a.date).toDateString())).size;
+      const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+      set("atvPeriodTitle", per.title);
+      set("sumCount", String(inPeriod.length));
+      set("sumCountLabel", gPlural(inPeriod.length, "Treino", "Treinos") + " · " + activeDays + " " + gPlural(activeDays, "dia ativo", "dias ativos"));
+      set("sumDist", (totalKm < 100 ? totalKm.toFixed(1).replace(".", ",") : Math.round(totalKm).toLocaleString("pt-BR")) + "<small>km</small>");
+      set("sumDistLabel", "Distância " + per.suffix);
+      set("sumTime", Math.floor(totalSec / 3600) + "<small>h</small> " + Math.floor((totalSec % 3600) / 60) + "<small>min</small>");
+      set("sumTimeLabel", "Tempo ativo " + per.suffix);
+      set("sumXp", "+" + totalXp.toLocaleString("pt-BR"));
+      set("sumXpLabel", "XP ganho " + per.suffix);
+      // contador em cada filtro (todas as atividades)
+      tabsEl.querySelectorAll("[data-count]").forEach((c) => {
+        const t = c.dataset.count;
+        c.textContent = t === "Todos" ? allActs.length : allActs.filter((a) => (a.type || "Corrida") === t).length;
+      });
+    }
+    if (periodEl && periodEl.dataset.wired !== "1") {
+      periodEl.dataset.wired = "1";
+      periodEl.querySelectorAll(".period-pill").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          periodEl.querySelectorAll(".period-pill").forEach((b) => { b.classList.remove("active"); b.setAttribute("aria-pressed", "false"); });
+          btn.classList.add("active");
+          btn.setAttribute("aria-pressed", "true");
+          periodEl._render(btn.dataset.period);
+        });
+      });
+    }
+    // initAtividades roda de novo depois de salvar/excluir: o clique sempre usa o render mais recente
+    if (periodEl) periodEl._render = (p) => { currentPeriod = p; renderSummary(); };
+
+    // ---- Recordes na lateral ----
+    function renderRecords() {
+      const el = document.getElementById("atvRecords");
+      if (!el) return;
+      if (!records.length) {
+        el.innerHTML = '<li class="atv-rec-empty">Registre treinos para bater seus primeiros recordes.</li>';
+        return;
+      }
+      el.innerHTML = records.map((r) => {
+        const d = new Date(r.act.date);
+        return '<li><button type="button" class="atv-rec" data-goto="' + gEsc(r.act.id) + '" style="--tone:' + r.tone + '">' +
+          '<span class="atv-rec-ic" aria-hidden="true">' + RECORD_ICON + "</span>" +
+          '<span class="atv-rec-body"><span class="atv-rec-label">' + r.label + "</span>" +
+            '<span class="atv-rec-act">' + gEsc(r.act.title || r.act.type || "Treino") + " · " + d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }) + "</span></span>" +
+          '<b class="atv-rec-value">' + r.value(r.act) + "</b>" +
+        "</button></li>";
+      }).join("");
+    }
+
+    // ---- Lista agrupada por semana ----
+    function weekLabel(monday) {
+      const thisMonday = mondayOf(new Date());
+      const diffWeeks = Math.round((thisMonday - monday) / (7 * 86400000));
+      if (diffWeeks === 0) return "Esta semana";
+      if (diffWeeks === 1) return "Semana passada";
+      const sunday = new Date(monday);
+      sunday.setDate(sunday.getDate() + 6);
+      const f = (d) => d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(".", "");
+      return f(monday) + " – " + f(sunday);
+    }
+
+    function itemHtml(a) {
+      const d = new Date(a.date);
+      const type = a.type || "Corrida";
+      const sp = sportOf(type);
+      const title = a.title || (type + " registrada");
+      const dateLabel = d.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" }) +
+        " · " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      const recs = (recordsByAct.get(String(a.id)) || []).slice(0, 2);
+      const stat = (label, value) => '<div class="act-stat"><span>' + label + "</span><b>" + value + "</b></div>";
+      return (
+        '<article class="activity-item" data-activity-id="' + gEsc(a.id) + '" style="--sport:' + sp.color + '">' +
+          sportIconHtml(type, "lg") +
+          '<div class="act-body">' +
+            '<div class="act-head">' +
+              "<div>" +
+                '<h3 class="act-title">' + gEsc(title) + "</h3>" +
+                '<div class="act-date">' + type + " · " + dateLabel + "</div>" +
+              "</div>" +
+              '<div class="act-head-right">' +
+                xpChipHtml(actXp(a)) +
+                '<div class="activity-actions">' +
+                  '<button type="button" class="act-action-btn" data-action="edit" aria-label="Editar ' + gEsc(title) + '" title="Editar">' +
+                    '<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>' +
+                  '<button type="button" class="act-action-btn danger" data-action="delete" aria-label="Excluir ' + gEsc(title) + '" title="Excluir">' +
+                    '<svg viewBox="0 0 24 24"><path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>' +
+                "</div>" +
+              "</div>" +
+            "</div>" +
+            (recs.length ? '<div class="act-badges">' + recs.map((r) =>
+              '<span class="g-badge" style="--tone:' + r.tone + '">' + RECORD_ICON + r.label + "</span>").join("") + "</div>" : "") +
+            '<div class="act-stats">' +
+              stat("Distância", a.distanceKm.toFixed(2).replace(".", ",") + " km") +
+              stat("Duração", formatClock(a.durationSec)) +
+              stat(type === "Ciclismo" ? "Velocidade" : "Ritmo", sportPaceHtml(a)) +
+              (a.heartRate ? stat("Freq.", a.heartRate + " bpm") : "") +
+              (a.elevationM ? stat("Elevação", a.elevationM + " m") : "") +
+            "</div>" +
+          "</div>" +
+        "</article>"
+      );
     }
 
     function renderList() {
-      const all = [...(data.activities || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
-      const filtered = currentType === "Todos" ? all : all.filter((a) => (a.type || "Corrida") === currentType);
-
-      renderSummary(all);
-
+      const filtered = currentType === "Todos" ? allActs : allActs.filter((a) => (a.type || "Corrida") === currentType);
       const listEl = document.getElementById("atividadesList");
       const emptyEl = document.getElementById("atividadesEmpty");
-      if (!listEl) return;
-
       listEl._acts = data.activities || [];
       wireActivityActions(listEl);
 
-      if (filtered.length === 0) {
+      if (!filtered.length) {
         listEl.innerHTML = "";
-        if (emptyEl) emptyEl.style.display = "block";
+        emptyEl.innerHTML = currentType === "Todos"
+          ? emptyBlock("activity", "Nenhuma atividade ainda", "Registre seu primeiro treino em \"+ Nova Atividade\" e comece a ganhar XP.")
+          : emptyBlock("activity", "Nenhuma atividade de " + currentType.toLowerCase(), "Que tal estrear esse esporte? Todo treino vale XP.");
+        emptyEl.style.display = "block";
         return;
       }
-      if (emptyEl) emptyEl.style.display = "none";
+      emptyEl.style.display = "none";
 
-      listEl.innerHTML = filtered.map((a) => {
-        const d = new Date(a.date);
-        const dateLabel = d.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" }) +
-          ", " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-        const type = a.type || "Corrida";
-        const title = a.title || (type + " registrada");
-        const extraStats = (a.heartRate || a.elevationM)
-          ? '<div><div class="act-stat-label">Freq.</div><div class="act-stat-value">' + (a.heartRate ? a.heartRate + " bpm" : "—") + '</div></div>' +
-            '<div><div class="act-stat-label">Elevação</div><div class="act-stat-value">' + (a.elevationM ? a.elevationM + "m" : "—") + '</div></div>'
-          : "";
-        return (
-          '<div class="activity-item" data-activity-id="' + a.id + '">' +
-            '<div class="activity-item-top">' +
-              '<div class="activity-item-info">' +
-                "<div>" +
-                  '<div class="act-type">' + type + '</div>' +
-                  '<div class="act-title">' + title + '</div>' +
-                  '<div class="act-date">' + dateLabel + "</div>" +
-                "</div>" +
-              "</div>" +
-              '<div class="activity-actions">' +
-                '<button type="button" class="act-action-btn" data-action="edit">Editar</button>' +
-                '<button type="button" class="act-action-btn danger" data-action="delete">Excluir</button>' +
-              "</div>" +
-            "</div>" +
-            '<div class="act-stats">' +
-              '<div><div class="act-stat-label">Distância</div><div class="act-stat-value">' + a.distanceKm.toFixed(2).replace(".", ",") + ' km</div></div>' +
-              '<div><div class="act-stat-label">Duração</div><div class="act-stat-value">' + formatClock(a.durationSec) + '</div></div>' +
-              '<div><div class="act-stat-label">Ritmo</div><div class="act-stat-value">' + formatPace(a.durationSec / 60, a.distanceKm) + '/km</div></div>' +
-              extraStats +
-            "</div>" +
-          "</div>"
-        );
+      // agrupa por semana (segunda a domingo)
+      const groups = [];
+      filtered.forEach((a) => {
+        const monday = mondayOf(new Date(a.date)).getTime();
+        let g = groups[groups.length - 1];
+        if (!g || g.monday !== monday) { g = { monday, acts: [] }; groups.push(g); }
+        g.acts.push(a);
+      });
+
+      listEl.innerHTML = groups.map((g) => {
+        const km = g.acts.reduce((s, a) => s + a.distanceKm, 0);
+        const xp = g.acts.reduce((s, a) => s + actXp(a), 0);
+        return '<section class="act-week">' +
+          '<header class="act-week-head">' +
+            '<h2>' + weekLabel(new Date(g.monday)) + "</h2>" +
+            '<span class="act-week-sum">' + g.acts.length + " " + gPlural(g.acts.length, "treino", "treinos") +
+              " · " + km.toFixed(1).replace(".", ",") + " km</span>" +
+            xpChipHtml(xp) +
+          "</header>" +
+          g.acts.map(itemHtml).join("") +
+        "</section>";
       }).join("");
+    }
+
+    // Recorde clicado: rola até a atividade e dá um destaque
+    const recordsEl = document.getElementById("atvRecords");
+    if (recordsEl && recordsEl.dataset.wired !== "1") {
+      recordsEl.dataset.wired = "1";
+      recordsEl.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-goto]");
+        if (!btn) return;
+        const all = tabsEl.querySelector('[data-filter="Todos"]');
+        if (currentType !== "Todos" && all) all.click();
+        const item = document.querySelector('.activity-item[data-activity-id="' + CSS.escape(btn.dataset.goto) + '"]');
+        if (!item) return;
+        item.scrollIntoView({ behavior: "smooth", block: "center" });
+        item.classList.remove("flash");
+        void item.offsetWidth;
+        item.classList.add("flash");
+      });
     }
 
     // initAtividades roda de novo depois de registrar/editar/excluir; os filtros
@@ -2691,49 +3035,23 @@
       tabsEl.dataset.wired = "1";
       tabsEl.querySelectorAll(".filter-pill").forEach((tab) => {
         tab.addEventListener("click", () => {
-          tabsEl.querySelectorAll(".filter-pill").forEach((t) => t.classList.remove("active"));
+          tabsEl.querySelectorAll(".filter-pill").forEach((t) => { t.classList.remove("active"); t.setAttribute("aria-pressed", "false"); });
           tab.classList.add("active");
+          tab.setAttribute("aria-pressed", "true");
           tabsEl._render();
         });
       });
     }
 
+    renderLevel();
+    renderSummary();
+    renderRecords();
     tabsEl._render();
     initRegisterModal(data, null, () => initAtividades());
-    initAtividadesStatsPeriod();
     renderAtividadesConsistencyCalendar(data.activities || []);
+    getStreak().then((st) => renderStreakChip(document.getElementById("atvStreakSlot"), st, data)).catch(() => {});
   }
 
-  // NOVO: card de Resumo da página Atividades, com seletor de período
-  // (Semana/Mês/6 Meses/Ano) — busca o agregado direto da API
-  // (/activities/summary), independente da aba Estatísticas do perfil.
-  const PERIOD_LABELS = { week: "Semana", month: "Mês", "6months": "6 Meses", year: "Ano" };
-
-  async function fetchActivitiesSummary(period) {
-    const { data } = await apiRequest("/activities/summary?period=" + encodeURIComponent(period));
-    return data;
-  }
-
-  function renderAtividadesStatsCards(summary) {
-    const label = PERIOD_LABELS[summary.period] || "Período";
-
-    const resumoTitleEl = document.getElementById("atvResumoTitle");
-    if (resumoTitleEl) resumoTitleEl.textContent = "Resumo — " + label;
-
-    const distEl = document.getElementById("atvDistancia");
-    const tempoEl = document.getElementById("atvTempo");
-    const totalEl = document.getElementById("atvTotal");
-    const diasEl = document.getElementById("atvDiasAtivos");
-    if (distEl) distEl.textContent = summary.distanceKm.toFixed(2).replace(".", ",") + " km";
-    if (tempoEl) tempoEl.textContent = formatHM(summary.durationSec);
-    if (totalEl) totalEl.textContent = summary.activitiesCount;
-    if (diasEl) diasEl.textContent = summary.activeDays + (summary.activeDays === 1 ? " dia" : " dias");
-  }
-
-  // NOVO: mesma "tabelinha" (calendário do mês atual) da aba
-  // Estatísticas do perfil, reaproveitada aqui no card de Consistência
-  // — usa os dados já carregados em data.activities, sem depender do
-  // seletor de período (que só afeta o card de Resumo).
   function renderAtividadesConsistencyCalendar(acts) {
     const grid = document.getElementById("atvConsistGrid");
     if (!grid) return;
@@ -2782,30 +3100,7 @@
     if (csPct) csPct.textContent = pct + "%";
   }
 
-  function initAtividadesStatsPeriod() {
-    const periodTabs = document.querySelectorAll(".period-tabs .period-pill");
-    if (!periodTabs.length) return;
 
-    async function loadPeriod(period) {
-      try {
-        const summary = await fetchActivitiesSummary(period);
-        renderAtividadesStatsCards(summary);
-      } catch (err) {
-        showToast(err.message || "Não foi possível carregar o resumo do período.");
-      }
-    }
-
-    periodTabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
-        periodTabs.forEach((t) => t.classList.remove("active"));
-        tab.classList.add("active");
-        loadPeriod(tab.dataset.period);
-      });
-    });
-
-    const initialTab = document.querySelector(".period-tabs .period-pill.active") || periodTabs[0];
-    loadPeriod(initialTab.dataset.period);
-  }
 
   /* ---------------------------------------------------------
      8. MAPA: rastreamento real via Geolocation API + Leaflet
@@ -2975,8 +3270,31 @@
      NOVO: Página Explorar (rotas prontas cadastradas por usuários)
      --------------------------------------------------------- */
   // Mesmos tipos de rota do app: Corrida, Ciclismo e Caminhada
-  const ROUTE_TYPE_ICON = { Corrida: "", Ciclismo: "", Caminhada: "" };
   const ROUTE_TYPE_COLOR = { Corrida: "#3b82f6", Ciclismo: "#10b981", Caminhada: "#f59e0b" };
+
+  // Quanto tempo e XP uma rota daria, com um ritmo comum de cada esporte
+  // (corrida 6 min/km, ciclismo 25 km/h, caminhada 12 min/km) + 1 min a cada
+  // 10 m de subida. É só uma estimativa: o XP de verdade vem do treino feito.
+  const ROUTE_PACE_MIN_PER_KM = { Corrida: 6, Ciclismo: 2.4, Caminhada: 12 };
+  function routeEstimate(r) {
+    const pace = ROUTE_PACE_MIN_PER_KM[r.type] || 6;
+    const min = Math.max(1, Math.round(r.distanceKm * pace + (r.elevationM || 0) / 10));
+    return { min, xp: xpFromActivity(r.distanceKm, min * 60) };
+  }
+  function fmtMinutes(min) {
+    return min >= 60 ? Math.floor(min / 60) + "h" + (min % 60 ? String(min % 60).padStart(2, "0") : "") : min + " min";
+  }
+  const DIFFICULTY = {
+    "Fácil": { level: 1, color: "var(--ok)" },
+    "Moderada": { level: 2, color: "#f59e0b" },
+    "Difícil": { level: 3, color: "var(--danger, #f0554e)" }
+  };
+  function difficultyHtml(d) {
+    const info = DIFFICULTY[d] || DIFFICULTY.Moderada;
+    return '<span class="diff-badge" style="--tone:' + info.color + '">' +
+      '<span class="diff-bars" aria-hidden="true">' + [1, 2, 3].map((n) => "<i" + (n <= info.level ? ' class="on"' : "") + "></i>").join("") + "</span>" +
+      gEsc(d || "Moderada") + "</span>";
+  }
 
   function initExplorar() {
     const myListEl = document.getElementById("myRoutesList");
@@ -3012,17 +3330,43 @@
         return;
       }
       bar.style.display = "flex";
+      const est = routeEstimate(route);
+      const doneHref = "atividades.php?nova=1&tipo=" + encodeURIComponent(route.type) +
+        "&km=" + encodeURIComponent(route.distanceKm) + "&titulo=" + encodeURIComponent(route.name) +
+        (route.elevationM ? "&elev=" + encodeURIComponent(route.elevationM) : "");
+      bar.style.setProperty("--sport", sportOf(route.type).color);
       bar.innerHTML =
-        "<div>" +
-          '<div class="route-detail-title">' + route.name + "</div>" +
-          '<div class="route-detail-sub">' + route.type + (route.terrain ? " · " + route.terrain : "") + "</div>" +
+        '<div class="rd-main">' +
+          sportIconHtml(route.type, "lg") +
+          "<div>" +
+            '<div class="route-detail-title">' + gEsc(route.name) + "</div>" +
+            '<div class="route-detail-sub">' + gEsc(route.type) + (route.terrain ? " · " + gEsc(route.terrain) : "") +
+              " · criada por " + (route.isMine ? "você" : gEsc(route.creatorName)) + "</div>" +
+          "</div>" +
         "</div>" +
         '<div class="route-detail-stats">' +
-          '<div><div class="rd-label">Dificuldade</div><div class="rd-value">' + route.difficulty + "</div></div>" +
-          '<div><div class="rd-label">Avaliação</div><div class="rd-value">' + (route.ratingAvg ? "★ " + route.ratingAvg + (route.ratingCount ? " (" + route.ratingCount + ")" : "") : "Sem notas") + "</div></div>" +
-          '<div><div class="rd-label">Criada por</div><div class="rd-value">' + (route.isMine ? "Você" : route.creatorName) + "</div></div>" +
+          '<div><div class="rd-label">Dificuldade</div><div class="rd-value">' + difficultyHtml(route.difficulty) + "</div></div>" +
+          '<div><div class="rd-label">Distância</div><div class="rd-value">' + route.distanceKm.toFixed(1).replace(".", ",") + " km</div></div>" +
+          '<div><div class="rd-label">Tempo estimado</div><div class="rd-value">≈ ' + fmtMinutes(est.min) + "</div></div>" +
+          '<div class="rd-xp"><div class="rd-label">Vale cerca de</div>' + xpChipHtml(est.xp, "lg") + "</div>" +
         "</div>" +
-        '<a class="btn-primary" href="mapa.php?startLat=' + route.startLat + "&startLng=" + route.startLng + '" style="text-decoration:none;">Iniciar Rota →</a>';
+        '<a class="btn-primary rd-done" href="' + doneHref + '">' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Fiz essa rota</a>';
+    }
+
+    // Seus números de explorador (contam sempre todas as rotas, sem filtro)
+    function renderExploreSummary(routes) {
+      const el = document.getElementById("exploreSummary");
+      if (!el) return;
+      const mine = routes.filter((r) => r.isMine);
+      const km = mine.reduce((s, r) => s + r.distanceKm, 0);
+      const climb = mine.reduce((s, r) => s + (r.elevationM || 0), 0);
+      const item = (tone, icon, value, label) =>
+        '<li style="--tone:' + tone + '"><span class="exp-sum-ic" aria-hidden="true">' + icon + "</span><b>" + value + "</b><span>" + label + "</span></li>";
+      el.innerHTML =
+        item("var(--primary-blue)", '<svg viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>', mine.length, gPlural(mine.length, "rota criada", "rotas criadas")) +
+        item("var(--ok)", '<svg viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>', km.toFixed(1).replace(".", ",") + " km", "mapeados") +
+        item("#f59e0b", '<svg viewBox="0 0 24 24"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>', climb.toLocaleString("pt-BR") + " m", "de subida");
     }
 
     function selectRoute(id) {
@@ -3045,33 +3389,32 @@
       emptyEl.style.display = "none";
 
       containerEl.innerHTML = routes.map((r) => {
-        const icon = ROUTE_TYPE_ICON[r.type] || "";
-        const color = ROUTE_TYPE_COLOR[r.type] || "#3b82f6";
+        const est = routeEstimate(r);
         return (
-          '<div class="route-card' + (String(r.id) === selectedId ? " selected" : "") + '" data-route-id="' + r.id + '">' +
+          '<div class="route-card' + (String(r.id) === selectedId ? " selected" : "") + '" data-route-id="' + gEsc(r.id) + '" style="--sport:' + sportOf(r.type).color + '" tabindex="0" role="button" aria-label="Ver rota ' + gEsc(r.name) + ' no mapa">' +
             '<div class="route-card-top">' +
-              '<div class="route-icon" style="background:' + color + '22; color:' + color + ';">' + icon + "</div>" +
+              sportIconHtml(r.type) +
               '<div class="route-card-main">' +
-                '<div class="route-name">' + r.name + "</div>" +
-                '<div class="route-meta">' + r.type + (r.ratingAvg ? " · ★ " + r.ratingAvg + " (" + r.ratingCount + ")" : "") + "</div>" +
-                '<div class="route-tags"><span class="route-tag">' + r.difficulty + "</span>" + "" + "</div>" +
-                (showCreator ? '<div class="route-creator">por ' + r.creatorName + "</div>" : "") +
+                '<div class="route-name">' + gEsc(r.name) + "</div>" +
+                '<div class="route-meta">' + gEsc(r.type) + (r.terrain ? " · " + gEsc(r.terrain) : "") +
+                  (showCreator ? " · por " + gEsc(r.creatorName) : "") + "</div>" +
               "</div>" +
               (!showCreator ? (
                 '<div class="route-card-actions">' +
-                  '<button class="route-icon-btn" data-edit-route="' + r.id + '" title="Editar" aria-label="Editar rota">' +
+                  '<button class="route-icon-btn" data-edit-route="' + gEsc(r.id) + '" title="Editar" aria-label="Editar rota ' + gEsc(r.name) + '">' +
                     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"></path></svg>' +
                   "</button>" +
-                  '<button class="route-icon-btn danger" data-delete-route="' + r.id + '" title="Apagar" aria-label="Apagar rota">' +
+                  '<button class="route-icon-btn danger" data-delete-route="' + gEsc(r.id) + '" title="Apagar" aria-label="Apagar rota ' + gEsc(r.name) + '">' +
                     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>' +
                   "</button>" +
                 "</div>"
               ) : "") +
             "</div>" +
+            '<div class="route-tags">' + difficultyHtml(r.difficulty) + xpChipHtml(est.xp, "route-xp") + "</div>" +
             '<div class="route-stats3">' +
               "<div><b>" + r.distanceKm.toFixed(2).replace(".", ",") + " km</b><span>Distância</span></div>" +
-              "<div><b>" + r.elevationM + " m</b><span>Elevação</span></div>" +
-              "<div><b>" + (r.terrain || "—") + "</b><span>Terreno</span></div>" +
+              "<div><b>" + (r.elevationM || 0) + " m</b><span>Subida</span></div>" +
+              "<div><b>≈ " + fmtMinutes(est.min) + "</b><span>Tempo estimado</span></div>" +
             "</div>" +
           "</div>"
         );
@@ -3082,6 +3425,9 @@
           if (e.target.closest("[data-edit-route], [data-delete-route]")) return;
           selectRoute(card.dataset.routeId);
         });
+        card.addEventListener("keydown", (e) => {
+          if ((e.key === "Enter" || e.key === " ") && e.target === card) { e.preventDefault(); selectRoute(card.dataset.routeId); }
+        });
       });
     }
 
@@ -3091,6 +3437,10 @@
 
       renderGroup(myListEl, document.getElementById("myRoutesEmpty"), myRoutes, false);
       renderGroup(friendsListEl, document.getElementById("friendsRoutesEmpty"), friendsRoutes, true);
+      const myCount = document.getElementById("myRoutesCount");
+      const frCount = document.getElementById("friendsRoutesCount");
+      if (myCount) myCount.textContent = myRoutes.length;
+      if (frCount) frCount.textContent = friendsRoutes.length;
 
       if (!routes.length) {
         renderDetailBar(null);
@@ -3107,6 +3457,7 @@
       const activeType = document.querySelector(".filter-pill.active")?.dataset.filter || "Todos";
       const term = document.getElementById("routeSearch").value.trim().toLowerCase();
       allRoutes = await getRoutes(activeType);
+      if (activeType === "Todos") renderExploreSummary(allRoutes);
       const filtered = term ? allRoutes.filter((r) => r.name.toLowerCase().includes(term)) : allRoutes;
       selectedId = null;
       renderList(filtered);
@@ -3351,6 +3702,19 @@
   /* ---------------------------------------------------------
      NOVO: Página Clubes
      --------------------------------------------------------- */
+  // Cada clube ganha uma cor fixa (a partir do id) pro brasão
+  const CLUB_COLORS = ["#2f7dfd", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4", "#ec4899"];
+  function clubColor(id) {
+    let h = 0;
+    String(id).split("").forEach((c) => { h = (h * 31 + c.charCodeAt(0)) >>> 0; });
+    return CLUB_COLORS[h % CLUB_COLORS.length];
+  }
+  function clubBadgeHtml(club, cls) {
+    return '<span class="club-crest ' + (cls || "") + '" style="--club:' + clubColor(club.id) + '" aria-hidden="true">' +
+      '<svg viewBox="0 0 40 46"><path d="M20 2 37 8v14c0 11-7.5 18.5-17 22C10.5 40.5 3 33 3 22V8z"/></svg>' +
+      "<b>" + gEsc(club.name ? club.name.charAt(0).toUpperCase() : "?") + "</b></span>";
+  }
+
   function initClubes() {
     const listEl = document.getElementById("myClubsList");
     if (!listEl) return; // não é a página de clubes
@@ -3364,13 +3728,16 @@
         return;
       }
       listEl.innerHTML = myClubs.map((c) => (
-        '<div class="club-list-item' + (String(c.id) === String(selectedClubId) ? " selected" : "") + '" data-club-id="' + c.id + '">' +
-          '<div class="club-icon">' + (c.name ? c.name.charAt(0).toUpperCase() : "?") + "</div>" +
-          "<div>" +
-            '<div class="club-list-name">' + c.name + (c.isAdmin ? ' <span style="color:var(--primary-blue);font-size:10px;">ADMIN</span>' : "") + "</div>" +
-            '<div class="club-list-meta">' + c.memberCount + " membros</div>" +
-          "</div>" +
-        "</div>"
+        '<button type="button" class="club-list-item' + (String(c.id) === String(selectedClubId) ? " selected" : "") + '" data-club-id="' + gEsc(c.id) + '"' +
+          ' style="--club:' + clubColor(c.id) + '" aria-pressed="' + (String(c.id) === String(selectedClubId) ? "true" : "false") + '">' +
+          clubBadgeHtml(c) +
+          '<span class="club-list-body">' +
+            '<span class="club-list-name">' + gEsc(c.name) + "</span>" +
+            '<span class="club-list-meta">' + c.memberCount + " " + gPlural(c.memberCount, "membro", "membros") +
+              (c.isAdmin ? ' · <span class="club-admin-tag">Admin</span>' : "") + "</span>" +
+          "</span>" +
+          '<svg class="club-list-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>' +
+        "</button>"
       )).join("");
 
       listEl.querySelectorAll(".club-list-item").forEach((item) => {
@@ -3393,7 +3760,6 @@
 
     async function renderClubDetail(club) {
       const detailEl = document.getElementById("clubDetail");
-      const medals = ["1º", "2º", "3º"];
 
       // ---- helpers de formatação dos desafios ----
       const METRIC_LABELS = { km: "Distância", activities: "Atividades", hours: "Tempo ativo", days: "Dias ativos" };
@@ -3413,17 +3779,47 @@
         return p[2] + "/" + p[1] + "/" + p[0];
       }
 
-      // ---- ranking semanal (km) ----
-      const rankingHtml = club.leaderboard.length
-        ? club.leaderboard.map((m, i) => (
-            '<div class="rank-row">' +
-              '<div class="rank-pos">' + (i < 3 ? '<span class="rank-medal">' + medals[i] + "</span>" : i + 1) + "</div>" +
-              avatarHtml("rank-avatar", m.id, m.name, m.avatarPhotoUrl) +
-              '<a class="rank-name" href="perfil.php?user=' + m.id + '">' + m.name + "</a>" +
-              '<div class="rank-km">' + m.weekKm.toFixed(1).replace(".", ",") + " km</div>" +
-            "</div>"
-          )).join("")
-        : '<p class="empty-state">Nenhum membro registrou km essa semana ainda.</p>';
+      // ---- placar da semana do clube ----
+      const lb = club.leaderboard || [];
+      const meInClub = lb.find((m) => m.isMe);
+      const myPos = meInClub ? lb.indexOf(meInClub) + 1 : null;
+      const clubWeekKm = lb.reduce((t, m) => t + (m.weekKm || 0), 0);
+      const clubWeekActs = lb.reduce((t, m) => t + (m.weekActivities || 0), 0);
+      const clubWeekXp = lb.reduce((t, m) => t + (m.weekXp || 0), 0);
+      const daysToReset = 7 - ((new Date().getDay() + 6) % 7);
+      const statTile = (tone, icon, value, label) =>
+        '<div class="g-stat ' + tone + '"><span class="g-stat-ic" aria-hidden="true">' + icon + "</span>" +
+        '<div class="g-stat-body"><div class="g-stat-value">' + value + '</div><div class="g-stat-label">' + label + "</div></div></div>";
+      const scoreboardHtml =
+        '<div class="g-stats club-scoreboard" aria-label="O clube nesta semana">' +
+          statTile("tone-green", '<svg viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>',
+            clubWeekKm.toFixed(1).replace(".", ",") + "<small>km</small>", "juntos nesta semana") +
+          statTile("", '<svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
+            String(clubWeekActs), gPlural(clubWeekActs, "treino do clube", "treinos do clube")) +
+          statTile("gold tone-gold", '<svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>',
+            "+" + clubWeekXp.toLocaleString("pt-BR"), "XP do clube na semana") +
+          statTile("tone-violet", '<svg viewBox="0 0 24 24"><path d="M7 4h10v3a5 5 0 0 1-10 0V4z"/><path d="M5 5H3v1a4 4 0 0 0 4 4M19 5h2v1a4 4 0 0 1-4 4M10 15h4l1 5H9l1-5z"/></svg>',
+            myPos ? myPos + "º<small>de " + lb.length + "</small>" : "—", "sua posição") +
+        "</div>";
+
+      // ---- ranking semanal (km) com pódio ----
+      const kmTxt = (m) => (m.weekKm || 0).toFixed(1).replace(".", ",") + " km";
+      const scoredLb = lb.filter((m) => m.weekKm > 0);
+      const podiumMembers = scoredLb.slice(0, 3);
+      const restMembers = lb.filter((m) => !podiumMembers.includes(m));
+      const rankingHtml = lb.length
+        ? (podiumMembers.length ? podiumHtml(podiumMembers, kmTxt) : '<p class="empty-state club-rank-empty">Ninguém pontuou ainda nesta semana. O primeiro treino já vale o 1º lugar!</p>') +
+          '<ol class="g-rank-list">' + restMembers.map((m) => (
+            '<li class="g-rank-row' + (m.isMe ? " is-me" : "") + '">' +
+              '<span class="g-rank-pos">' + (lb.indexOf(m) + 1) + "</span>" +
+              rankAvatarHtml(m, "sm") +
+              '<a class="g-rank-name" href="' + (m.isMe ? "perfil.php" : "perfil.php?user=" + encodeURIComponent(m.id)) + '">' + (m.isMe ? "Você" : gEsc(m.name)) +
+                "<small>" + (m.weekActivities || 0) + " " + gPlural(m.weekActivities || 0, "treino", "treinos") + "</small></a>" +
+              '<span class="g-rank-value">' + kmTxt(m) + "</span>" +
+            "</li>"
+          )).join("") + "</ol>" +
+          rivalLineHtml(lb, "weekKm", "km", 1)
+        : '<p class="empty-state">Esse clube ainda não tem membros no ranking.</p>';
 
       let challenge = null;
       let history = [];
@@ -3431,55 +3827,39 @@
       try { history = await getChallengeHistory(club.id); } catch (e) { /* ignora */ }
 
       // ---- desafio atual: pódio + lista de progresso ----
+      const myId = meInClub ? meInClub.id : null;
       function challengeBodyHtml(ch) {
-        const lb = ch.leaderboard || [];
-        if (!lb.length) return '<p class="empty-state challenge-progress-empty">Esse clube ainda não tem membros.</p>';
+        const chLb = (ch.leaderboard || []).map((m) => Object.assign({}, m, { isMe: m.id === myId }));
+        if (!chLb.length) return '<p class="empty-state challenge-progress-empty">Esse clube ainda não tem membros.</p>';
 
-        const topValue = lb[0].value || 0;
-        const top = lb.slice(0, 3).filter((m) => m.value > 0);
-        const rest = lb.slice(top.length);
-
-        let podium = "";
-        if (top.length) {
-          const order = top.length === 1 ? [0] : top.length === 2 ? [1, 0] : [1, 0, 2];
-          podium =
-            '<div class="podium">' +
-              order.map((i) => {
-                const m = top[i];
-                return (
-                  '<div class="podium-col place-' + (i + 1) + '">' +
-                    avatarHtml("podium-avatar", m.id, m.name, m.avatarPhotoUrl) +
-                    '<div class="podium-name">' + m.name + "</div>" +
-                    '<div class="podium-value">' + fmtValueUnit(ch, m.value) + "</div>" +
-                    '<div class="podium-step">' + medals[i] + "</div>" +
-                  "</div>"
-                );
-              }).join("") +
-            "</div>";
-        } else {
-          podium = '<p class="empty-state challenge-progress-empty">Ninguém pontuou nesse desafio ainda. Quem registrar a primeira atividade sai na frente.</p>';
-        }
+        const topValue = chLb[0].value || 0;
+        const top = chLb.slice(0, 3).filter((m) => m.value > 0);
+        const rest = chLb.slice(top.length);
+        const podium = top.length
+          ? podiumHtml(top, (m) => fmtValueUnit(ch, m.value))
+          : '<p class="empty-state challenge-progress-empty">Ninguém pontuou nesse desafio ainda. Quem registrar a primeira atividade sai na frente.</p>';
 
         const restHtml = rest.length
-          ? '<div class="challenge-progress-list">' +
+          ? '<ol class="challenge-progress-list">' +
               rest.map((m, idx) => {
                 const pct = topValue > 0 ? Math.max(3, Math.round((m.value / topValue) * 100)) : 0;
                 return (
-                  '<div class="challenge-progress-row">' +
+                  '<li class="challenge-progress-row' + (m.isMe ? " is-me" : "") + '">' +
                     '<div class="challenge-progress-pos">' + (top.length + idx + 1) + "º</div>" +
-                    avatarHtml("challenge-progress-avatar", m.id, m.name, m.avatarPhotoUrl) +
+                    rankAvatarHtml(m, "sm") +
                     '<div class="challenge-progress-info">' +
-                      '<div class="challenge-progress-name">' + m.name + "</div>" +
+                      '<div class="challenge-progress-name">' + (m.isMe ? "Você" : gEsc(m.name)) + "</div>" +
                       '<div class="challenge-progress-bar"><div class="challenge-progress-bar-fill" style="width:' + pct + '%"></div></div>' +
                     "</div>" +
                     '<div class="challenge-progress-km">' + fmtValueUnit(ch, m.value) + "</div>" +
-                  "</div>"
+                  "</li>"
                 );
               }).join("") +
-            "</div>"
+            "</ol>"
           : "";
-
-        return podium + restHtml;
+        const dec = ch.metric === "activities" || ch.metric === "days" ? 0 : 1;
+        const rival = ch.status === "active" ? rivalLineHtml(chLb, "value", (v) => unitFor(ch, v), dec) : "";
+        return podium + restHtml + rival;
       }
 
       let challengeHtml;
@@ -3497,7 +3877,7 @@
               "</div>" +
               '<span class="challenge-days">' + statusText + "</span>" +
             "</div>" +
-            '<div class="challenge-title">' + challenge.title + "</div>" +
+            '<div class="challenge-title">' + gEsc(challenge.title) + "</div>" +
             '<div class="challenge-period">' + fmtDate(challenge.startDate) + " até " + fmtDate(challenge.endDate) + "</div>" +
             '<div class="challenge-time-bar"><div class="challenge-time-bar-fill" style="width:' + challenge.elapsedPct + '%"></div></div>' +
             challengeBodyHtml(challenge) +
@@ -3518,16 +3898,17 @@
         ? history.map((h) => (
             '<div class="history-item">' +
               '<div class="history-main">' +
-                '<div class="history-title">' + h.title + "</div>" +
+                '<div class="history-title">' + gEsc(h.title) + "</div>" +
                 '<div class="history-meta"><span class="metric-badge">' + (METRIC_LABELS[h.metric] || "Distância") + "</span> " +
                   fmtDate(h.startDate) + " - " + fmtDate(h.endDate) + "</div>" +
               "</div>" +
               (h.winner
                 ? '<div class="history-winner">' +
-                    avatarHtml("history-avatar", h.winner.id, h.winner.name, h.winner.avatarPhotoUrl) +
+                    '<span class="history-trophy" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 4h10v3a5 5 0 0 1-10 0V4z"/><path d="M5 5H3v1a4 4 0 0 0 4 4M19 5h2v1a4 4 0 0 1-4 4M10 15h4l1 5H9l1-5z"/></svg></span>' +
+                    rankAvatarHtml(h.winner, "sm") +
                     "<div>" +
                       '<div class="history-winner-label">Vencedor</div>' +
-                      '<div class="history-winner-name">' + h.winner.name + "</div>" +
+                      '<div class="history-winner-name">' + (h.winner.id === myId ? "Você" : gEsc(h.winner.name)) + "</div>" +
                       '<div class="history-winner-value">' + fmtValueUnit(h, h.winner.value) + "</div>" +
                     "</div>" +
                   "</div>"
@@ -3537,11 +3918,11 @@
         : '<p class="empty-state">Nenhum desafio encerrado ainda.</p>';
 
       detailEl.innerHTML =
-        '<div class="club-hero">' +
-          '<div class="club-hero-badge">' + (club.name ? club.name.charAt(0).toUpperCase() : "?") + "</div>" +
+        '<div class="club-hero" style="--club:' + clubColor(club.id) + '">' +
+          clubBadgeHtml(club, "lg") +
           '<div class="club-hero-info">' +
-            '<div class="club-detail-title">' + club.name + "</div>" +
-            '<div class="club-detail-sub">' + (club.description || "Sem descrição") + "</div>" +
+            '<h2 class="club-detail-title">' + gEsc(club.name) + "</h2>" +
+            '<div class="club-detail-sub">' + (club.description ? gEsc(club.description) : "Sem descrição") + "</div>" +
             '<div class="club-chips">' +
               '<span class="chip">' + club.memberCount + (club.memberCount === 1 ? " membro" : " membros") + "</span>" +
               (club.isAdmin ? '<span class="chip chip-accent">Admin</span>' : "") +
@@ -3560,6 +3941,7 @@
             ) : "") +
           "</div>" +
         "</div>" +
+        scoreboardHtml +
         challengeHtml +
         '<div class="club-invite-box">' +
           "<div>" +
@@ -3569,14 +3951,14 @@
           '<button class="btn-secondary" id="copyInviteBtn">Copiar</button>' +
         "</div>" +
         '<div class="club-columns">' +
-          '<div class="card">' +
-            '<div class="club-ranking-title">Ranking da semana</div>' +
+          '<section class="card club-rank-card">' +
+            '<div class="club-ranking-title"><span>Ranking da semana</span><small>Zera ' + (daysToReset === 1 ? "amanhã" : "em " + daysToReset + " dias") + "</small></div>" +
             rankingHtml +
-          "</div>" +
-          '<div class="card">' +
-            '<div class="club-ranking-title">Histórico de desafios</div>' +
+          "</section>" +
+          '<section class="card">' +
+            '<div class="club-ranking-title"><span>Histórico de desafios</span></div>' +
             historyHtml +
-          "</div>" +
+          "</section>" +
         "</div>";
 
       ["openChallengeBtn", "openChallengeBtn2"].forEach((btnId) => {

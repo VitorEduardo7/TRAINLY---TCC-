@@ -250,34 +250,38 @@
      Card quadrado de publicação (aba "Publicações" do perfil,
      mesmo formato dos cards de atividade — .pa-card)
      --------------------------------------------------------- */
+  // Cartão de publicação da aba "Publicações" do perfil
   function renderPostCard(p) {
     const photoHtml = p.photoUrl
-      ? '<div class="pa-photo" style="background-image:url(\'' + p.photoUrl + '\');"><span class="pa-badge">PUBLICAÇÃO</span></div>'
+      ? '<div class="pa-photo" style="background-image:url(\'' + p.photoUrl + '\');"></div>'
       : "";
-    const inlineBadge = !p.photoUrl ? '<span class="pa-badge-inline">PUBLICAÇÃO</span>' : "";
-    const titleText = p.content ? escapeHtml(p.content) : "Publicação sem texto";
+    const text = p.content
+      ? escapeHtml(p.content).replace(/\n/g, "<br>")
+      : '<span class="pc-empty">Publicação sem texto</span>';
     const deleteBtn = p.isMine
-      ? '<button class="route-icon-btn danger post-delete-btn" type="button" title="Apagar publicação">' +
-          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      ? '<button class="route-icon-btn danger post-delete-btn" type="button" title="Apagar publicação" aria-label="Apagar publicação">' +
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
           '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>' +
           '<path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>' +
         "</button>"
       : "";
+    const comments = p.comments ? p.comments.length : 0;
 
     return (
-      '<div class="pa-card post-card" data-post-id="' + p.id + '">' +
+      '<article class="pa-card post-card" data-post-id="' + p.id + '">' +
         photoHtml +
-        deleteBtn +
         '<div class="pa-body">' +
-          inlineBadge +
-          '<div class="pa-title">' + titleText + "</div>" +
-          '<div class="pa-date">' + timeAgo(p.date) + "</div>" +
-          '<div class="pa-stats">' +
-            "<div>" + (p.comments ? p.comments.length : 0) + " coment.</div>" +
+          '<div class="pc-top">' +
+            '<span class="pc-when">' + timeAgo(p.date) + "</span>" +
+            deleteBtn +
+          "</div>" +
+          '<p class="pc-text">' + text + "</p>" +
+          '<div class="pc-foot">' +
             '<button class="kudos-btn pa-kudos' + (p.likedByMe ? " liked" : "") + '" data-action="like" aria-label="Curtir"' + (p.canLike ? "" : " disabled") + ">" + HEART_SVG + "<span>" + (p.likeCount || 0) + "</span></button>" +
+            '<span class="pc-comments">' + COMMENT_SVG + "<span>" + comments + " " + (comments === 1 ? "comentário" : "comentários") + "</span></span>" +
           "</div>" +
         "</div>" +
-      "</div>"
+      "</article>"
     );
   }
 
