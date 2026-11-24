@@ -398,10 +398,11 @@
       .eq("user_id", targetId).maybeSingle();
     const streakRow = streakRes.error ? null : streakRes.data;
 
-    const recent = unwrap(await sb.from("activities").select(ACTIVITY_COLUMNS)
-      .eq("user_id", targetId).order("date", { ascending: false }).limit(12));
-    const allIds = await fetchAllPages(() => sb.from("activities").select("id").eq("user_id", targetId));
-    const likes = await likesFor(allIds.map((a) => a.id));
+    // Todas as atividades (não só as 12 últimas): o perfil usa para o resumo
+    // do ano, os recordes e o calendário de consistência com meses anteriores.
+    const allActs = await fetchAllPages(() => sb.from("activities").select(ACTIVITY_COLUMNS)
+      .eq("user_id", targetId).order("date", { ascending: false }).order("id", { ascending: false }));
+    const likes = await likesFor(allActs.map((a) => a.id));
 
     let kudos = 0;
     likes.forEach((list) => { kudos += list.length; });
@@ -422,13 +423,13 @@
       memberSince: toLocalIso(user.created_at),
       xp: num(user.xp),
       streak: mapStreak(streakRow),
-      activitiesCount: allIds.length,
+      activitiesCount: allActs.length,
       followersCount,
       followingCount,
       kudosReceived: kudos,
       isFollowing: isFollowingCount > 0,
       isSelf: targetId === viewerId,
-      activities: recent.map((a) => {
+      activities: allActs.map((a) => {
         const m = mapActivity(a, likes, viewerId);
         delete m.heartRate;
         delete m.xpEarned;

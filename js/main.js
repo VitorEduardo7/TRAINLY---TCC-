@@ -2298,52 +2298,11 @@
         : emptyBlock("trophy", "Sem recordes ainda", "Os recordes aparecem aqui depois dos primeiros treinos.", true);
     }
 
-    // Calendário de consistência (mês atual)
-    const calGrid = document.getElementById("consistencyGrid");
-    if (calGrid) {
-      const now = new Date();
-      const monthNames = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-      const titleEl = document.getElementById("consistencyTitle");
-      if (titleEl) titleEl.textContent = "Consistência — " + monthNames[now.getMonth()] + " " + now.getFullYear();
-
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      const firstWeekday = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
-      const activeDaysSet = new Set(
-        acts
-          .filter((a) => {
-            const d = new Date(a.date);
-            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-          })
-          .map((a) => new Date(a.date).getDate())
-      );
-
-      const dayLabels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-      let html = dayLabels.map((l) => '<div class="consistency-day-label">' + l + "</div>").join("");
-      for (let i = 0; i < firstWeekday; i++) html += '<div class="consistency-day empty"></div>';
-      for (let d = 1; d <= daysInMonth; d++) {
-        html += '<div class="consistency-day' + (activeDaysSet.has(d) ? " active" : "") + '"></div>';
-      }
-      calGrid.innerHTML = html;
-
-      // Maior sequência de dias consecutivos ativos
-      let longestStreak = 0, current = 0;
-      for (let d = 1; d <= daysInMonth; d++) {
-        if (activeDaysSet.has(d)) {
-          current++;
-          longestStreak = Math.max(longestStreak, current);
-        } else {
-          current = 0;
-        }
-      }
-      const pct = Math.round((activeDaysSet.size / daysInMonth) * 100);
-
-      const csActive = document.getElementById("csActiveDays");
-      const csStreak = document.getElementById("csStreak");
-      const csPct = document.getElementById("csPct");
-      if (csActive) csActive.textContent = activeDaysSet.size + " / " + daysInMonth;
-      if (csStreak) csStreak.textContent = longestStreak + (longestStreak === 1 ? " dia" : " dias");
-      if (csPct) csPct.textContent = pct + "%";
-    }
+    // Calendário de consistência, com setas para ver os meses anteriores
+    renderConsistency({
+      grid: "consistencyGrid", month: "consistencyTitle", nav: "consistencyNav", info: "consistencyInfo",
+      active: "csActiveDays", streak: "csStreak", pct: "csPct"
+    }, acts);
   }
 
   // NOVO: liga as abas Publicações/Atividades/Estatísticas — roda tanto no
@@ -3048,59 +3007,129 @@
     renderRecords();
     tabsEl._render();
     initRegisterModal(data, null, () => initAtividades());
-    renderAtividadesConsistencyCalendar(data.activities || []);
+    renderConsistency({
+      grid: "atvConsistGrid", month: "atvConsistMonth", nav: "atvConsistNav", info: "atvConsistInfo",
+      active: "atvCsActive", streak: "atvCsStreak", pct: "atvCsPct"
+    }, data.activities || []);
     getStreak().then((st) => renderStreakChip(document.getElementById("atvStreakSlot"), st, data)).catch(() => {});
   }
 
-  function renderAtividadesConsistencyCalendar(acts) {
-    const grid = document.getElementById("atvConsistGrid");
+  /* Calendário de consistência (Perfil e Atividades)
+     Mostra o mês atual e deixa voltar até o mês do primeiro treino.
+     Cada dia com treino fica azul, mais forte quanto mais km no dia;
+     tocar num dia mostra o resumo dele embaixo do calendário.
+     ids: { grid, month, nav, info, active, streak, pct } */
+  const CAL_MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  const CAL_DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+  function renderConsistency(ids, acts) {
+    const $ = (id) => (id ? document.getElementById(id) : null);
+    const grid = $(ids.grid);
     if (!grid) return;
 
     const now = new Date();
-    const monthNames = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-    const titleEl = document.getElementById("atvConsistTitle");
-    if (titleEl) titleEl.textContent = "Consistência — " + monthNames[now.getMonth()] + " " + now.getFullYear();
+    const monthKey = (d) => d.getFullYear() * 12 + d.getMonth();
+    const currentKey = monthKey(now);
+    let firstKey = currentKey;
 
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const firstWeekday = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
-    const activeDaysSet = new Set(
-      acts
-        .filter((a) => {
-          const d = new Date(a.date);
-          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        })
-        .map((a) => new Date(a.date).getDate())
-    );
+    // Treinos por dia: "ano-mês-dia" -> { n, km }
+    const byDay = new Map();
+    acts.forEach((a) => {
+      const d = new Date(a.date);
+      if (isNaN(d)) return;
+      firstKey = Math.min(firstKey, monthKey(d));
+      const k = d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+      const cur = byDay.get(k) || { n: 0, km: 0 };
+      cur.n += 1;
+      cur.km += a.distanceKm || 0;
+      byDay.set(k, cur);
+    });
 
-    const dayLabels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-    let html = dayLabels.map((l) => '<div class="consistency-day-label">' + l + "</div>").join("");
-    for (let i = 0; i < firstWeekday; i++) html += '<div class="consistency-day empty"></div>';
-    for (let d = 1; d <= daysInMonth; d++) {
-      html += '<div class="consistency-day' + (activeDaysSet.has(d) ? " active" : "") + '"></div>';
-    }
-    grid.innerHTML = html;
+    const kmTxt = (km) => km.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " km";
+    const treinosTxt = (n) => n + " " + gPlural(n, "treino", "treinos");
+    let shown = currentKey;
+    let monthInfo = "";
 
-    // Maior sequência de dias consecutivos ativos, dentro do mês
-    let longestStreak = 0, current = 0;
-    for (let d = 1; d <= daysInMonth; d++) {
-      if (activeDaysSet.has(d)) {
-        current++;
-        longestStreak = Math.max(longestStreak, current);
-      } else {
-        current = 0;
+    function draw() {
+      const y = Math.floor(shown / 12);
+      const m = shown % 12;
+      const isCurrent = shown === currentKey;
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      const firstWeekday = new Date(y, m, 1).getDay();
+      const monthShort = CAL_MONTHS[m].slice(0, 3).toLowerCase();
+
+      const days = [];
+      for (let d = 1; d <= daysInMonth; d++) days.push(byDay.get(y + "-" + m + "-" + d) || null);
+      const maxKm = Math.max(0, ...days.map((x) => (x ? x.km : 0)));
+
+      let html = CAL_DAY_LABELS.map((l) => '<div class="consistency-day-label">' + l + "</div>").join("");
+      for (let i = 0; i < firstWeekday; i++) html += '<div class="consistency-day empty"></div>';
+      days.forEach((info, i) => {
+        const d = i + 1;
+        let cls = "consistency-day";
+        let tip = d + " de " + monthShort;
+        if (info) {
+          const ratio = maxKm > 0 ? info.km / maxKm : 1;
+          cls += " active lv" + (ratio > 0.66 ? 3 : ratio > 0.33 ? 2 : 1);
+          tip += " · " + treinosTxt(info.n) + (info.km > 0 ? " · " + kmTxt(info.km) : "");
+        } else if (isCurrent && d > now.getDate()) {
+          cls += " is-future";
+        } else {
+          tip += " · sem treino";
+        }
+        if (isCurrent && d === now.getDate()) cls += " is-today";
+        html += '<div class="' + cls + '" title="' + tip + '" data-tip="' + tip + '"><span class="cd-n">' + d + "</span></div>";
+      });
+      grid.innerHTML = html;
+
+      // Maior sequência de dias seguidos com treino, dentro do mês
+      let longest = 0, run = 0;
+      days.forEach((info) => { run = info ? run + 1 : 0; longest = Math.max(longest, run); });
+      const activeDays = days.filter(Boolean).length;
+      const monthN = days.reduce((s, x) => s + (x ? x.n : 0), 0);
+      const monthKm = days.reduce((s, x) => s + (x ? x.km : 0), 0);
+      monthInfo = monthN ? treinosTxt(monthN) + (monthKm > 0 ? " · " + kmTxt(monthKm) : "") : "Nenhum treino neste mês";
+
+      const label = CAL_MONTHS[m] + " " + y;
+      grid.setAttribute("aria-label", label + ": " + activeDays + " " + gPlural(activeDays, "dia", "dias") + " com treino");
+      const monthEl = $(ids.month);
+      if (monthEl) monthEl.textContent = label;
+      const infoEl = $(ids.info);
+      if (infoEl) infoEl.textContent = monthInfo;
+      const set = (id, txt) => { const el = $(id); if (el) el.textContent = txt; };
+      set(ids.active, activeDays + " / " + daysInMonth);
+      set(ids.streak, longest + " " + gPlural(longest, "dia", "dias"));
+      set(ids.pct, Math.round((activeDays / daysInMonth) * 100) + "%");
+
+      const nav = $(ids.nav);
+      if (nav) {
+        nav.querySelector('[data-step="-1"]').disabled = shown <= firstKey;
+        nav.querySelector('[data-step="1"]').disabled = shown >= currentKey;
       }
     }
-    const pct = Math.round((activeDaysSet.size / daysInMonth) * 100);
 
-    const csActive = document.getElementById("atvCsActive");
-    const csStreak = document.getElementById("atvCsStreak");
-    const csPct = document.getElementById("atvCsPct");
-    if (csActive) csActive.textContent = activeDaysSet.size + " / " + daysInMonth;
-    if (csStreak) csStreak.textContent = longestStreak + (longestStreak === 1 ? " dia" : " dias");
-    if (csPct) csPct.textContent = pct + "%";
+    const nav = $(ids.nav);
+    if (nav) {
+      nav.querySelectorAll("[data-step]").forEach((btn) => {
+        btn.onclick = () => {
+          shown = Math.min(currentKey, Math.max(firstKey, shown + Number(btn.dataset.step)));
+          draw();
+        };
+      });
+    }
+    // Tocar num dia mostra o resumo dele (no celular não existe "passar o mouse")
+    grid.onclick = (e) => {
+      const cell = e.target.closest(".consistency-day:not(.empty)");
+      const infoEl = $(ids.info);
+      if (!cell || !infoEl) return;
+      const wasSelected = cell.classList.contains("is-sel");
+      grid.querySelectorAll(".is-sel").forEach((c) => c.classList.remove("is-sel"));
+      if (wasSelected) { infoEl.textContent = monthInfo; return; }
+      cell.classList.add("is-sel");
+      infoEl.textContent = cell.dataset.tip;
+    };
+    draw();
   }
-
-
 
   /* ---------------------------------------------------------
      8. MAPA: rastreamento real via Geolocation API + Leaflet

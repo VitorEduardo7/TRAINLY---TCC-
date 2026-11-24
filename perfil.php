@@ -117,13 +117,26 @@
                     </div>
                 </div>
 
-                <div class="card">
-                    <h3 class="stats-card-title" id="consistencyTitle">Consistência</h3>
-                    <div class="consistency-calendar" id="consistencyGrid"></div>
-                    <div class="consistency-summary">
-                        <div class="cs-item"><b id="csActiveDays">0 / 0</b><span>Dias ativos no mês</span></div>
-                        <div class="cs-item"><b id="csStreak">0 dias</b><span>Maior sequência de dias</span></div>
-                        <div class="cs-item"><b id="csPct">0%</b><span>Taxa de consistência</span></div>
+                <!-- Consistência: as setas trocam o mês (main.js → renderConsistency) -->
+                <div class="card consist-card">
+                    <div class="cal-head">
+                        <h3 class="stats-card-title">Consistência</h3>
+                        <div class="cal-nav" id="consistencyNav">
+                            <button type="button" class="cal-arrow" data-step="-1" aria-label="Mês anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                            <span class="cal-month" id="consistencyTitle" aria-live="polite"></span>
+                            <button type="button" class="cal-arrow" data-step="1" aria-label="Próximo mês"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
+                        </div>
+                    </div>
+                    <div class="cal-body">
+                        <div class="cal-main">
+                            <div class="consistency-calendar" id="consistencyGrid" role="img"></div>
+                            <div class="cal-foot"><span id="consistencyInfo"></span><span class="cal-legend" aria-hidden="true">Menos<i></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i>Mais</span></div>
+                        </div>
+                        <div class="consistency-summary">
+                            <div class="cs-item"><b id="csActiveDays">0 / 0</b><span>Dias ativos no mês</span></div>
+                            <div class="cs-item"><b id="csStreak">0 dias</b><span>Maior sequência de dias</span></div>
+                            <div class="cs-item"><b id="csPct">0%</b><span>Taxa de consistência</span></div>
+                        </div>
                     </div>
                 </div>
             </div>

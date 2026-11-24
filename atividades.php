@@ -73,9 +73,17 @@
 
             <!-- Consistência do mês + recordes pessoais -->
             <aside class="atividades-sidebar">
-                <div class="stats-card">
-                    <div class="stats-card-title" id="atvConsistTitle">Consistência</div>
-                    <div class="consistency-grid" id="atvConsistGrid"></div>
+                <div class="stats-card consist-card">
+                    <div class="cal-head">
+                        <div class="stats-card-title">Consistência</div>
+                        <div class="cal-nav" id="atvConsistNav">
+                            <button type="button" class="cal-arrow" data-step="-1" aria-label="Mês anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                            <span class="cal-month" id="atvConsistMonth" aria-live="polite"></span>
+                            <button type="button" class="cal-arrow" data-step="1" aria-label="Próximo mês"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
+                        </div>
+                    </div>
+                    <div class="consistency-grid" id="atvConsistGrid" role="img"></div>
+                    <div class="cal-foot"><span id="atvConsistInfo"></span><span class="cal-legend" aria-hidden="true">Menos<i></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i>Mais</span></div>
                     <div class="consistency-summary">
                         <div class="consistency-summary-item">
                             <span id="atvCsActive">0</span>

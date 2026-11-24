@@ -1675,3 +1675,48 @@ html[data-contrast="high"] .g-rank-row.is-me { border: 1px solid var(--border-co
 .atv-rec-act { display: block; font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .atv-rec-value { font-size: 14px; font-weight: 800; color: var(--text-dark); white-space: nowrap; }
 .atv-rec-empty { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+/* Calendário de consistência (Perfil e Atividades)
+   Setas para trocar o mês, número do dia, azul mais forte quanto mais km
+   no dia, contorno no dia de hoje e legenda "Menos → Mais". */
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.cal-head .stats-card-title { margin: 0; }
+.cal-nav { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border-radius: var(--radius-pill); background: var(--surface); }
+.cal-arrow {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    color: var(--text-dark);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.cal-arrow svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.cal-arrow:hover:not(:disabled) { background: var(--card-bg); }
+.cal-arrow:disabled { opacity: 0.3; cursor: default; }
+.cal-month { min-width: 112px; padding: 0 4px; text-align: center; font-size: 13.5px; font-weight: 800; color: var(--text-dark); }
+
+.consist-card .consistency-day { position: relative; display: grid; place-items: center; cursor: default; }
+.consist-card .consistency-day:not(.empty) { cursor: pointer; }
+.cd-n { font-size: 10.5px; font-weight: 700; line-height: 1; color: var(--text-muted); opacity: 0.75; }
+.consistency-day.active .cd-n { color: #fff; opacity: 1; }
+.consistency-day.active.lv1 { background: color-mix(in srgb, var(--primary-blue) 40%, var(--surface)); border-color: transparent; }
+.consistency-day.active.lv2 { background: color-mix(in srgb, var(--primary-blue) 70%, var(--surface)); border-color: transparent; }
+.consistency-day.active.lv3 { background: var(--primary-blue); border-color: transparent; }
+.consistency-day.is-future { background: transparent; box-shadow: inset 0 0 0 1px var(--border-color); }
+.consistency-day.is-future .cd-n { opacity: 0.4; }
+.consistency-day.is-today { outline: 2px solid var(--text-dark); outline-offset: 2px; }
+.consistency-day.is-sel { outline: 2px solid var(--xp-gold); outline-offset: 2px; }
+
+.cal-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; margin: -4px 0 16px; font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+.cal-legend { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; }
+.cal-legend i { width: 11px; height: 11px; border-radius: 3px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border-color); }
+.cal-legend i:first-child { margin-left: 2px; }
+.cal-legend i:last-of-type { margin-right: 2px; }
+.cal-legend i.lv1 { background: color-mix(in srgb, var(--primary-blue) 40%, var(--surface)); box-shadow: none; }
+.cal-legend i.lv2 { background: color-mix(in srgb, var(--primary-blue) 70%, var(--surface)); box-shadow: none; }
+.cal-legend i.lv3 { background: var(--primary-blue); box-shadow: none; }
+html[data-theme="light"] .consistency-day.active.lv1 .cd-n { color: color-mix(in srgb, var(--primary-blue) 60%, #000); }

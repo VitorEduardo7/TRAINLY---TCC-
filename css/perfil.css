@@ -738,6 +738,18 @@ div.atv-rec:hover { background: transparent; }
 .consistency-day { border: none; background: var(--surface); }
 .cs-item b { font-family: var(--font-display); font-style: italic; font-size: 24px; color: var(--primary-blue); }
 
+/* Consistência: no cartão largo (computador) o resumo vai para o lado do
+   calendário; no estreito (celular) fica embaixo, como antes. */
+.consist-card { container-type: inline-size; }
+.consistency-calendar { margin-bottom: 18px; }
+@container (min-width: 540px) {
+    .cal-body { display: grid; grid-template-columns: minmax(0, 360px) minmax(140px, 1fr); gap: 26px; align-items: center; }
+    .cal-body .cal-foot { margin-bottom: 0; }
+    .cal-body .consistency-summary { flex-direction: column; gap: 20px; padding: 4px 0 4px 26px; border-top: none; border-left: 1px solid var(--border-color); }
+    .cal-body .cs-item { text-align: left; }
+    .cal-body .cs-item b { font-size: 30px; line-height: 1.05; white-space: nowrap; }
+}
+
 html[data-contrast="high"] .profile-stat-card,
 html[data-contrast="high"] #profileActivitiesGrid .pa-card,
 html[data-contrast="high"] #profilePostsList .pa-card,
@@ -773,5 +785,5 @@ html[data-contrast="high"] .stats-grid-2col .card { border: 1px solid var(--bord
     .profile-settings-btn { flex: 0 0 44px; }
     .resumo-value { font-size: 22px; }
     .cs-item { min-width: 0; overflow-wrap: anywhere; }
-    .cs-item b { font-size: 20px; }
+    .cs-item b { font-size: 20px; white-space: nowrap; }
 }
