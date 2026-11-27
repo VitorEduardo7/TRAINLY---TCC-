@@ -787,3 +787,59 @@ html[data-contrast="high"] .stats-grid-2col .card { border: 1px solid var(--bord
     .cs-item { min-width: 0; overflow-wrap: anywhere; }
     .cs-item b { font-size: 20px; white-space: nowrap; }
 }
+
+/* =========================================================
+   EDITOR DE RECORTE (foto de perfil em círculo, capa 4:1)
+   Montado pelo main.js (openImageCropper) só quando é usado.
+   ========================================================= */
+.crop-overlay { z-index: 3000; }
+.crop-modal { width: min(560px, calc(100vw - 32px)); max-width: none; padding: 20px 22px 18px; border-radius: 24px; }
+.crop-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.crop-head h3 { margin: 0; font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 24px; text-transform: uppercase; }
+.crop-hint { margin: 4px 0 14px; font-size: 13.5px; color: var(--text-muted); }
+.crop-stage {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 18px;
+    background: #0b0816;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    outline: none;
+}
+.crop-stage.crop-circle { max-width: 420px; margin: 0 auto; }
+.crop-stage.dragging { cursor: grabbing; }
+.crop-stage:focus-visible { box-shadow: 0 0 0 3px var(--primary-blue); }
+.crop-stage img { position: absolute; left: 0; top: 0; max-width: none; transform-origin: 0 0; pointer-events: none; }
+/* A moldura escurece tudo em volta com uma sombra gigante */
+.crop-frame { position: absolute; pointer-events: none; box-shadow: 0 0 0 9999px rgba(8, 5, 20, 0.62); border: 2px solid rgba(255, 255, 255, 0.9); }
+.crop-circle .crop-frame { border-radius: 50%; }
+.crop-rect .crop-frame { border-radius: 14px; }
+/* Grade de terços, só enquanto arrasta */
+.crop-frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+        linear-gradient(90deg, transparent calc(33.33% - 0.5px), rgba(255,255,255,.35) 0 calc(33.33% + 0.5px), transparent 0 calc(66.66% - 0.5px), rgba(255,255,255,.35) 0 calc(66.66% + 0.5px), transparent 0),
+        linear-gradient(180deg, transparent calc(33.33% - 0.5px), rgba(255,255,255,.35) 0 calc(33.33% + 0.5px), transparent 0 calc(66.66% - 0.5px), rgba(255,255,255,.35) 0 calc(66.66% + 0.5px), transparent 0);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+.crop-stage.dragging .crop-frame::after { opacity: 1; }
+.crop-zoom { display: flex; align-items: center; gap: 12px; margin: 16px 4px 4px; color: var(--text-muted); }
+.crop-zoom svg { width: 20px; height: 20px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.crop-zoom input { flex: 1; accent-color: var(--primary-blue); min-width: 0; }
+.crop-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.crop-actions .crop-spacer { flex: 1; }
+.crop-actions .btn-primary,
+.crop-actions .btn-secondary { height: 42px; padding: 0 18px; }
+html[data-contrast="high"] .crop-modal { border: 1px solid var(--border-color); }
+@media (max-width: 600px) {
+    .crop-modal { padding: 16px 14px 14px; }
+    .crop-actions [data-crop="reset"] { order: 3; width: 100%; }
+    .crop-actions .crop-spacer { display: none; }
+    .crop-actions [data-crop="cancel"], .crop-actions [data-crop="save"] { flex: 1; }
+}

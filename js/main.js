@@ -240,6 +240,202 @@
     return data;
   }
 
+  /* ---------------------------------------------------------
+     EDITOR DE IMAGEM (recorte antes de enviar)
+     Foto de perfil: recorte em círculo. Capa: faixa larga 4:1, como
+     Discord/Twitter. Arrastar move, a barra/roda do mouse/pinça dá zoom,
+     setas do teclado também movem. Devolve um File JPEG já recortado
+     (ou null se a pessoa cancelar).
+     --------------------------------------------------------- */
+  const CROP_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+  function openImageCropper(file, opts) {
+    const o = Object.assign({ shape: "circle", aspect: 1, outW: 512, outH: 512, title: "Ajustar foto", fileName: "foto.jpg" }, opts);
+    return new Promise((resolve) => {
+      if (!file || !CROP_TYPES.includes(file.type)) {
+        showToast("Formato não suportado. Use JPG, PNG ou WEBP.");
+        resolve(null);
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onerror = () => { URL.revokeObjectURL(url); showToast("Não foi possível abrir essa imagem."); resolve(null); };
+      img.onload = () => build();
+      img.src = url;
+
+      function build() {
+        const overlay = document.createElement("div");
+        overlay.className = "overlay open crop-overlay";
+        overlay.innerHTML =
+          '<div class="modal crop-modal" role="dialog" aria-modal="true" aria-labelledby="cropTitle">' +
+            '<div class="crop-head"><h3 id="cropTitle"></h3>' +
+              '<button type="button" class="conn-close" data-crop="cancel" aria-label="Fechar">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div>' +
+            '<p class="crop-hint">Arraste para posicionar e use o zoom para ajustar.</p>' +
+            '<div class="crop-stage crop-' + o.shape + '" tabindex="0" aria-label="Área de recorte. Use as setas para mover e + ou - para o zoom.">' +
+              '<img alt="" draggable="false"><div class="crop-frame"></div></div>' +
+            '<div class="crop-zoom">' +
+              '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M20 20l-3.5-3.5"/></svg>' +
+              '<input type="range" min="0" max="1000" value="0" aria-label="Zoom">' +
+              '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M11 8v6M20 20l-3.5-3.5"/></svg>' +
+            '</div>' +
+            '<div class="crop-actions">' +
+              '<button type="button" class="btn-secondary" data-crop="reset">Centralizar</button>' +
+              '<span class="crop-spacer"></span>' +
+              '<button type="button" class="btn-secondary" data-crop="cancel">Cancelar</button>' +
+              '<button type="button" class="btn-primary" data-crop="save">Salvar</button>' +
+            '</div>' +
+          '</div>';
+        overlay.querySelector("#cropTitle").textContent = o.title;
+        document.body.appendChild(overlay);
+        document.body.style.overflow = "hidden";
+
+        const stage = overlay.querySelector(".crop-stage");
+        const frame = overlay.querySelector(".crop-frame");
+        const pic = overlay.querySelector(".crop-stage img");
+        const range = overlay.querySelector(".crop-zoom input");
+        pic.src = url;
+        stage.style.aspectRatio = o.shape === "circle" ? "1 / 1" : (o.aspect * 0.78).toFixed(3) + " / 1";
+
+        const iw = img.naturalWidth, ih = img.naturalHeight;
+        let F = { x: 0, y: 0, w: 0, h: 0 };          // moldura, em px da tela
+        let minS = 1, maxS = 4, s = 1, x = 0, y = 0; // escala e posição da imagem
+
+        function layout(keepCenter) {
+          const r = stage.getBoundingClientRect();
+          // Centro da moldura em coordenadas da imagem (para manter ao redimensionar)
+          const cx = keepCenter ? (F.x + F.w / 2 - x) / s : iw / 2;
+          const cy = keepCenter ? (F.y + F.h / 2 - y) / s : ih / 2;
+          const pad = o.shape === "circle" ? 0.1 : 0.04;
+          F.w = r.width * (1 - pad * 2);
+          F.h = o.shape === "circle" ? F.w : F.w / o.aspect;
+          F.x = (r.width - F.w) / 2;
+          F.y = (r.height - F.h) / 2;
+          Object.assign(frame.style, { left: F.x + "px", top: F.y + "px", width: F.w + "px", height: F.h + "px" });
+          const oldRatio = keepCenter ? (s - minS) / (maxS - minS || 1) : 0;
+          minS = Math.max(F.w / iw, F.h / ih);
+          maxS = minS * 5;
+          s = minS + oldRatio * (maxS - minS);
+          x = F.x + F.w / 2 - cx * s;
+          y = F.y + F.h / 2 - cy * s;
+          apply();
+        }
+        // Não deixa sobrar espaço vazio dentro da moldura
+        function clamp() {
+          s = Math.min(maxS, Math.max(minS, s));
+          x = Math.min(F.x, Math.max(F.x + F.w - iw * s, x));
+          y = Math.min(F.y, Math.max(F.y + F.h - ih * s, y));
+        }
+        function apply() {
+          clamp();
+          pic.style.width = iw * s + "px";
+          pic.style.height = ih * s + "px";
+          pic.style.transform = "translate(" + x + "px," + y + "px)";
+          range.value = String(Math.round(((s - minS) / (maxS - minS || 1)) * 1000));
+        }
+        // Zoom mantendo fixo o ponto (px, py) da tela (centro da moldura por padrão)
+        function zoomTo(ns, px, py) {
+          if (px === undefined) { px = F.x + F.w / 2; py = F.y + F.h / 2; }
+          ns = Math.min(maxS, Math.max(minS, ns));
+          x = px - (px - x) * (ns / s);
+          y = py - (py - y) * (ns / s);
+          s = ns;
+          apply();
+        }
+
+        // Arrastar (mouse, caneta, dedo) e pinça com dois dedos
+        const pts = new Map();
+        let last = null, pinch = null;
+        stage.addEventListener("pointerdown", (e) => {
+          stage.setPointerCapture(e.pointerId);
+          pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          stage.classList.add("dragging");
+          last = { x: e.clientX, y: e.clientY };
+          if (pts.size === 2) {
+            const [a, b] = [...pts.values()];
+            pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s };
+          }
+        });
+        stage.addEventListener("pointermove", (e) => {
+          if (!pts.has(e.pointerId)) return;
+          pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (pts.size === 2 && pinch) {
+            const [a, b] = [...pts.values()];
+            const r = stage.getBoundingClientRect();
+            zoomTo(pinch.s * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top);
+            return;
+          }
+          x += e.clientX - last.x;
+          y += e.clientY - last.y;
+          last = { x: e.clientX, y: e.clientY };
+          apply();
+        });
+        const up = (e) => {
+          pts.delete(e.pointerId);
+          if (pts.size < 2) pinch = null;
+          if (pts.size === 1) last = [...pts.values()][0];
+          if (!pts.size) stage.classList.remove("dragging");
+        };
+        stage.addEventListener("pointerup", up);
+        stage.addEventListener("pointercancel", up);
+        stage.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          const r = stage.getBoundingClientRect();
+          zoomTo(s * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top);
+        }, { passive: false });
+        stage.addEventListener("keydown", (e) => {
+          const step = e.shiftKey ? 30 : 10;
+          const moves = { ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] };
+          if (moves[e.key]) { x += moves[e.key][0]; y += moves[e.key][1]; apply(); e.preventDefault(); }
+          else if (e.key === "+" || e.key === "=") { zoomTo(s * 1.1); e.preventDefault(); }
+          else if (e.key === "-") { zoomTo(s / 1.1); e.preventDefault(); }
+        });
+        range.addEventListener("input", () => zoomTo(minS + (Number(range.value) / 1000) * (maxS - minS)));
+
+        const onResize = () => layout(true);
+        window.addEventListener("resize", onResize);
+        const onKey = (e) => { if (e.key === "Escape") finish(null); };
+        document.addEventListener("keydown", onKey);
+
+        function finish(result) {
+          window.removeEventListener("resize", onResize);
+          document.removeEventListener("keydown", onKey);
+          overlay.remove();
+          document.body.style.overflow = "";
+          URL.revokeObjectURL(url);
+          resolve(result);
+        }
+
+        overlay.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-crop]");
+          if (e.target === overlay) return finish(null);
+          if (!btn) return;
+          const act = btn.dataset.crop;
+          if (act === "cancel") finish(null);
+          else if (act === "reset") layout(false);
+          else if (act === "save") {
+            btn.disabled = true;
+            btn.textContent = "Salvando...";
+            const canvas = document.createElement("canvas");
+            canvas.width = o.outW;
+            canvas.height = o.outH;
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#fff"; // PNG transparente vira fundo branco no JPEG
+            ctx.fillRect(0, 0, o.outW, o.outH);
+            ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(img, (F.x - x) / s, (F.y - y) / s, F.w / s, F.h / s, 0, 0, o.outW, o.outH);
+            canvas.toBlob((blob) => {
+              finish(blob ? new File([blob], o.fileName, { type: "image/jpeg" }) : null);
+            }, "image/jpeg", 0.9);
+          }
+        });
+
+        layout(false);
+        stage.focus();
+      }
+    });
+  }
+
   async function uploadAvatarPhoto(file) {
     const form = new FormData();
     form.append("avatar", file);
@@ -2449,7 +2645,11 @@
     if (editCoverBtn && coverInput) {
       editCoverBtn.addEventListener("click", () => coverInput.click());
       coverInput.addEventListener("change", async () => {
-        const file = coverInput.files[0];
+        const picked = coverInput.files[0];
+        coverInput.value = ""; // deixa escolher o mesmo arquivo de novo
+        if (!picked) return;
+        // Recorte da capa em faixa larga (4:1, o formato da capa no computador), antes de enviar
+        const file = await openImageCropper(picked, { shape: "rect", aspect: 4, outW: 1600, outH: 400, title: "Ajustar capa", fileName: "capa.jpg" });
         if (!file) return;
         const coverLabel = editCoverBtn.querySelector("span") || editCoverBtn;
         coverLabel.textContent = "Enviando...";
@@ -2471,7 +2671,11 @@
     if (editAvatarBtn && avatarInput) {
       editAvatarBtn.addEventListener("click", () => avatarInput.click());
       avatarInput.addEventListener("change", async () => {
-        const file = avatarInput.files[0];
+        const picked = avatarInput.files[0];
+        avatarInput.value = "";
+        if (!picked) return;
+        // Recorte em círculo antes de enviar
+        const file = await openImageCropper(picked, { shape: "circle", outW: 512, outH: 512, title: "Ajustar foto de perfil", fileName: "avatar.jpg" });
         if (!file) return;
         try {
           const fresh = await uploadAvatarPhoto(file);
