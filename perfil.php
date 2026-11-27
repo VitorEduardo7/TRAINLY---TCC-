@@ -15,6 +15,10 @@
 <?php include __DIR__ . '/includes/nav.php'; ?>
 
 <div class="profile-cover" id="profileCover">
+    <!-- Camada da imagem (foto ou fundo na cor da patente). Fica separada para
+         poder cortar as bordas arredondadas sem cortar o avatar, e para o
+         efeito de profundidade ao rolar a página (main.js → setCoverImage). -->
+    <div class="cover-media" aria-hidden="true"><div class="cover-img" id="profileCoverImg"></div></div>
     <button class="btn-secondary cover-edit-btn" id="editCoverBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Editar capa</span></button>
     <input type="file" id="coverInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
 

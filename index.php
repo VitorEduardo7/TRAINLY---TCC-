@@ -443,12 +443,6 @@ $linkDoApp = '';
                     <li><a href="#app">App</a></li>
                 </ul>
             </div>
-            <div>
-                <h2>Projeto</h2>
-                <ul>
-                    <li><a href="api-docs.php">API</a></li>
-                </ul>
-            </div>
         </nav>
     </div>
     <div class="lp-wrap lp-copy">

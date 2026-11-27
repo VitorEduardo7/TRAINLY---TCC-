@@ -10,7 +10,6 @@
             <a href="/TRAINLY---TCC-/atividades.php">Atividades</a>
             <a href="/TRAINLY---TCC-/explorar.php">Explorar rotas</a>
             <a href="/TRAINLY---TCC-/perfil.php">Meu perfil</a>
-            <a href="/TRAINLY---TCC-/api-docs.php">API</a>
         </nav>
 
         <p class="footer-copy">© 2026 Trainly · Projeto de TCC</p>

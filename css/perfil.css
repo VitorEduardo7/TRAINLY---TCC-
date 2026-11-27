@@ -458,32 +458,107 @@ html[data-contrast="high"] .conn-modal { border: 1px solid var(--border-color); 
    ficam no global.css, seção 14. --rank-color vem do main.js.
    ========================================================= */
 
-/* ---------- Capa ---------- */
+/* ---------- Capa ----------
+   Formato 4:1, o mesmo do fundo do LinkedIn (1584×396) e do editor de
+   recorte, entre 250 e 420px de altura.
+   .cover-media guarda o fundo e a foto, com as bordas arredondadas; a capa
+   em si não corta nada, para o avatar poder ficar por cima da borda. */
 .profile-cover {
     --rank-color: #2f7dfd;
-    height: 250px;
+    height: auto;
+    aspect-ratio: 4 / 1;
+    min-height: 250px;
+    max-height: 420px;
     margin: 16px 24px 0;
     border-radius: 28px;
+    background: none;
+}
+/* O global.css dá width:100% e flex:1 aos filhos do body; com a margem
+   lateral a capa estourava 24px, e em página curta ela crescia. */
+#profileCover { width: auto; flex: none; }
+
+.cover-media {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    overflow: hidden;
+    isolation: isolate;
     background-color: var(--card-bg);
     background-image:
         radial-gradient(70% 140% at 88% 0%, color-mix(in srgb, var(--rank-color) 42%, transparent), transparent 62%),
         radial-gradient(50% 90% at 0% 100%, color-mix(in srgb, var(--primary-blue) 22%, transparent), transparent 70%),
         repeating-linear-gradient(-58deg, transparent 0 26px, color-mix(in srgb, var(--text-dark) 4%, transparent) 26px 28px),
         linear-gradient(135deg, color-mix(in srgb, var(--rank-color) 22%, var(--card-bg)), var(--card-bg));
+    box-shadow: var(--shadow-card);
 }
-/* O global.css dá width:100% e flex:1 aos filhos do body; com a margem
-   lateral a capa estourava 24px, e em página curta ela crescia. */
-#profileCover { width: auto; flex: none; }
-/* Com foto: a cor da patente sai e a base escurece de leve */
-.profile-cover.has-photo { background-size: cover; background-position: center; }
-.profile-cover.has-photo::after {
+/* Sem foto: duas manchas de luz na cor da patente que flutuam devagar */
+.cover-media::before {
+    content: "";
+    position: absolute;
+    inset: -40%;
+    background:
+        radial-gradient(22% 38% at 32% 42%, color-mix(in srgb, var(--rank-color) 38%, transparent), transparent 70%),
+        radial-gradient(20% 34% at 68% 62%, color-mix(in srgb, var(--primary-blue) 32%, transparent), transparent 70%);
+    animation: coverDrift 16s ease-in-out infinite alternate;
+    pointer-events: none;
+}
+.profile-cover.has-photo .cover-media::before { display: none; }
+@keyframes coverDrift {
+    from { transform: translate(-6%, 4%) rotate(-4deg); }
+    to { transform: translate(7%, -5%) rotate(6deg); }
+}
+
+/* A foto aparece INTEIRA quando a página está parada (o 1584×396 cabe
+   certinho). .cover-img cuida do efeito ao rolar (aproxima e desce um
+   pouco, sem atraso); o ::before tem a foto, entra com um zoom suave e
+   aproxima de leve quando o mouse passa por cima. */
+.cover-img {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    scale: calc(1 + var(--cover-zoom, 0));
+    translate: 0 var(--cover-shift, 0px);
+    will-change: translate, scale;
+}
+.cover-img::before {
     content: "";
     position: absolute;
     inset: 0;
-    border-radius: inherit;
-    background: linear-gradient(180deg, transparent 45%, rgba(10, 6, 24, 0.45));
-    pointer-events: none;
+    background: var(--cover-url, none) center / cover no-repeat;
+    opacity: 0;
+    scale: 1.08;
+    transition: opacity 0.7s ease, scale 1.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+.cover-img.loaded::before { opacity: 1; scale: 1; }
+.profile-cover:hover .cover-img.loaded::before { scale: 1.04; }
+
+/* Base: escurece um pouco (foto) + uma linha fina na cor da patente */
+.cover-media::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background:
+        linear-gradient(90deg, transparent 4%, var(--rank-color) 50%, transparent 96%) bottom / 100% 3px no-repeat,
+        linear-gradient(180deg, transparent 55%, rgba(10, 6, 24, 0.18));
+}
+.profile-cover.has-photo .cover-media::after {
+    background:
+        linear-gradient(90deg, transparent 4%, var(--rank-color) 50%, transparent 96%) bottom / 100% 3px no-repeat,
+        linear-gradient(180deg, rgba(10, 6, 24, 0.22), transparent 28%, transparent 52%, rgba(10, 6, 24, 0.5));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cover-media::before { animation: none; }
+    .cover-img::before { transition: opacity 0.3s ease; scale: 1; }
+    .cover-img.loaded::before, .profile-cover:hover .cover-img.loaded::before { scale: 1; }
+}
+html[data-motion="reduce"] .cover-img::before,
+html[data-motion="reduce"] .cover-img.loaded::before,
+html[data-motion="reduce"] .profile-cover:hover .cover-img.loaded::before { scale: 1; }
+
 .cover-edit-btn {
     z-index: 2;
     top: 16px;
@@ -763,7 +838,7 @@ html[data-contrast="high"] .stats-grid-2col .card { border: 1px solid var(--bord
     .stats-grid-2col { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
-    .profile-cover { height: 190px; margin: 0; border-radius: 0 0 24px 24px; }
+    .profile-cover { min-height: 240px; margin: 0; border-radius: 0 0 24px 24px; }
     .profile-avatar-wrapper { left: 18px; bottom: -44px; }
     .profile-avatar-big { width: 96px; height: 96px; font-size: 36px; box-shadow: 0 0 0 4px var(--bg-color), 0 0 0 7px var(--rank-color, #2f7dfd); }
     .profile-level-badge { min-width: 32px; height: 32px; font-size: 18px; right: -8px; }
@@ -797,6 +872,8 @@ html[data-contrast="high"] .stats-grid-2col .card { border: 1px solid var(--bord
 .crop-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .crop-head h3 { margin: 0; font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 24px; text-transform: uppercase; }
 .crop-hint { margin: 4px 0 14px; font-size: 13.5px; color: var(--text-muted); }
+.crop-warn { display: flex; gap: 8px; margin: -6px 0 12px; padding: 9px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; color: #f5b74a; background: color-mix(in srgb, #f5b74a 14%, transparent); }
+.crop-warn[hidden] { display: none; }
 .crop-stage {
     position: relative;
     width: 100%;

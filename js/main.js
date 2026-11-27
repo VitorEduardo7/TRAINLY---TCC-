@@ -242,7 +242,7 @@
 
   /* ---------------------------------------------------------
      EDITOR DE IMAGEM (recorte antes de enviar)
-     Foto de perfil: recorte em círculo. Capa: faixa larga 4:1, como
+     Foto de perfil: recorte em círculo. Capa: 4:1 (1584×396), como
      Discord/Twitter. Arrastar move, a barra/roda do mouse/pinça dá zoom,
      setas do teclado também movem. Devolve um File JPEG já recortado
      (ou null se a pessoa cancelar).
@@ -272,6 +272,7 @@
               '<button type="button" class="conn-close" data-crop="cancel" aria-label="Fechar">' +
               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div>' +
             '<p class="crop-hint">Arraste para posicionar e use o zoom para ajustar.</p>' +
+            '<p class="crop-warn" hidden>Imagem com pouca resolução: pode ficar borrada. Use uma foto maior ou diminua o zoom.</p>' +
             '<div class="crop-stage crop-' + o.shape + '" tabindex="0" aria-label="Área de recorte. Use as setas para mover e + ou - para o zoom.">' +
               '<img alt="" draggable="false"><div class="crop-frame"></div></div>' +
             '<div class="crop-zoom">' +
@@ -294,6 +295,7 @@
         const frame = overlay.querySelector(".crop-frame");
         const pic = overlay.querySelector(".crop-stage img");
         const range = overlay.querySelector(".crop-zoom input");
+        const warn = overlay.querySelector(".crop-warn");
         pic.src = url;
         stage.style.aspectRatio = o.shape === "circle" ? "1 / 1" : (o.aspect * 0.78).toFixed(3) + " / 1";
 
@@ -332,6 +334,8 @@
           pic.style.height = ih * s + "px";
           pic.style.transform = "translate(" + x + "px," + y + "px)";
           range.value = String(Math.round(((s - minS) / (maxS - minS || 1)) * 1000));
+          // Quantos pixels reais da foto cabem na moldura: abaixo do mínimo, avisa
+          if (o.minW) warn.hidden = F.w / s >= o.minW;
         }
         // Zoom mantendo fixo o ponto (px, py) da tela (centro da moldura por padrão)
         function zoomTo(ns, px, py) {
@@ -417,16 +421,20 @@
             btn.disabled = true;
             btn.textContent = "Salvando...";
             const canvas = document.createElement("canvas");
-            canvas.width = o.outW;
-            canvas.height = o.outH;
+            // Salva no tamanho real do recorte (sem esticar à toa), até o máximo
+            const srcW = Math.round(F.w / s);
+            const outW = Math.max(1, Math.min(o.outW, srcW));
+            const outH = Math.round(outW * (o.outH / o.outW));
+            canvas.width = outW;
+            canvas.height = outH;
             const ctx = canvas.getContext("2d");
             ctx.fillStyle = "#fff"; // PNG transparente vira fundo branco no JPEG
-            ctx.fillRect(0, 0, o.outW, o.outH);
+            ctx.fillRect(0, 0, outW, outH);
             ctx.imageSmoothingQuality = "high";
-            ctx.drawImage(img, (F.x - x) / s, (F.y - y) / s, F.w / s, F.h / s, 0, 0, o.outW, o.outH);
+            ctx.drawImage(img, (F.x - x) / s, (F.y - y) / s, F.w / s, F.h / s, 0, 0, outW, outH);
             canvas.toBlob((blob) => {
               finish(blob ? new File([blob], o.fileName, { type: "image/jpeg" }) : null);
-            }, "image/jpeg", 0.9);
+            }, "image/jpeg", 0.92);
           }
         });
 
@@ -434,6 +442,49 @@
         stage.focus();
       }
     });
+  }
+
+  /* Capa do perfil: carrega a foto antes de mostrar (entra com um leve
+     zoom) e liga o efeito de profundidade ao rolar a página. */
+  function setCoverImage(url) {
+    const cover = document.getElementById("profileCover");
+    const layer = document.getElementById("profileCoverImg");
+    if (!cover || !layer || !url) return;
+    if (layer.dataset.src === url) return;
+    layer.dataset.src = url;
+    layer.classList.remove("loaded");
+    const pre = new Image();
+    pre.onload = () => {
+      if (layer.dataset.src !== url) return;
+      // Endereço completo: url() dentro de variável CSS seria lido a partir da pasta do .css
+      const abs = new URL(url, location.href).href;
+      layer.style.setProperty("--cover-url", "url('" + abs.replace(/'/g, "%27") + "')");
+      cover.classList.add("has-photo");
+      requestAnimationFrame(() => layer.classList.add("loaded"));
+    };
+    pre.src = url;
+    initCoverParallax(cover, layer);
+  }
+
+  function initCoverParallax(cover, layer) {
+    if (cover.dataset.parallax) return;
+    cover.dataset.parallax = "1";
+    const calm = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      document.documentElement.getAttribute("data-motion") === "reduce";
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      if (calm()) { layer.style.setProperty("--cover-zoom", "0"); layer.style.setProperty("--cover-shift", "0px"); return; }
+      // Rolando: aproxima até 12% e desce até 4% da altura (o zoom cobre a descida,
+      // então nunca aparece borda vazia). Parado no topo: foto inteira.
+      const h = cover.offsetHeight || 1;
+      const p = Math.min(Math.max(window.scrollY, 0), h) / h;
+      layer.style.setProperty("--cover-zoom", (p * 0.12).toFixed(4));
+      layer.style.setProperty("--cover-shift", (p * 0.04 * h).toFixed(1) + "px");
+    };
+    window.addEventListener("scroll", () => {
+      if (!ticking) { ticking = true; requestAnimationFrame(update); }
+    }, { passive: true });
   }
 
   async function uploadAvatarPhoto(file) {
@@ -2373,8 +2424,7 @@
     }
     const coverEl = document.getElementById("profileCover");
     if (coverEl && profile.coverPhotoUrl) {
-      coverEl.style.backgroundImage = "url('" + profile.coverPhotoUrl + "')";
-      coverEl.classList.add("has-photo");
+      setCoverImage(profile.coverPhotoUrl);
     }
 
     document.getElementById("statActivities").textContent = profile.activitiesCount;
@@ -2557,8 +2607,7 @@
 
       const coverEl = document.getElementById("profileCover");
       if (coverEl && d.coverPhotoUrl) {
-        coverEl.style.backgroundImage = "url('" + d.coverPhotoUrl + "')";
-        coverEl.classList.add("has-photo");
+        setCoverImage(d.coverPhotoUrl);
       }
 
       document.getElementById("statActivities").textContent = stats.totalActivities;
@@ -2648,8 +2697,8 @@
         const picked = coverInput.files[0];
         coverInput.value = ""; // deixa escolher o mesmo arquivo de novo
         if (!picked) return;
-        // Recorte da capa em faixa larga (4:1, o formato da capa no computador), antes de enviar
-        const file = await openImageCropper(picked, { shape: "rect", aspect: 4, outW: 1600, outH: 400, title: "Ajustar capa", fileName: "capa.jpg" });
+        // Recorte da capa em 4:1 (padrão do fundo do LinkedIn, 1584×396), antes de enviar
+        const file = await openImageCropper(picked, { shape: "rect", aspect: 4, outW: 2400, outH: 600, minW: 1584, title: "Ajustar capa", fileName: "capa.jpg" });
         if (!file) return;
         const coverLabel = editCoverBtn.querySelector("span") || editCoverBtn;
         coverLabel.textContent = "Enviando...";
@@ -2675,7 +2724,7 @@
         avatarInput.value = "";
         if (!picked) return;
         // Recorte em círculo antes de enviar
-        const file = await openImageCropper(picked, { shape: "circle", outW: 512, outH: 512, title: "Ajustar foto de perfil", fileName: "avatar.jpg" });
+        const file = await openImageCropper(picked, { shape: "circle", outW: 600, outH: 600, minW: 300, title: "Ajustar foto de perfil", fileName: "avatar.jpg" });
         if (!file) return;
         try {
           const fresh = await uploadAvatarPhoto(file);
